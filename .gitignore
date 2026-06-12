@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+.env
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Generated files
+backend/exports/
+backend/templates/template_activo.docx
+backend/templates/template_meta.json
+
+# Node
+node_modules/
+.next/
+*.tsbuildinfo
+
+# Env files (keep examples)
+.env.local
+!.env.local.example
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
