@@ -4,94 +4,46 @@ from schemas.tercera_clase import TerceraClaseInput
 
 
 SONNET_SYSTEM_PROMPT = """
-Eres un asistente especializado en redacción de motivadas y resoluciones de trámites catastrales colombianos,
-siguiendo las normas del IGAC y la Resolución 1040 de 2009.
+Eres un experto en catastro colombiano. Redactas motivadas de resoluciones para mutaciones catastrales
+siguiendo la Resolución 1040 de 2009 del IGAC, la Ley 388 de 1997 y el Decreto 1420 de 1998.
 
-Tu tarea es generar una MOTIVADA JURÍDICAMENTE VÁLIDA para una mutación catastral de TERCERA CLASE
-(Incorporación de Construcción).
+Genera una MOTIVADA COMPLETA Y JURÍDICAMENTE VÁLIDA para una mutación de TERCERA CLASE
+(Incorporación de Construcción al inventario catastral).
 
-La motivada debe:
-1. Incluir antecedentes de hecho (quién solicita, qué solicita, por qué)
-2. Considerar los fundamentos legales aplicables (Ley 388/97, Resolución 1040/09 IGAC, Decreto 1420/98)
-3. Análisis técnico-jurídico breve pero sólido que justifique la incorporación
-4. Conclusiones claras que fundamenten la decisión
-5. Ser redactada en estilo formal/administrativo colombiano
-6. Incluir citas normativas precisas donde corresponda
+Estructura obligatoria:
+1. ANTECEDENTES: Quién solicita, qué solicita, datos del predio y construcción
+2. CONSIDERACIONES JURÍDICAS: Fundamentos legales aplicables con citas normativas precisas
+3. PARTE MOTIVA: Análisis técnico-jurídico que justifica la incorporación
 
-Formato esperado de salida:
-- Sin códigos de formateo markdown, solo texto limpio
-- Párrafos separados por saltos de línea dobles
-- Máximo 900 palabras
-- Lenguaje profesional y técnico, sin legalés innecesario
-- Estructura: ANTECEDENTES → CONSIDERACIONES → PARTE MOTIVA
-
-Genera una motivada que pueda ser usada directamente en un documento oficial de la entidad catastral.
+Reglas:
+- Lenguaje formal administrativo colombiano
+- Cita exacta de artículos de la Resolución 1040/09 y Ley 388/97
+- Máximo 700 palabras
+- Solo texto limpio, sin markdown ni numeraciones
+- Párrafos separados por doble salto de línea
+- Infiere datos complementarios (municipio del código predial, uso habitacional por defecto)
+- Sé completo y profesional — el documento debe poder usarse directamente en resolución oficial
 """
 
 
-def _build_user_prompt(data: TerceraClaseInput) -> str:
-    solicitante_info = ""
-    if data.solicitante:
-        solicitante_info = f"""
-SOLICITANTE (diferente al propietario):
-- Nombre: {data.solicitante.nombre_completo}
-- Documento: {data.solicitante.tipo_documento} {data.solicitante.numero_documento}
-- Calidad: {data.solicitante.calidad}
-"""
-    else:
-        solicitante_info = "SOLICITANTE: El mismo propietario"
+def _build_prompt(data: TerceraClaseInput) -> str:
+    docs = "\n".join(f"  - {d}" for d in data.documentos_aportados)
+    return f"""Genera la motivada para este trámite catastral:
 
-    documentos = "\n".join(f"  - {doc}" for doc in data.documentos_presentados)
+PROPIETARIO: {data.nombre_propietario}
+CÉDULA: {data.cedula}
+NÚMERO PREDIAL: {data.numero_predial}
+FOLIO DE MATRÍCULA INMOBILIARIA: {data.folio_matricula}
+ÁREA CONSTRUIDA: {data.area_construida_m2} m²
+ÁREA DE TERRENO: {data.area_terreno_m2} m²
 
-    visita = (
-        f"Fecha de visita técnica: {data.fecha_visita_tecnica}"
-        if data.fecha_visita_tecnica
-        else "Sin fecha de visita registrada"
-    )
+DOCUMENTOS APORTADOS:
+{docs}
 
-    observaciones = data.observaciones_tecnicas or "Sin observaciones técnicas adicionales."
-
-    return f"""Genera la motivada para el siguiente trámite catastral:
-
-EXPEDIENTE: {data.numero_expediente}
-NÚMERO DE PREDIO (Código Catastral): {data.numero_predio}
-MATRÍCULA INMOBILIARIA: {data.matricula_inmobiliaria or "No registrada"}
-
-PROPIETARIO:
-- Nombre: {data.propietario.nombre_completo}
-- Documento: {data.propietario.tipo_documento} {data.propietario.numero_documento}
-
-{solicitante_info}
-
-CONSTRUCCIÓN A INCORPORAR:
-- Dirección: {data.construccion.direccion}, {data.construccion.municipio}, {data.construccion.departamento}
-- Área construida: {data.construccion.area_construida_m2} m²
-- Número de pisos: {data.construccion.numero_pisos}
-- Año de construcción: {data.construccion.anio_construccion}
-- Descripción: {data.construccion.descripcion}
-- Materiales predominantes: {data.construccion.materiales_predominantes}
-- Uso: {data.construccion.uso_construccion}
-- Destino económico: {data.construccion.destino_economico}
-
-FECHAS:
-- Fecha de solicitud: {data.fecha_solicitud}
-- {visita}
-
-INSPECTOR RESPONSABLE: {data.inspector_responsable} - {data.cargo_inspector}
-
-DOCUMENTOS PRESENTADOS:
-{documentos}
-
-OBSERVACIONES TÉCNICAS:
-{observaciones}
-
-{f"OBSERVACIONES ADICIONALES: {data.observaciones_adicionales}" if data.observaciones_adicionales else ""}
-
-Por favor genera la motivada completa y profesional para este trámite de incorporación de construcción."""
+Genera la motivada completa y profesional para este trámite de incorporación de construcción."""
 
 
 def generate_motivada(data: TerceraClaseInput) -> dict:
-    """Calls Claude Sonnet to generate a legally valid motivada."""
     if not settings.anthropic_api_key:
         raise ValueError(
             "ANTHROPIC_API_KEY no configurada. Configure la clave en el archivo .env"
@@ -103,15 +55,10 @@ def generate_motivada(data: TerceraClaseInput) -> dict:
         model="claude-sonnet-4-6",
         max_tokens=1500,
         system=SONNET_SYSTEM_PROMPT,
-        messages=[
-            {"role": "user", "content": _build_user_prompt(data)}
-        ],
+        messages=[{"role": "user", "content": _build_prompt(data)}],
     )
 
-    texto_motivada = message.content[0].text
-    tokens_usados = message.usage.input_tokens + message.usage.output_tokens
-
     return {
-        "texto_motivada": texto_motivada,
-        "tokens_usados": tokens_usados,
+        "texto_motivada": message.content[0].text,
+        "tokens_usados": message.usage.input_tokens + message.usage.output_tokens,
     }

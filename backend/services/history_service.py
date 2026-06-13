@@ -1,21 +1,15 @@
-import json
-from datetime import datetime
 from sqlalchemy.orm import Session
 from models.motivada import HistorialMotivada, EstadoMotivada, TipoMutacion
 from schemas.tercera_clase import TerceraClaseInput
 
 
-def crear_registro(
-    db: Session,
-    data: TerceraClaseInput,
-    texto_motivada: str,
-) -> HistorialMotivada:
+def crear_registro(db: Session, data: TerceraClaseInput, texto_motivada: str) -> HistorialMotivada:
     registro = HistorialMotivada(
         tipo_mutacion=TipoMutacion.TERCERA_CLASE,
-        numero_expediente=data.numero_expediente,
-        numero_predio=data.numero_predio,
-        propietario_nombre=data.propietario.nombre_completo,
-        propietario_documento=data.propietario.numero_documento,
+        numero_expediente=data.numero_predial,
+        numero_predio=data.numero_predial,
+        propietario_nombre=data.nombre_propietario,
+        propietario_documento=data.cedula,
         texto_motivada=texto_motivada,
         datos_formulario=data.model_dump_json(),
         estado=EstadoMotivada.GENERADA,
@@ -37,19 +31,13 @@ def marcar_exportado(db: Session, registro_id: int, nombre_archivo: str) -> Hist
     return registro
 
 
-def listar_historial(
-    db: Session,
-    skip: int = 0,
-    limit: int = 50,
-    buscar: str | None = None,
-) -> list[HistorialMotivada]:
+def listar_historial(db: Session, skip: int = 0, limit: int = 50, buscar: str | None = None):
     query = db.query(HistorialMotivada)
     if buscar:
         like = f"%{buscar}%"
         query = query.filter(
             HistorialMotivada.numero_expediente.ilike(like)
             | HistorialMotivada.propietario_nombre.ilike(like)
-            | HistorialMotivada.numero_predio.ilike(like)
         )
     return query.order_by(HistorialMotivada.fecha_creacion.desc()).offset(skip).limit(limit).all()
 

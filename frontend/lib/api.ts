@@ -5,43 +5,18 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 60000, // Claude can take a moment
+  timeout: 60000,
 });
 
-export interface PropietarioInput {
-  nombre_completo: string;
-  tipo_documento: string;
-  numero_documento: string;
-  direccion?: string;
-  telefono?: string;
-}
-
-export interface ConstruccionInput {
-  direccion: string;
-  municipio: string;
-  departamento: string;
-  area_construida_m2: number;
-  descripcion: string;
-  anio_construccion: number;
-  numero_pisos: number;
-  materiales_predominantes: string;
-  uso_construccion: string;
-  destino_economico: string;
-}
-
+// Simplified form data — only what's needed
 export interface TerceraClaseFormData {
-  numero_expediente: string;
-  numero_predio: string;
-  matricula_inmobiliaria?: string;
-  propietario: PropietarioInput;
-  construccion: ConstruccionInput;
-  fecha_solicitud: string;
-  fecha_visita_tecnica?: string;
-  inspector_responsable: string;
-  cargo_inspector: string;
-  documentos_presentados: string[];
-  observaciones_tecnicas?: string;
-  observaciones_adicionales?: string;
+  nombre_propietario: string;
+  cedula: string;
+  numero_predial: string;
+  folio_matricula: string;
+  area_construida_m2: number | string;
+  area_terreno_m2: number | string;
+  documentos_aportados: string[];
 }
 
 export interface MotivadaGeneradaResponse {
@@ -69,11 +44,7 @@ export interface HistorialDetalle extends HistorialItem {
   datos_formulario: string;
 }
 
-// --- API calls ---
-
-export async function generarMotivada(
-  data: TerceraClaseFormData
-): Promise<MotivadaGeneradaResponse> {
+export async function generarMotivada(data: TerceraClaseFormData): Promise<MotivadaGeneradaResponse> {
   const res = await api.post("/motivada/generar", data);
   return res.data;
 }
@@ -120,8 +91,7 @@ export async function deleteHistorialItem(id: number) {
 
 export function downloadBase64Docx(base64: string, filename: string) {
   const byteCharacters = atob(base64);
-  const byteNumbers = Array.from(byteCharacters, (c) => c.charCodeAt(0));
-  const byteArray = new Uint8Array(byteNumbers);
+  const byteArray = new Uint8Array(Array.from(byteCharacters, (c) => c.charCodeAt(0)));
   const blob = new Blob([byteArray], {
     type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });

@@ -157,16 +157,16 @@ export default function PreviewMotivada({ motivada, formData, onReset }: Preview
         </h4>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
           {[
-            ["Municipio", formData.construccion.municipio],
-            ["Área construida", `${formData.construccion.area_construida_m2} m²`],
-            ["Año construcción", formData.construccion.anio_construccion],
-            ["Inspector", formData.inspector_responsable],
-            ["Fecha solicitud", formData.fecha_solicitud],
-            ["Predio", formData.numero_predio],
+            ["Propietario", (formData as never as { nombre_propietario: string }).nombre_propietario],
+            ["Cédula", (formData as never as { cedula: string }).cedula],
+            ["Número predial", (formData as never as { numero_predial: string }).numero_predial],
+            ["Folio matrícula", (formData as never as { folio_matricula: string }).folio_matricula],
+            ["Área construida", `${(formData as never as { area_construida_m2: number }).area_construida_m2} m²`],
+            ["Área terreno", `${(formData as never as { area_terreno_m2: number }).area_terreno_m2} m²`],
           ].map(([k, v]) => (
             <div key={String(k)}>
               <dt className="text-slate-500">{k}</dt>
-              <dd className="text-slate-300 font-medium">{v}</dd>
+              <dd className="text-slate-300 font-medium">{String(v)}</dd>
             </div>
           ))}
         </dl>
