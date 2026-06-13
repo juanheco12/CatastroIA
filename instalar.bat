@@ -1,131 +1,120 @@
 @echo off
 chcp 65001 >nul
-title CatIA - Instalador automático
+title CatIA - Instalador
 color 0A
 
 echo ================================================
-echo    CatIA - Instalador automático para Windows
+echo    CatIA - Instalador para Windows
 echo ================================================
 echo.
+
+:: Instala en la carpeta del usuario (sin necesitar administrador)
+set "CATIA=%USERPROFILE%\CatastroIA"
 
 :: ── Verificar Python ──────────────────────────────
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python NO está instalado.
+    echo [ERROR] Python NO esta instalado.
     echo.
-    echo  1. Abre este enlace en tu navegador:
-    echo     https://www.python.org/downloads/
+    echo  Instala Python desde:
+    echo  https://www.python.org/downloads/
     echo.
-    echo  2. Descarga e instala Python
-    echo  3. MUY IMPORTANTE: marca "Add Python to PATH"
-    echo  4. Cuando termines, vuelve a ejecutar este archivo
+    echo  IMPORTANTE: marca "Add Python to PATH" al instalar
+    echo  Luego cierra y vuelve a abrir este archivo.
     echo.
+    start https://www.python.org/downloads/
     pause
     exit /b 1
 )
-echo [OK] Python encontrado
-python --version
+for /f "tokens=*" %%i in ('python --version') do echo [OK] %%i
 
 :: ── Verificar Node.js ─────────────────────────────
 node --version >nul 2>&1
 if errorlevel 1 (
+    echo [ERROR] Node.js NO esta instalado.
     echo.
-    echo [ERROR] Node.js NO está instalado.
+    echo  Instala Node.js desde:
+    echo  https://nodejs.org/  (version LTS)
+    echo  Luego cierra y vuelve a abrir este archivo.
     echo.
-    echo  1. Abre este enlace en tu navegador:
-    echo     https://nodejs.org/
-    echo  2. Descarga e instala la versión LTS
-    echo  3. Cuando termines, vuelve a ejecutar este archivo
-    echo.
+    start https://nodejs.org/
     pause
     exit /b 1
 )
-echo [OK] Node.js encontrado
-node --version
+for /f "tokens=*" %%i in ('node --version') do echo [OK] Node %%i
 
-:: ── Descargar proyecto ────────────────────────────
+:: ── Crear carpeta ─────────────────────────────────
 echo.
-echo [1/5] Descargando el proyecto desde GitHub...
+echo [1/5] Creando carpeta en %CATIA%
+if not exist "%CATIA%" mkdir "%CATIA%"
 
-if not exist "C:\CatastroIA" mkdir C:\CatastroIA
+:: ── Descargar ZIP ─────────────────────────────────
+echo [2/5] Descargando proyecto...
+powershell -Command "Invoke-WebRequest -Uri 'https://github.com/juanheco12/CatastroIA/archive/refs/heads/claude/wonderful-cori-iw233n.zip' -OutFile '%CATIA%\proyecto.zip'"
 
-powershell -Command "Invoke-WebRequest -Uri 'https://github.com/juanheco12/CatastroIA/archive/refs/heads/claude/wonderful-cori-iw233n.zip' -OutFile 'C:\CatastroIA\proyecto.zip'" 2>nul
-
-if not exist "C:\CatastroIA\proyecto.zip" (
-    echo [ERROR] No se pudo descargar. Verifica tu conexión a internet.
+if not exist "%CATIA%\proyecto.zip" (
+    echo [ERROR] No se pudo descargar. Verifica tu internet.
     pause
     exit /b 1
 )
 echo [OK] Descargado
 
-:: ── Extraer ZIP ───────────────────────────────────
-echo [2/5] Extrayendo archivos...
-powershell -Command "Expand-Archive -Path 'C:\CatastroIA\proyecto.zip' -DestinationPath 'C:\CatastroIA\' -Force"
+:: ── Extraer ───────────────────────────────────────
+echo [3/5] Extrayendo archivos...
+powershell -Command "Expand-Archive -Path '%CATIA%\proyecto.zip' -DestinationPath '%CATIA%\' -Force"
 
-:: Mover contenido de subcarpeta al directorio principal
-set "SUBFOLDER=C:\CatastroIA\CatastroIA-claude-wonderful-cori-iw233n"
-if exist "%SUBFOLDER%" (
-    xcopy "%SUBFOLDER%\*" "C:\CatastroIA\" /E /Y /Q >nul
-    rmdir /S /Q "%SUBFOLDER%"
-)
-del "C:\CatastroIA\proyecto.zip" >nul 2>&1
-echo [OK] Archivos extraídos en C:\CatastroIA\
+xcopy "%CATIA%\CatastroIA-claude-wonderful-cori-iw233n\*" "%CATIA%\" /E /Y /Q >nul 2>&1
+rmdir /S /Q "%CATIA%\CatastroIA-claude-wonderful-cori-iw233n" >nul 2>&1
+del "%CATIA%\proyecto.zip" >nul 2>&1
+echo [OK] Archivos en %CATIA%
 
-:: ── Configurar Backend ────────────────────────────
-echo [3/5] Configurando Backend (Python)...
-cd /d C:\CatastroIA\backend
-
+:: ── Backend ───────────────────────────────────────
+echo [4/5] Instalando Backend Python...
+cd /d "%CATIA%\backend"
 python -m venv .venv
-call .venv\Scripts\activate
-pip install -r requirements.txt --quiet
+call .venv\Scripts\activate.bat
+python -m pip install -r requirements.txt --quiet
+if not exist ".env" copy .env.example .env >nul
+echo [OK] Backend listo
 
-if not exist ".env" (
-    copy .env.example .env >nul
-)
-echo [OK] Backend configurado
+:: ── Frontend ──────────────────────────────────────
+echo [5/5] Instalando Frontend Node...
+cd /d "%CATIA%\frontend"
+call npm install --legacy-peer-deps
+echo [OK] Frontend listo
 
-:: ── Configurar Frontend ───────────────────────────
-echo [4/5] Instalando dependencias del Frontend (puede tardar)...
-cd /d C:\CatastroIA\frontend
-call npm install --legacy-peer-deps --silent
-echo [OK] Frontend configurado
-
-:: ── Configurar clave API ──────────────────────────
-echo.
-echo [5/5] Configuración de la clave Anthropic
-echo ================================================
-echo.
-echo  Necesitas ingresar tu clave de API de Anthropic.
-echo  La puedes obtener en: https://console.anthropic.com/
-echo.
-set /p "APIKEY=  Pega tu clave aqui (sk-ant-...): "
-
-powershell -Command "(Get-Content 'C:\CatastroIA\backend\.env') -replace 'sk-ant-your-key-here', '%APIKEY%' | Set-Content 'C:\CatastroIA\backend\.env'"
-
+:: ── Clave API ─────────────────────────────────────
 echo.
 echo ================================================
-echo  [LISTO] Instalación completada
+echo  ULTIMO PASO: Tu clave de Anthropic
 echo ================================================
 echo.
-echo  Para iniciar la aplicación ejecuta:
-echo     C:\CatastroIA\iniciar.bat
+echo  Obtenla en: https://console.anthropic.com/
 echo.
+set /p "APIKEY=  Pega tu clave (sk-ant-...): "
 
-:: ── Crear script de inicio ────────────────────────
+powershell -Command "(Get-Content '%CATIA%\backend\.env') -replace 'sk-ant-your-key-here', '%APIKEY%' | Set-Content '%CATIA%\backend\.env'"
+
+:: ── Crear iniciar.bat ─────────────────────────────
 (
 echo @echo off
 echo title CatIA
 echo echo Iniciando CatIA...
-echo echo.
-echo start "CatIA Backend" cmd /k "cd /d C:\CatastroIA\backend && .venv\Scripts\activate && uvicorn main:app --reload"
-echo timeout /t 3 /nobreak ^>nul
-echo start "CatIA Frontend" cmd /k "cd /d C:\CatastroIA\frontend && npm run dev"
-echo timeout /t 5 /nobreak ^>nul
+echo start "Backend" cmd /k "cd /d %CATIA%\backend ^&^& .venv\Scripts\activate ^&^& uvicorn main:app --reload"
+echo timeout /t 4 /nobreak ^>nul
+echo start "Frontend" cmd /k "cd /d %CATIA%\frontend ^&^& npm run dev"
+echo timeout /t 6 /nobreak ^>nul
 echo start http://localhost:3000
-echo echo Abriendo http://localhost:3000 en el navegador...
-) > C:\CatastroIA\iniciar.bat
+) > "%CATIA%\iniciar.bat"
 
-echo  Iniciando la aplicación ahora...
 echo.
+echo ================================================
+echo  INSTALACION COMPLETADA
+echo ================================================
+echo.
+echo  Para abrir CatIA en el futuro usa:
+echo  %CATIA%\iniciar.bat
+echo.
+echo  Iniciando ahora...
 pause
-call C:\CatastroIA\iniciar.bat
+call "%CATIA%\iniciar.bat"
