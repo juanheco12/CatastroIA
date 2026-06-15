@@ -1,71 +1,85 @@
 "use client";
 
 import { useState } from "react";
-import FormBuilder, { SimpleFormData } from "./components/FormBuilder";
+import MutationSelector, { TipoMutacion, TipoOrigen } from "./components/MutationSelector";
+import FormBuilder, { SolicitudFormData } from "./components/FormBuilder";
 import PreviewMotivada from "./components/PreviewMotivada";
 import HistoryPanel from "./components/HistoryPanel";
-import TemplateUploader from "./components/TemplateUploader";
 import SettingsPanel from "./components/SettingsPanel";
+import { generarMotivada, MotivadaGeneradaResponse, HistorialDetalle } from "@/lib/api";
 import {
-  generarMotivada,
-  MotivadaGeneradaResponse,
-  HistorialDetalle,
-} from "@/lib/api";
-import {
-  FileText, Eye, History, Upload, Settings, MapPin, AlertCircle, Sparkles,
+  MapPin, Sparkles, FileText, Eye, History, Settings, AlertCircle, ArrowLeft,
 } from "lucide-react";
 import clsx from "clsx";
 
-type Tab = "form" | "preview" | "historial" | "template" | "settings";
+type Tab     = "form" | "preview" | "historial" | "settings";
+type Step    = "select" | "form";
 
-const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "form",      label: "Formulario",  icon: FileText  },
-  { id: "preview",   label: "Vista previa", icon: Eye      },
-  { id: "historial", label: "Historial",   icon: History   },
-  { id: "template",  label: "Template",    icon: Upload    },
-  { id: "settings",  label: "Ajustes",     icon: Settings  },
+const TABS = [
+  { id: "form"      as Tab, label: "Formulario", icon: FileText  },
+  { id: "preview"   as Tab, label: "Motivada",   icon: Eye       },
+  { id: "historial" as Tab, label: "Historial",  icon: History   },
+  { id: "settings"  as Tab, label: "Ajustes",    icon: Settings  },
 ];
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab]   = useState<Tab>("form");
-  const [formData,  setFormData]    = useState<SimpleFormData | null>(null);
-  const [motivada,  setMotivada]    = useState<MotivadaGeneradaResponse | null>(null);
-  const [isLoading, setIsLoading]   = useState(false);
-  const [error,     setError]       = useState<string | null>(null);
+  const [tab,      setTab]      = useState<Tab>("form");
+  const [step,     setStep]     = useState<Step>("select");
+  const [mutacion, setMutacion] = useState<TipoMutacion | null>(null);
+  const [origen,   setOrigen]   = useState<TipoOrigen   | null>(null);
+  const [motivada, setMotivada] = useState<MotivadaGeneradaResponse | null>(null);
+  const [formData, setFormData] = useState<SolicitudFormData | null>(null);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
 
-  const handleGenerate = async (data: SimpleFormData) => {
-    setIsLoading(true);
+  const handleOrigenSelect = (v: TipoOrigen) => {
+    setOrigen(v);
+    setStep("form");
+  };
+
+  const handleGenerate = async (data: SolicitudFormData) => {
+    setLoading(true);
     setError(null);
     setFormData(data);
     try {
       const result = await generarMotivada(data as never);
       setMotivada(result);
-      setActiveTab("preview");
+      setTab("preview");
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
       setError(detail ?? "Error al conectar con el servidor. ¿Está corriendo el backend?");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleReopen = (detalle: HistorialDetalle) => {
-    const data: SimpleFormData = JSON.parse(detalle.datos_formulario);
-    setFormData(data);
-    setMotivada({
-      texto_motivada:  detalle.texto_motivada,
-      numero_expediente: detalle.numero_expediente,
-      propietario:     detalle.propietario_nombre,
-      tipo_mutacion:   "Tercera Clase - Incorporación de Construcción",
-    });
-    setActiveTab("preview");
+  const handleReset = () => {
+    setMotivada(null); setFormData(null); setError(null);
+    setStep("select"); setMutacion(null); setOrigen(null);
+    setTab("form");
   };
 
-  const handleReset = () => {
-    setMotivada(null);
-    setFormData(null);
-    setError(null);
-    setActiveTab("form");
+  const handleReopen = (d: HistorialDetalle) => {
+    const fd: SolicitudFormData = JSON.parse(d.datos_formulario);
+    setFormData(fd);
+    setMotivada({
+      texto_motivada:    d.texto_motivada,
+      numero_expediente: d.numero_expediente,
+      propietario:       d.propietario_nombre,
+      tipo_mutacion:     d.tipo_mutacion,
+    });
+    setTab("preview");
+  };
+
+  const labelMutacion: Record<TipoMutacion, string> = {
+    primera_clase: "1ra Clase",
+    tercera_clase: "3ra Clase",
+  };
+  const labelOrigen: Record<TipoOrigen, string> = {
+    propietario: "Propietario",
+    autorizado:  "Autorizado",
+    poder:       "Con poder",
+    snr:         "SNR",
   };
 
   return (
@@ -77,13 +91,17 @@ export default function Dashboard() {
             <div className="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center">
               <MapPin size={16} className="text-white" />
             </div>
-            <span className="font-bold text-slate-100 tracking-tight">CatIA</span>
+            <span className="font-bold text-slate-100">CatIA</span>
             <span className="hidden sm:inline text-slate-500 text-xs">Motivadas Catastrales</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <Sparkles size={12} className="text-brand-warning" />
             <span className="hidden sm:inline">Claude Sonnet 4.6</span>
-            <span className="font-mono bg-slate-800 px-2 py-0.5 rounded text-slate-400">3ra Clase</span>
+            {mutacion && origen && (
+              <span className="font-mono bg-slate-800 px-2 py-0.5 rounded text-slate-300">
+                {labelMutacion[mutacion]} · {labelOrigen[origen]}
+              </span>
+            )}
           </div>
         </div>
       </header>
@@ -93,45 +111,22 @@ export default function Dashboard() {
           {/* Sidebar */}
           <nav className="hidden lg:flex flex-col gap-1 w-44 shrink-0">
             {TABS.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActiveTab(id)}
+              <button key={id} type="button" onClick={() => setTab(id)}
                 className={clsx(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left",
-                  activeTab === id
+                  tab === id
                     ? "bg-brand-primary text-white shadow-lg shadow-blue-500/20"
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                )}
-              >
-                <Icon size={16} />
-                {label}
-                {id === "preview" && motivada && (
-                  <span className="ml-auto w-2 h-2 rounded-full bg-brand-success" />
-                )}
+                )}>
+                <Icon size={16} />{label}
+                {id === "preview" && motivada && <span className="ml-auto w-2 h-2 rounded-full bg-brand-success" />}
               </button>
             ))}
           </nav>
 
-          {/* Mobile tab bar */}
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-10 flex">
-            {TABS.map(({ id, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActiveTab(id)}
-                className={clsx(
-                  "flex-1 flex flex-col items-center py-2.5 transition-colors",
-                  activeTab === id ? "text-brand-primary" : "text-slate-500"
-                )}
-              >
-                <Icon size={18} />
-              </button>
-            ))}
-          </div>
-
           {/* Main */}
           <main className="flex-1 min-w-0 pb-20 lg:pb-0">
+            {/* Error banner */}
             {error && (
               <div className="flex items-start gap-3 p-4 mb-5 bg-red-500/10 border border-red-500/30 rounded-xl text-sm text-brand-danger">
                 <AlertCircle size={18} className="mt-0.5 shrink-0" />
@@ -143,31 +138,61 @@ export default function Dashboard() {
               </div>
             )}
 
-            {activeTab === "form" && (
-              <FormBuilder onGenerate={handleGenerate} isLoading={isLoading} />
+            {/* FORMULARIO tab */}
+            {tab === "form" && (
+              <>
+                {step === "select" && (
+                  <MutationSelector
+                    selectedMutacion={mutacion}
+                    selectedOrigen={origen}
+                    onSelectMutacion={(v) => { setMutacion(v); setOrigen(null); setStep("select"); }}
+                    onSelectOrigen={handleOrigenSelect}
+                  />
+                )}
+                {step === "form" && mutacion && origen && (
+                  <div className="space-y-4">
+                    <button type="button" onClick={() => setStep("select")}
+                      className="btn-ghost text-xs">
+                      <ArrowLeft size={13} />
+                      Cambiar tipo / origen
+                    </button>
+                    <FormBuilder
+                      tipoMutacion={mutacion}
+                      tipoOrigen={origen}
+                      onGenerate={handleGenerate}
+                      isLoading={loading}
+                    />
+                  </div>
+                )}
+              </>
             )}
 
-            {activeTab === "preview" && motivada && formData ? (
-              <PreviewMotivada
-                motivada={motivada}
-                formData={formData as never}
-                onReset={handleReset}
-              />
-            ) : activeTab === "preview" ? (
+            {/* PREVIEW tab */}
+            {tab === "preview" && motivada && formData ? (
+              <PreviewMotivada motivada={motivada} formData={formData as never} onReset={handleReset} />
+            ) : tab === "preview" ? (
               <div className="flex flex-col items-center justify-center py-24 text-slate-500 gap-3">
                 <Eye size={48} className="opacity-20" />
                 <p className="text-sm">Aún no hay motivada generada</p>
-                <button type="button" onClick={() => setActiveTab("form")} className="btn-primary text-xs mt-2">
-                  Ir al formulario
-                </button>
+                <button type="button" onClick={() => setTab("form")} className="btn-primary text-xs mt-2">Ir al formulario</button>
               </div>
             ) : null}
 
-            {activeTab === "historial" && <HistoryPanel onReopen={handleReopen} />}
-            {activeTab === "template"  && <TemplateUploader />}
-            {activeTab === "settings"  && <SettingsPanel />}
+            {tab === "historial" && <HistoryPanel onReopen={handleReopen} />}
+            {tab === "settings"  && <SettingsPanel />}
           </main>
         </div>
+      </div>
+
+      {/* Mobile tab bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-10 flex">
+        {TABS.map(({ id, icon: Icon }) => (
+          <button key={id} type="button" onClick={() => setTab(id)}
+            className={clsx("flex-1 flex flex-col items-center py-2.5 transition-colors",
+              tab === id ? "text-brand-primary" : "text-slate-500")}>
+            <Icon size={18} />
+          </button>
+        ))}
       </div>
     </div>
   );

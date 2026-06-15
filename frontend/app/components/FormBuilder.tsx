@@ -1,256 +1,278 @@
 "use client";
 
 import { useState } from "react";
-import { TerceraClaseFormData } from "@/lib/api";
-import { Plus, Minus, Wand2, FileText } from "lucide-react";
+import { Wand2, Plus, Minus } from "lucide-react";
+import { TipoMutacion, TipoOrigen } from "./MutationSelector";
 import clsx from "clsx";
 
-// Minimal form data type matching the simplified backend schema
-export interface SimpleFormData {
-  nombre_propietario: string;
-  cedula: string;
-  numero_predial: string;
-  folio_matricula: string;
-  area_construida_m2: number | string;
-  area_terreno_m2: number | string;
+export interface SolicitudFormData {
+  tipo_mutacion:   TipoMutacion;
+  tipo_origen:     TipoOrigen;
+  numero_predial:       string;
+  folio_matricula:      string;
+  municipio?:           string;
+  nombre_propietario?:  string;
+  cedula_propietario?:  string;
+  nombre_solicitante?:  string;
+  tipo_doc_solicitante?:string;
+  cedula_solicitante?:  string;
+  tp_solicitante?:      string;
+  numero_radicado?:     string;
+  area_construida_m2?:  number | string;
+  area_terreno_m2?:     number | string;
   documentos_aportados: string[];
 }
 
-const MOCK_DATA: SimpleFormData = {
-  nombre_propietario: "María Fernanda Gómez Restrepo",
-  cedula: "43512876",
-  numero_predial: "05001000200000010001000",
-  folio_matricula: "001-123456",
-  area_construida_m2: 95.5,
-  area_terreno_m2: 120.0,
-  documentos_aportados: [
-    "Formulario de solicitud",
-    "Copia cédula de ciudadanía",
-    "Escritura pública de compraventa",
+// ── Mock data per case ──────────────────────────────────────────────────────
+const MOCKS: Record<string, Partial<SolicitudFormData>> = {
+  primera_clase_propietario: {
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ",
+    cedula_propietario: "6.872.472",
+    numero_predial:     "23001000090004000000000",
+    folio_matricula:    "140-38712",
+    documentos_aportados: ["Sentencia SN del 2018-11-27 Juzgado Tercero Civil Municipal de Montería, debidamente registrada en el folio de matrícula inmobiliaria 140-38712"],
+  },
+  primera_clase_autorizado: {
+    nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ",
+    cedula_solicitante: "1.234.567",
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ",
+    cedula_propietario: "6.872.472",
+    numero_predial:     "23001000090004000000000",
+    folio_matricula:    "140-38712",
+    documentos_aportados: ["Sentencia SN del 2018-11-27 Juzgado Tercero Civil Municipal de Montería, debidamente registrada en el folio de matrícula inmobiliaria 140-38712"],
+  },
+  primera_clase_poder: {
+    nombre_solicitante:    "JORGE LUIS MARTINEZ RUIZ",
+    tipo_doc_solicitante:  "CC",
+    cedula_solicitante:    "9.876.543",
+    tp_solicitante:        "45678",
+    nombre_propietario:    "HERNAN JOSE CAUSIL MARTINEZ",
+    cedula_propietario:    "6.872.472",
+    numero_predial:        "23001000090004000000000",
+    folio_matricula:       "140-38712",
+    documentos_aportados:  ["Poder especial No. 0826 del 31/12/2015 de la GOBERNACION DE CORDOBA, debidamente registrada en el folio de matrícula inmobiliaria 140-38712"],
+  },
+  primera_clase_snr: {
+    numero_radicado: "2024-3312",
+    numero_predial:  "23001000100039002700000",
+    folio_matricula: "140-133775",
+    municipio:       "Montería",
+    documentos_aportados: ["Escritura pública No. 1053 del 23/11/2023 de la Notaría Cuarta de Montería, debidamente registrada en el folio de matrícula inmobiliaria 140-133775"],
+  },
+  tercera_clase_propietario: {
+    nombre_propietario: "María Fernanda Gómez Restrepo",
+    cedula_propietario: "43512876",
+    numero_predial:     "05001000200000010001000",
+    folio_matricula:    "001-123456",
+    area_construida_m2: 95.5,
+    area_terreno_m2:    120,
+    documentos_aportados: ["Formulario de solicitud", "Copia cédula de ciudadanía", "Licencia de construcción"],
+  },
+};
+
+const DOCS_RAPIDOS: Record<string, string[]> = {
+  primera_clase: [
+    "Escritura pública",
+    "Certificado de libertad y tradición",
+    "Sentencia judicial",
+    "Poder especial",
+    "Resolución de adjudicación",
+  ],
+  tercera_clase: [
     "Licencia de construcción",
+    "Plano de construcción aprobado",
+    "Declaración de construcción",
+    "Certificado de libertad y tradición",
   ],
 };
 
-const INITIAL: SimpleFormData = {
-  nombre_propietario: "",
-  cedula: "",
-  numero_predial: "",
-  folio_matricula: "",
-  area_construida_m2: "",
-  area_terreno_m2: "",
-  documentos_aportados: [
-    "Formulario de solicitud",
-    "Copia del documento de identidad",
-  ],
-};
-
-const DOCS_COMUNES = [
-  "Copia cédula de ciudadanía",
-  "Escritura pública",
-  "Licencia de construcción",
-  "Certificado de libertad y tradición",
-  "Plano de construcción",
-  "Declaración de construcción",
-];
-
-interface FormBuilderProps {
-  onGenerate: (data: SimpleFormData) => void;
-  isLoading: boolean;
+interface Props {
+  tipoMutacion: TipoMutacion;
+  tipoOrigen:   TipoOrigen;
+  onGenerate:   (data: SolicitudFormData) => void;
+  isLoading:    boolean;
 }
 
-export default function FormBuilder({ onGenerate, isLoading }: FormBuilderProps) {
-  const [data, setData] = useState<SimpleFormData>(INITIAL);
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="field-label">{label}{required && <span className="text-brand-danger ml-1">*</span>}</label>
+      {children}
+    </div>
+  );
+}
+
+export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLoading }: Props) {
+  const mockKey = `${tipoMutacion}_${tipoOrigen}`;
+  const [data, setData] = useState<SolicitudFormData>({
+    tipo_mutacion: tipoMutacion,
+    tipo_origen:   tipoOrigen,
+    numero_predial: "", folio_matricula: "",
+    documentos_aportados: [],
+  });
   const [newDoc, setNewDoc] = useState("");
 
-  const set = (key: keyof SimpleFormData, value: unknown) =>
-    setData((p) => ({ ...p, [key]: value }));
+  const set = (k: keyof SolicitudFormData, v: unknown) =>
+    setData(p => ({ ...p, [k]: v }));
+
+  const loadMock = () =>
+    setData(p => ({ ...p, ...MOCKS[mockKey] }));
 
   const addDoc = (doc?: string) => {
     const d = (doc ?? newDoc).trim();
     if (!d || data.documentos_aportados.includes(d)) return;
-    setData((p) => ({ ...p, documentos_aportados: [...p.documentos_aportados, d] }));
+    setData(p => ({ ...p, documentos_aportados: [...p.documentos_aportados, d] }));
     if (!doc) setNewDoc("");
   };
 
   const removeDoc = (i: number) =>
-    setData((p) => ({ ...p, documentos_aportados: p.documentos_aportados.filter((_, idx) => idx !== i) }));
+    setData(p => ({ ...p, documentos_aportados: p.documentos_aportados.filter((_, idx) => idx !== i) }));
 
-  const canSubmit =
-    data.nombre_propietario.trim() &&
-    data.cedula.trim() &&
-    data.numero_predial.trim() &&
-    data.folio_matricula.trim() &&
-    Number(data.area_construida_m2) > 0 &&
-    Number(data.area_terreno_m2) > 0;
+  const inp = "field-input";
+
+  // ── Validation ──────────────────────────────────────────────
+  const canSubmit = (() => {
+    if (!data.numero_predial || !data.folio_matricula) return false;
+    if (tipoOrigen === "snr") return !!data.numero_radicado;
+    if (!data.cedula_propietario || !data.nombre_propietario) return false;
+    if ((tipoOrigen === "autorizado" || tipoOrigen === "poder") && !data.cedula_solicitante) return false;
+    if (tipoMutacion === "tercera_clase") return !!data.area_construida_m2 && !!data.area_terreno_m2;
+    return true;
+  })();
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-100">Mutación Tercera Clase</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Incorporación de Construcción – IGAC</p>
-        </div>
-        <button type="button" onClick={() => setData(MOCK_DATA)} className="btn-ghost text-xs">
-          <Wand2 size={13} />
-          Datos de prueba
+        <p className="text-xs text-slate-500">Completa los campos para generar la motivada</p>
+        <button type="button" onClick={loadMock} className="btn-ghost text-xs">
+          <Wand2 size={13} />Datos de prueba
         </button>
       </div>
 
-      {/* Datos del propietario */}
-      <div className="card p-5 space-y-4">
-        <div className="flex items-center gap-2 pb-2 border-b border-slate-700">
-          <FileText size={15} className="text-brand-primary" />
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Propietario</h3>
+      {/* ── SNR ── */}
+      {tipoOrigen === "snr" && (
+        <div className="card p-5 space-y-4">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">SNR</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Número de radicado" required>
+              <input className={inp} value={data.numero_radicado ?? ""} onChange={e => set("numero_radicado", e.target.value)} placeholder="2024-3312" />
+            </Field>
+            <Field label="Municipio" required>
+              <input className={inp} value={data.municipio ?? ""} onChange={e => set("municipio", e.target.value)} placeholder="Montería" />
+            </Field>
+          </div>
         </div>
+      )}
+
+      {/* ── Solicitante (autorizado / poder) ── */}
+      {(tipoOrigen === "autorizado" || tipoOrigen === "poder") && (
+        <div className="card p-5 space-y-4">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
+            {tipoOrigen === "autorizado" ? "Datos del autorizado" : "Datos del apoderado"}
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Field label={tipoOrigen === "autorizado" ? "Nombre del autorizado" : "Nombre del apoderado"} required>
+                <input className={inp} value={data.nombre_solicitante ?? ""} onChange={e => set("nombre_solicitante", e.target.value)} placeholder="Nombre completo" />
+              </Field>
+            </div>
+            {tipoOrigen === "poder" && (
+              <Field label="Tipo de documento">
+                <select className={inp} value={data.tipo_doc_solicitante ?? "CC"} onChange={e => set("tipo_doc_solicitante", e.target.value)}>
+                  {["CC","NIT","CE","PA"].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+            )}
+            <Field label="Número de documento" required>
+              <input className={inp} value={data.cedula_solicitante ?? ""} onChange={e => set("cedula_solicitante", e.target.value)} placeholder="Cédula / NIT" />
+            </Field>
+            {tipoOrigen === "poder" && (
+              <Field label="TP (Tarjeta Profesional)">
+                <input className={inp} value={data.tp_solicitante ?? ""} onChange={e => set("tp_solicitante", e.target.value)} placeholder="Número TP" />
+              </Field>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Propietario (todos excepto SNR) ── */}
+      {tipoOrigen !== "snr" && (
+        <div className="card p-5 space-y-4">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Propietario</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Field label="Nombre completo" required>
+                <input className={inp} value={data.nombre_propietario ?? ""} onChange={e => set("nombre_propietario", e.target.value)} placeholder="Nombre completo del propietario" />
+              </Field>
+            </div>
+            <Field label="Cédula" required>
+              <input className={inp} value={data.cedula_propietario ?? ""} onChange={e => set("cedula_propietario", e.target.value)} placeholder="C.C. del propietario" />
+            </Field>
+          </div>
+        </div>
+      )}
+
+      {/* ── Predio ── */}
+      <div className="card p-5 space-y-4">
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Datos del predio</h3>
         <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
-            <label className="field-label">Nombre completo <span className="text-brand-danger">*</span></label>
-            <input
-              className="field-input"
-              value={data.nombre_propietario}
-              onChange={(e) => set("nombre_propietario", e.target.value)}
-              placeholder="Nombre completo del propietario"
-            />
-          </div>
-          <div>
-            <label className="field-label">Cédula <span className="text-brand-danger">*</span></label>
-            <input
-              className="field-input"
-              value={data.cedula}
-              onChange={(e) => set("cedula", e.target.value)}
-              placeholder="Número de cédula"
-            />
-          </div>
-          <div>
-            <label className="field-label">Número predial <span className="text-brand-danger">*</span></label>
-            <input
-              className="field-input font-mono text-xs"
-              value={data.numero_predial}
-              onChange={(e) => set("numero_predial", e.target.value)}
-              placeholder="05001000200000010001000"
-            />
-          </div>
-          <div className="col-span-2">
-            <label className="field-label">Folio de matrícula inmobiliaria <span className="text-brand-danger">*</span></label>
-            <input
-              className="field-input"
-              value={data.folio_matricula}
-              onChange={(e) => set("folio_matricula", e.target.value)}
-              placeholder="001-123456"
-            />
-          </div>
+          <Field label="Número predial" required>
+            <input className={clsx(inp, "font-mono text-xs")} value={data.numero_predial} onChange={e => set("numero_predial", e.target.value)} placeholder="Código catastral" />
+          </Field>
+          <Field label="Folio de matrícula inmobiliaria" required>
+            <input className={inp} value={data.folio_matricula} onChange={e => set("folio_matricula", e.target.value)} placeholder="140-XXXXX" />
+          </Field>
         </div>
       </div>
 
-      {/* Áreas */}
-      <div className="card p-5 space-y-4">
-        <div className="flex items-center gap-2 pb-2 border-b border-slate-700">
-          <FileText size={15} className="text-brand-primary" />
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Áreas</h3>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="field-label">Área construida (m²) <span className="text-brand-danger">*</span></label>
-            <input
-              type="number"
-              min={1}
-              step={0.5}
-              className="field-input"
-              value={data.area_construida_m2}
-              onChange={(e) => set("area_construida_m2", e.target.value)}
-              placeholder="95.5"
-            />
-          </div>
-          <div>
-            <label className="field-label">Área de terreno (m²) <span className="text-brand-danger">*</span></label>
-            <input
-              type="number"
-              min={1}
-              step={0.5}
-              className="field-input"
-              value={data.area_terreno_m2}
-              onChange={(e) => set("area_terreno_m2", e.target.value)}
-              placeholder="120.0"
-            />
+      {/* ── Áreas (solo Tercera Clase) ── */}
+      {tipoMutacion === "tercera_clase" && (
+        <div className="card p-5 space-y-4">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Áreas</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Área construida (m²)" required>
+              <input type="number" min={1} step={0.5} className={inp} value={data.area_construida_m2 ?? ""} onChange={e => set("area_construida_m2", e.target.value)} placeholder="95.5" />
+            </Field>
+            <Field label="Área de terreno (m²)" required>
+              <input type="number" min={1} step={0.5} className={inp} value={data.area_terreno_m2 ?? ""} onChange={e => set("area_terreno_m2", e.target.value)} placeholder="120" />
+            </Field>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Documentos */}
+      {/* ── Documentos ── */}
       <div className="card p-5 space-y-3">
-        <div className="flex items-center gap-2 pb-2 border-b border-slate-700">
-          <FileText size={15} className="text-brand-primary" />
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Documentos aportados</h3>
-        </div>
-
-        {/* Quick add buttons */}
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Documentos justificativos</h3>
         <div className="flex flex-wrap gap-1.5">
-          {DOCS_COMUNES.filter((d) => !data.documentos_aportados.includes(d)).map((doc) => (
-            <button
-              key={doc}
-              type="button"
-              onClick={() => addDoc(doc)}
-              className="text-xs px-2.5 py-1 rounded-full border border-slate-600 text-slate-400
-                         hover:border-brand-primary hover:text-brand-primary transition-all"
-            >
+          {(DOCS_RAPIDOS[tipoMutacion] ?? []).filter(d => !data.documentos_aportados.includes(d)).map(doc => (
+            <button key={doc} type="button" onClick={() => addDoc(doc)}
+              className="text-xs px-2.5 py-1 rounded-full border border-slate-600 text-slate-400 hover:border-brand-primary hover:text-brand-primary transition-all">
               + {doc}
             </button>
           ))}
         </div>
-
-        {/* Current docs */}
         <div className="space-y-1.5">
           {data.documentos_aportados.map((doc, i) => (
             <div key={i} className="flex items-center gap-2 group">
-              <span className="flex-1 text-sm text-slate-300 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50">
-                {doc}
-              </span>
-              <button
-                type="button"
-                onClick={() => removeDoc(i)}
-                className="opacity-0 group-hover:opacity-100 p-1 text-brand-danger
-                           hover:bg-red-500/10 rounded transition-all"
-              >
+              <span className="flex-1 text-sm text-slate-300 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50">{doc}</span>
+              <button type="button" onClick={() => removeDoc(i)} className="opacity-0 group-hover:opacity-100 p-1 text-brand-danger hover:bg-red-500/10 rounded transition-all">
                 <Minus size={14} />
               </button>
             </div>
           ))}
         </div>
-
-        {/* Manual add */}
         <div className="flex gap-2">
-          <input
-            className={clsx("field-input flex-1")}
-            value={newDoc}
-            onChange={(e) => setNewDoc(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addDoc())}
-            placeholder="Otro documento..."
-          />
-          <button type="button" onClick={() => addDoc()} className="btn-ghost px-3">
-            <Plus size={16} />
-          </button>
+          <input className={clsx(inp, "flex-1")} value={newDoc} onChange={e => setNewDoc(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addDoc())} placeholder="Otro documento..." />
+          <button type="button" onClick={() => addDoc()} className="btn-ghost px-3"><Plus size={16} /></button>
         </div>
       </div>
 
-      {/* Submit */}
-      <button
-        type="button"
-        onClick={() => onGenerate(data)}
-        disabled={isLoading || !canSubmit}
-        className="btn-primary w-full justify-center py-3 text-base"
-      >
-        {isLoading ? (
-          <>
-            <span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-            Generando motivada con Claude...
-          </>
-        ) : (
-          <>
-            <Wand2 size={18} />
-            Generar Motivada
-          </>
-        )}
+      <button type="button" onClick={() => onGenerate(data)} disabled={isLoading || !canSubmit}
+        className="btn-primary w-full justify-center py-3.5 text-base">
+        {isLoading
+          ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />Generando motivada...</>
+          : <><Wand2 size={18} />Generar Motivada</>}
       </button>
     </div>
   );
