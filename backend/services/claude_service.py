@@ -23,58 +23,84 @@ def _municipio(data: SolicitudUnificada) -> str:
 
 # ── Demo motivadas ────────────────────────────────────────────────────────────
 
+_P1_PRIMERA = (
+    "Que la Resolución 1040 de 2023 del Instituto Geográfico Agustín Codazzi (IGAC), en el "
+    "artículo 4.5.1 numeral 1 señala que las mutaciones de primera clase son aquellas que se "
+    "presentan cuando cambia el propietario, poseedor u ocupante de un predio y no afecta el "
+    "avalúo catastral."
+)
+
+_P3_PRIMERA = (
+    "Que, en consecuencia, procede una mutación de primera y su correspondiente inscripción en "
+    "el catastro, conforme lo indican en los artículos 4.5.1, y subsiguientes de la Resolución "
+    "1040 de 2023, 'por la cual se expide la resolución única de la gestión catastral "
+    "multipropósito', el artículo 4.6.1 y subsiguientes de la resolución vigente sobre los "
+    "requisitos para trámites y otros procedimientos administrativos."
+)
+
+def _p4_primera(mun: str) -> str:
+    return (
+        f"Que, revisados los antecedentes catastrales del municipio de {mun}, verificada la "
+        f"documentación aportada por el(la) solicitante, procede la mutación de primera y su "
+        f"correspondiente inscripción en el catastro."
+    )
+
 def _demo_primera_propietario(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
-    return (
+    p2 = (
         f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con C.C. No. "
         f"{data.cedula_propietario}, propietario del inmueble identificado con número predial "
         f"{data.numero_predial}, inscrito en la base de datos catastral del municipio de {mun}, "
         f"presentó ante la Oficina de atención al público una solicitud de trámite catastral, "
         f"consistente en Cambio de propietario, soportada en los siguientes documentos "
-        f"justificativos: {docs}."
+        f"aportados: {docs}."
     )
+    return "\n\n".join([_P1_PRIMERA, p2, _P3_PRIMERA, _p4_primera(mun)])
 
 def _demo_primera_autorizado(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
-    return (
-        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con CC NO. "
-        f"{data.cedula_solicitante}, en su condición de contacto y/o autorizado del señor(a) "
-        f"{data.nombre_propietario}, identificado con C.C. {data.cedula_propietario}, propietario "
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con CC No. "
+        f"{data.cedula_solicitante}, en su condición de autorizado del señor(a) "
+        f"{data.nombre_propietario}, identificado con CC. {data.cedula_propietario}, propietario "
         f"del inmueble identificado con número predial {data.numero_predial}, inscrito en la base "
         f"de datos catastral del municipio de {mun}, presentó ante la Oficina de atención al "
         f"público una solicitud de trámite catastral, consistente en Cambio de propietario, "
-        f"soportada en los siguientes documentos justificativos: {docs}."
+        f"soportada en los siguientes documentos aportados: {docs}."
     )
+    return "\n\n".join([_P1_PRIMERA, p2, _P3_PRIMERA, _p4_primera(mun)])
 
 def _demo_primera_poder(data: SolicitudUnificada) -> str:
     mun    = _municipio(data)
     docs   = ", ".join(data.documentos_aportados)
-    tp_txt = f", y TP. {data.tp_solicitante}" if data.tp_solicitante else ""
-    return (
+    tp_txt = f", TP. {data.tp_solicitante}" if data.tp_solicitante else ""
+    p2 = (
         f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
-        f"{data.tipo_doc_solicitante or 'CC'} NO. {data.cedula_solicitante}{tp_txt}, en su "
-        f"condición de apoderado del señor(a) {data.nombre_propietario}, identificado con c.c. "
+        f"{data.tipo_doc_solicitante or 'CC'} No. {data.cedula_solicitante}{tp_txt}, actuando "
+        f"en calidad de apoderado del señor(a) {data.nombre_propietario}, identificado con C.C. "
         f"{data.cedula_propietario}, propietario del inmueble identificado con número predial "
         f"{data.numero_predial}, inscrito en la base de datos catastral del municipio de {mun}, "
         f"presentó ante la Oficina de atención al público una solicitud de trámite catastral, "
         f"consistente en Cambio de propietario, soportada en los siguientes documentos "
-        f"justificativos: {docs}."
+        f"aportados: {docs}."
     )
+    return "\n\n".join([_P1_PRIMERA, p2, _P3_PRIMERA, _p4_primera(mun)])
 
 def _demo_primera_snr(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
-    return (
+    p2 = (
         f"Que teniendo en cuenta la interrelación catastro-registro y la colaboración armónica "
-        f"que entre estas existe, la superintendencia de notariado y registro del circuito de "
+        f"que entre estas existe, la Superintendencia de Notariado y Registro del circuito de "
         f"{mun}, suministra información para realizar el debido estudio jurídico, con el fin de "
-        f"inscribir en la base catastral del municipio de {mun}, Córdoba las respectivas "
-        f"mutaciones. La oficina de catastro radico con el número {data.numero_radicado or 'N/A'}, "
-        f"el predio {data.numero_predial}, soportada en los siguientes documentos justificativos: "
-        f"{docs}."
+        f"inscribir en la base catastral del municipio de {mun} las respectivas mutaciones. "
+        f"La oficina de catastro radicó con el número de radicado {data.numero_radicado or 'N/A'}, "
+        f"una mutación de primera clase sobre el predio identificado con numero predial "
+        f"{data.numero_predial}, soportada en los siguientes documentos justificativos: {docs}."
     )
+    return "\n\n".join([_P1_PRIMERA, p2, _P3_PRIMERA, _p4_primera(mun)])
 
 def _demo_tercera(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
@@ -96,7 +122,35 @@ def _demo_tercera(data: SolicitudUnificada) -> str:
             f"identificado con C.C. {data.cedula_propietario},"
         )
     elif data.tipo_origen == "snr":
-        return _demo_primera_snr(data)  # SNR uses same structure for any mutation type
+        snr_p2 = (
+            f"Que teniendo en cuenta la interrelación catastro-registro y la colaboración "
+            f"armónica que entre estas existe, la Superintendencia de Notariado y Registro del "
+            f"circuito de {mun}, suministra información para realizar el debido estudio jurídico, "
+            f"con el fin de inscribir en la base catastral del municipio de {mun} las respectivas "
+            f"mutaciones. La oficina de catastro radicó con el número de radicado "
+            f"{data.numero_radicado or 'N/A'}, una mutación de tercera clase sobre el predio "
+            f"identificado con numero predial {data.numero_predial}, soportada en los siguientes "
+            f"documentos justificativos: {docs}."
+        )
+        return (
+            snr_p2
+            + f"\n\n"
+            + f"Que en atención a la solicitud presentada se realizó la verificación de la "
+            f"documentación aportada y visita técnica, se concluye que se procede a incorporar el "
+            f"elemento constructivo al predio con referencia catastral No. {data.numero_predial}, "
+            f"para un total de área construida de {data.area_construida_m2} metros cuadrados sobre "
+            f"un área de terreno de {data.area_terreno_m2} metros cuadrados."
+            + f"\n\n"
+            + f"Que, revisados los antecedentes catastrales del municipio de {mun}, verificada la "
+            f"documentación aportada por el(la) solicitante, se procede a la validación "
+            f"correspondiente en los términos del artículo 2.2.2.2.6. del Decreto 1170 de 2015, "
+            f"modificado por el Decreto 148 de 2020, se pudo establecer que para el predio con "
+            f"referencia catastral predial {data.numero_predial} procede la mutación de tercera "
+            f"clase, por incorporar o modificar las unidades y su correspondiente inscripción en el "
+            f"catastro, conforme lo indica el artículo 4.5.1 numeral 3 de la Resolución 1040 de "
+            f"2023, en concordancia del artículo 2.2.2.2.2 literal C del Decreto 1170 de 2015, "
+            f"modificado por el Decreto 148 de 2020."
+        )
     else:  # propietario
         apertura = (
             f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con C.C. No. "
@@ -147,9 +201,19 @@ SYSTEM_PROMPT = """
 Eres experto en catastro colombiano. Redactas motivadas siguiendo la Resolución 1040 de 2023
 del IGAC, el Decreto 1170 de 2015 y el Decreto 148 de 2020.
 
-Genera párrafos "Que..." según el tipo de mutación y origen de la solicitud.
+Para mutaciones de PRIMERA CLASE genera exactamente 4 párrafos "Que...":
+1. Base legal: artículo 4.5.1 numeral 1 de la Resolución 1040 de 2023 (cambio de propietario).
+2. Identificación del solicitante/propietario según el origen (propietario, autorizado, apoderado o SNR), con número predial y municipio, y documentos aportados.
+3. Consecuencia: procede mutación de primera conforme artículos 4.5.1 y 4.6.1 de la Resolución 1040 de 2023.
+4. Conclusión: revisados antecedentes del municipio, procede la mutación de primera.
+
+Para mutaciones de TERCERA CLASE genera 3 párrafos "Que...":
+1. Identificación del solicitante con folio de matrícula, número predial, municipio y documentos aportados.
+2. Verificación documental y visita técnica: área construida y área de terreno.
+3. Validación conforme Decreto 1170 de 2015 y Resolución 1040 de 2023 artículo 4.5.1 numeral 3.
+
 Sin títulos, sin markdown, párrafos separados por doble salto de línea.
-Lenguaje formal administrativo colombiano. Máximo 400 palabras.
+Lenguaje formal administrativo colombiano. Máximo 500 palabras.
 """
 
 def generate_motivada(data: SolicitudUnificada) -> dict:
