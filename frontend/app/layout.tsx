@@ -8,8 +8,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className="dark">
-      <body className="min-h-screen bg-[#0F172A] text-slate-100 antialiased">
+    <html lang="es">
+      <head>
+        {/* Apply saved theme before first paint to avoid flash */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(){
+            try {
+              var t = localStorage.getItem('catia-theme') || 'dark';
+              document.documentElement.setAttribute('data-theme', t);
+            } catch(e){}
+          })();
+        ` }} />
+      </head>
+      <body className="min-h-screen antialiased">
         {children}
       </body>
     </html>

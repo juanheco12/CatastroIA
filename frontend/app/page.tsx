@@ -8,7 +8,7 @@ import HistoryPanel from "./components/HistoryPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import { generarMotivada, MotivadaGeneradaResponse, HistorialDetalle } from "@/lib/api";
 import {
-  MapPin, Sparkles, FileText, Eye, History, Settings, AlertCircle, ArrowLeft,
+  MapPin, FileText, Eye, History, Settings, AlertCircle, ArrowLeft,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -94,15 +94,11 @@ export default function Dashboard() {
             <span className="font-bold text-slate-100">CatIA</span>
             <span className="hidden sm:inline text-slate-500 text-xs">Motivadas Catastrales</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <Sparkles size={12} className="text-brand-warning" />
-            <span className="hidden sm:inline">Claude Sonnet 4.6</span>
-            {mutacion && origen && (
-              <span className="font-mono bg-slate-800 px-2 py-0.5 rounded text-slate-300">
-                {labelMutacion[mutacion]} · {labelOrigen[origen]}
-              </span>
-            )}
-          </div>
+          {mutacion && origen && (
+            <span className="font-mono bg-slate-800 px-2 py-0.5 rounded text-slate-300 text-xs">
+              {labelMutacion[mutacion]} · {labelOrigen[origen]}
+            </span>
+          )}
         </div>
       </header>
 
