@@ -27,6 +27,4 @@ class HistorialMotivada(Base):
     texto_motivada: Mapped[str] = mapped_column(Text)
     datos_formulario: Mapped[str] = mapped_column(Text)  # JSON serializado
     archivo_exportado: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    estado: Mapped[str] = mapped_column(
-        SAEnum(EstadoMotivada), default=EstadoMotivada.GENERADA
-    )
+    estado: Mapped[str] = mapped_column(String(50), default="generada")

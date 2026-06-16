@@ -1,15 +1,14 @@
 from sqlalchemy.orm import Session
-from models.motivada import HistorialMotivada, EstadoMotivada, TipoMutacion
-from schemas.tercera_clase import TerceraClaseInput
+from models.motivada import HistorialMotivada, EstadoMotivada
 
 
-def crear_registro(db: Session, data: TerceraClaseInput, texto_motivada: str) -> HistorialMotivada:
+def crear_registro(db: Session, data, texto_motivada: str) -> HistorialMotivada:
     registro = HistorialMotivada(
-        tipo_mutacion=TipoMutacion.TERCERA_CLASE,
+        tipo_mutacion=getattr(data, "tipo_mutacion", "tercera_clase"),
         numero_expediente=data.numero_predial,
         numero_predio=data.numero_predial,
-        propietario_nombre=data.nombre_propietario,
-        propietario_documento=data.cedula,
+        propietario_nombre=getattr(data, "nombre_propietario", "") or "",
+        propietario_documento=getattr(data, "cedula_propietario", "") or getattr(data, "cedula", "") or "-",
         texto_motivada=texto_motivada,
         datos_formulario=data.model_dump_json(),
         estado=EstadoMotivada.GENERADA,
