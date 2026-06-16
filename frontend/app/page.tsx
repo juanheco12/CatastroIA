@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LandingPage from "./components/LandingPage";
 import MutationSelector, { TipoMutacion, TipoOrigen } from "./components/MutationSelector";
 import FormBuilder, { SolicitudFormData } from "./components/FormBuilder";
@@ -9,22 +9,24 @@ import HistoryPanel from "./components/HistoryPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import { generarMotivada, MotivadaGeneradaResponse, HistorialDetalle } from "@/lib/api";
 import {
-  MapPin, FileText, Eye, History, Settings, AlertCircle, ArrowLeft,
+  FileText, Eye, History, Settings, AlertCircle, ArrowLeft,
+  Sun, Moon, Building2, House,
 } from "lucide-react";
 import clsx from "clsx";
 
-type Tab     = "form" | "preview" | "historial" | "settings";
-type Step    = "select" | "form";
+type Tab  = "form" | "preview" | "historial" | "settings";
+type Step = "select" | "form";
 
 const TABS = [
-  { id: "form"      as Tab, label: "Formulario", icon: FileText  },
-  { id: "preview"   as Tab, label: "Motivada",   icon: Eye       },
-  { id: "historial" as Tab, label: "Historial",  icon: History   },
-  { id: "settings"  as Tab, label: "Ajustes",    icon: Settings  },
+  { id: "form"      as Tab, label: "Formulario", icon: FileText },
+  { id: "preview"   as Tab, label: "Motivada",   icon: Eye      },
+  { id: "historial" as Tab, label: "Historial",  icon: History  },
+  { id: "settings"  as Tab, label: "Ajustes",    icon: Settings },
 ];
 
 export default function Dashboard() {
   const [showLanding, setShowLanding] = useState(true);
+  const [darkMode,    setDarkMode]    = useState(true);
   const [tab,      setTab]      = useState<Tab>("form");
   const [step,     setStep]     = useState<Step>("select");
   const [mutacion, setMutacion] = useState<TipoMutacion | null>(null);
@@ -34,12 +36,23 @@ export default function Dashboard() {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
 
+  useEffect(() => {
+    const stored = localStorage.getItem("catia-theme");
+    const isDark = stored ? stored === "dark" : true;
+    setDarkMode(isDark);
+    document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+  }, []);
+
+  const applyTheme = (isDark: boolean) => {
+    setDarkMode(isDark);
+    const t = isDark ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+    localStorage.setItem("catia-theme", t);
+  };
+
   if (showLanding) return <LandingPage onStart={() => setShowLanding(false)} />;
 
-  const handleOrigenSelect = (v: TipoOrigen) => {
-    setOrigen(v);
-    setStep("form");
-  };
+  const handleOrigenSelect = (v: TipoOrigen) => { setOrigen(v); setStep("form"); };
 
   const handleGenerate = async (data: SolicitudFormData) => {
     setLoading(true);
@@ -91,21 +104,67 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Top bar */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-brand-primary flex items-center justify-center">
-              <MapPin size={16} className="text-white" />
+      {/* ── Header ── */}
+      <header
+        className="border-b sticky top-0 z-10 backdrop-blur-sm transition-colors duration-200"
+        style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
+      >
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+          {/* Logo */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-brand-primary flex items-center justify-center shrink-0 shadow-lg shadow-teal-500/30">
+              <Building2 size={16} className="text-white" />
             </div>
-            <span className="font-bold text-slate-100">CatIA</span>
-            <span className="hidden sm:inline text-slate-500 text-xs">Motivadas Catastrales</span>
+            <div className="leading-tight">
+              <div className="font-bold text-sm" style={{ color: "var(--text)" }}>CatIA</div>
+              <div className="hidden sm:block text-[10px]" style={{ color: "var(--text-muted)" }}>
+                Conservación Catastral
+              </div>
+            </div>
+            {mutacion && origen && (
+              <span
+                className="hidden md:inline font-mono text-xs px-2 py-0.5 rounded-md border"
+                style={{
+                  backgroundColor: "rgba(20,184,166,0.08)",
+                  borderColor: "rgba(20,184,166,0.25)",
+                  color: "#2dd4bf",
+                }}
+              >
+                {labelMutacion[mutacion]} · {labelOrigen[origen]}
+              </span>
+            )}
           </div>
-          {mutacion && origen && (
-            <span className="font-mono bg-slate-800 px-2 py-0.5 rounded text-slate-300 text-xs">
-              {labelMutacion[mutacion]} · {labelOrigen[origen]}
-            </span>
-          )}
+
+          {/* Right controls */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Theme toggle */}
+            <button
+              type="button"
+              onClick={() => applyTheme(!darkMode)}
+              className="w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-200 hover:border-brand-primary"
+              style={{ backgroundColor: "var(--muted)", borderColor: "var(--border)" }}
+              title={darkMode ? "Cambiar a claro" : "Cambiar a oscuro"}
+            >
+              {darkMode
+                ? <Sun  size={16} className="text-brand-primary" />
+                : <Moon size={16} className="text-brand-primary" />}
+            </button>
+
+            {/* Back to landing */}
+            <button
+              type="button"
+              onClick={() => setShowLanding(true)}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-xl border transition-all duration-200 hover:border-brand-primary"
+              style={{
+                backgroundColor: "var(--muted)",
+                borderColor: "var(--border)",
+                color: "var(--text-muted)",
+              }}
+            >
+              <House size={13} />
+              <span className="hidden sm:inline">Inicio</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -118,7 +177,7 @@ export default function Dashboard() {
                 className={clsx(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left",
                   tab === id
-                    ? "bg-brand-primary text-white shadow-lg shadow-blue-500/20"
+                    ? "bg-brand-primary text-white shadow-lg shadow-teal-500/20"
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
                 )}>
                 <Icon size={16} />{label}
@@ -129,7 +188,6 @@ export default function Dashboard() {
 
           {/* Main */}
           <main className="flex-1 min-w-0 pb-20 lg:pb-0">
-            {/* Error banner */}
             {error && (
               <div className="flex items-start gap-3 p-4 mb-5 bg-red-500/10 border border-red-500/30 rounded-xl text-sm text-brand-danger">
                 <AlertCircle size={18} className="mt-0.5 shrink-0" />
@@ -141,7 +199,6 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* FORMULARIO tab */}
             {tab === "form" && (
               <>
                 {step === "select" && (
@@ -154,10 +211,8 @@ export default function Dashboard() {
                 )}
                 {step === "form" && mutacion && origen && (
                   <div className="space-y-4">
-                    <button type="button" onClick={() => setStep("select")}
-                      className="btn-ghost text-xs">
-                      <ArrowLeft size={13} />
-                      Cambiar tipo / origen
+                    <button type="button" onClick={() => setStep("select")} className="btn-ghost text-xs">
+                      <ArrowLeft size={13} />Cambiar tipo / origen
                     </button>
                     <FormBuilder
                       tipoMutacion={mutacion}
@@ -170,25 +225,31 @@ export default function Dashboard() {
               </>
             )}
 
-            {/* PREVIEW tab */}
             {tab === "preview" && motivada && formData ? (
               <PreviewMotivada motivada={motivada} formData={formData as never} onReset={handleReset} />
             ) : tab === "preview" ? (
               <div className="flex flex-col items-center justify-center py-24 text-slate-500 gap-3">
                 <Eye size={48} className="opacity-20" />
                 <p className="text-sm">Aún no hay motivada generada</p>
-                <button type="button" onClick={() => setTab("form")} className="btn-primary text-xs mt-2">Ir al formulario</button>
+                <button type="button" onClick={() => setTab("form")} className="btn-primary text-xs mt-2">
+                  Ir al formulario
+                </button>
               </div>
             ) : null}
 
             {tab === "historial" && <HistoryPanel onReopen={handleReopen} />}
-            {tab === "settings"  && <SettingsPanel />}
+            {tab === "settings"  && (
+              <SettingsPanel
+                theme={darkMode ? "dark" : "light"}
+                onThemeChange={(t) => applyTheme(t === "dark")}
+              />
+            )}
           </main>
         </div>
       </div>
 
       {/* Mobile tab bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-10 flex">
+      <div className="mobile-tabbar lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-10 flex">
         {TABS.map(({ id, icon: Icon }) => (
           <button key={id} type="button" onClick={() => setTab(id)}
             className={clsx("flex-1 flex flex-col items-center py-2.5 transition-colors",

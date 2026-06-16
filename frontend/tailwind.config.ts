@@ -13,7 +13,7 @@ const config: Config = {
           bg: "#0F172A",
           surface: "#1E293B",
           muted: "#334155",
-          primary: "#3B82F6",
+          primary: "#14b8a6",
           success: "#10B981",
           warning: "#F59E0B",
           danger: "#EF4444",
