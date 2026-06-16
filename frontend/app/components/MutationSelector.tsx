@@ -1,30 +1,16 @@
 "use client";
 
-import { Building2, Users, ClipboardEdit, ChevronRight } from "lucide-react";
+import { Building2, Users, ClipboardEdit, FilePlus2, ChevronRight } from "lucide-react";
 import clsx from "clsx";
 
-export type TipoMutacion = "primera_clase" | "tercera_clase" | "rectificacion";
+export type TipoMutacion = "primera_clase" | "tercera_clase" | "rectificacion" | "complementacion";
 export type TipoOrigen   = "propietario"   | "autorizado" | "poder" | "snr" | "oficio";
 
 const MUTACIONES = [
-  {
-    id: "primera_clase" as TipoMutacion,
-    titulo: "Primera Clase",
-    subtitulo: "Cambio de propietario",
-    icon: Users,
-  },
-  {
-    id: "tercera_clase" as TipoMutacion,
-    titulo: "Tercera Clase",
-    subtitulo: "Incorporación de construcción",
-    icon: Building2,
-  },
-  {
-    id: "rectificacion" as TipoMutacion,
-    titulo: "Rectificación",
-    subtitulo: "Corrección de datos catastrales",
-    icon: ClipboardEdit,
-  },
+  { id: "primera_clase"   as TipoMutacion, titulo: "Primera Clase",   subtitulo: "Cambio de propietario",          icon: Users        },
+  { id: "tercera_clase"   as TipoMutacion, titulo: "Tercera Clase",   subtitulo: "Incorporación de construcción",   icon: Building2    },
+  { id: "rectificacion"   as TipoMutacion, titulo: "Rectificación",   subtitulo: "Corrección de datos catastrales", icon: ClipboardEdit },
+  { id: "complementacion" as TipoMutacion, titulo: "Complementación", subtitulo: "Adición de datos faltantes",      icon: FilePlus2    },
 ];
 
 const ORIGENES_POR_MUTACION: Record<TipoMutacion, { id: TipoOrigen; titulo: string; desc: string }[]> = {
@@ -41,9 +27,13 @@ const ORIGENES_POR_MUTACION: Record<TipoMutacion, { id: TipoOrigen; titulo: stri
     { id: "snr",         titulo: "De la SNR",                desc: "Superintendencia de Notariado y Registro" },
   ],
   rectificacion: [
-    { id: "propietario", titulo: "Por propietario",  desc: "El propietario solicita la corrección" },
-    { id: "autorizado",  titulo: "Por autorizado",   desc: "Contacto o autorizado del propietario" },
-    { id: "oficio",      titulo: "De oficio",        desc: "La oficina de catastro corrige por oficio" },
+    { id: "propietario", titulo: "Por propietario", desc: "El propietario solicita la corrección" },
+    { id: "autorizado",  titulo: "Por autorizado",  desc: "Contacto o autorizado del propietario" },
+    { id: "oficio",      titulo: "De oficio",       desc: "La oficina de catastro corrige por oficio" },
+  ],
+  complementacion: [
+    { id: "propietario", titulo: "Por propietario", desc: "El propietario solicita la adición" },
+    { id: "snr",         titulo: "De la SNR",       desc: "Superintendencia de Notariado y Registro" },
   ],
 };
 
@@ -67,7 +57,7 @@ export default function MutationSelector({
           <span className="w-5 h-5 rounded-full bg-brand-primary text-white text-xs flex items-center justify-center font-bold">1</span>
           ¿Qué tipo de mutación?
         </h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {MUTACIONES.map(({ id, titulo, subtitulo, icon: Icon }) => (
             <button
               key={id}

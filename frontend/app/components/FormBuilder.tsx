@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Wand2, Plus, Minus } from "lucide-react";
+import { Wand2, Plus, Minus, Bell, BellOff, BellMinus } from "lucide-react";
 import { TipoMutacion, TipoOrigen } from "./MutationSelector";
 import clsx from "clsx";
 
 export interface SolicitudFormData {
-  tipo_mutacion:   TipoMutacion;
-  tipo_origen:     TipoOrigen;
+  tipo_mutacion:        TipoMutacion;
+  tipo_origen:          TipoOrigen;
   numero_predial:       string;
   folio_matricula:      string;
   municipio?:           string;
@@ -21,111 +21,83 @@ export interface SolicitudFormData {
   area_construida_m2?:  number | string;
   area_terreno_m2?:     number | string;
   campo_rectificado?:   string;
+  campo_complementado?: string;
+  tipo_notificacion?:   "notificable" | "no_notificable" | null;
   documentos_aportados: string[];
 }
 
-// ── Mock data per case ──────────────────────────────────────────────────────
+// ── Mock data ────────────────────────────────────────────────────────────────
 const MOCKS: Record<string, Partial<SolicitudFormData>> = {
   primera_clase_propietario: {
-    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ",
-    cedula_propietario: "6.872.472",
-    numero_predial:     "23001000090004000000000",
-    folio_matricula:    "140-38712",
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
+    numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
     documentos_aportados: ["Sentencia SN del 2018-11-27 Juzgado Tercero Civil Municipal de Montería, debidamente registrada en el folio de matrícula inmobiliaria 140-38712"],
   },
   primera_clase_autorizado: {
-    nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ",
-    cedula_solicitante: "1.234.567",
-    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ",
-    cedula_propietario: "6.872.472",
-    numero_predial:     "23001000090004000000000",
-    folio_matricula:    "140-38712",
+    nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ", cedula_solicitante: "1.234.567",
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
+    numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
     documentos_aportados: ["Sentencia SN del 2018-11-27 Juzgado Tercero Civil Municipal de Montería, debidamente registrada en el folio de matrícula inmobiliaria 140-38712"],
   },
   primera_clase_poder: {
-    nombre_solicitante:    "JORGE LUIS MARTINEZ RUIZ",
-    tipo_doc_solicitante:  "CC",
-    cedula_solicitante:    "9.876.543",
-    tp_solicitante:        "45678",
-    nombre_propietario:    "HERNAN JOSE CAUSIL MARTINEZ",
-    cedula_propietario:    "6.872.472",
-    numero_predial:        "23001000090004000000000",
-    folio_matricula:       "140-38712",
-    documentos_aportados:  ["Poder especial No. 0826 del 31/12/2015 de la GOBERNACION DE CORDOBA, debidamente registrada en el folio de matrícula inmobiliaria 140-38712"],
+    nombre_solicitante: "JORGE LUIS MARTINEZ RUIZ", tipo_doc_solicitante: "CC",
+    cedula_solicitante: "9.876.543", tp_solicitante: "45678",
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
+    numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
+    documentos_aportados: ["Poder especial No. 0826 del 31/12/2015 de la GOBERNACION DE CORDOBA, debidamente registrada en el folio de matrícula inmobiliaria 140-38712"],
   },
   primera_clase_snr: {
-    numero_radicado: "2024-3312",
-    numero_predial:  "23001000100039002700000",
-    folio_matricula: "140-133775",
-    municipio:       "Montería",
+    numero_radicado: "2024-3312", numero_predial: "23001000100039002700000",
+    folio_matricula: "140-133775", municipio: "Montería",
     documentos_aportados: ["Escritura pública No. 1053 del 23/11/2023 de la Notaría Cuarta de Montería, debidamente registrada en el folio de matrícula inmobiliaria 140-133775"],
   },
   tercera_clase_propietario: {
-    nombre_propietario: "María Fernanda Gómez Restrepo",
-    cedula_propietario: "43512876",
-    numero_predial:     "05001000200000010001000",
-    folio_matricula:    "001-123456",
-    area_construida_m2: 95.5,
-    area_terreno_m2:    120,
+    nombre_propietario: "María Fernanda Gómez Restrepo", cedula_propietario: "43512876",
+    numero_predial: "05001000200000010001000", folio_matricula: "001-123456",
+    area_construida_m2: 95.5, area_terreno_m2: 120,
     documentos_aportados: ["Formulario de solicitud", "Copia cédula de ciudadanía", "Licencia de construcción"],
   },
   rectificacion_propietario: {
-    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ",
-    cedula_propietario: "6.872.472",
-    numero_predial:     "23001000090004000000000",
-    folio_matricula:    "140-38712",
-    campo_rectificado:  "el área construida",
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
+    numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
+    campo_rectificado: "el área construida",
     documentos_aportados: ["Certificado de tradición y libertad 140-38712", "Copia cédula de ciudadanía"],
   },
   rectificacion_autorizado: {
-    nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ",
-    cedula_solicitante: "1.234.567",
-    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ",
-    cedula_propietario: "6.872.472",
-    numero_predial:     "23001000090004000000000",
-    folio_matricula:    "140-38712",
-    campo_rectificado:  "la dirección",
+    nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ", cedula_solicitante: "1.234.567",
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
+    numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
+    campo_rectificado: "la dirección",
     documentos_aportados: ["Certificado de tradición y libertad 140-38712", "Documento de autorización"],
   },
   rectificacion_oficio: {
-    numero_predial:    "23001000090004000000000",
-    folio_matricula:   "140-38712",
+    numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
     campo_rectificado: "el propietario",
     documentos_aportados: ["Certificado de tradición y libertad 140-38712"],
+  },
+  complementacion_propietario: {
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
+    numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
+    numero_radicado: "2024-1528",
+    campo_complementado: "propietario",
+    documentos_aportados: ["Certificado de tradición y libertad 140-38712", "Copia cédula de ciudadanía"],
+  },
+  complementacion_snr: {
+    numero_radicado: "2024-3312", numero_predial: "23001000100039002700000",
+    folio_matricula: "140-133775", municipio: "Montería",
+    documentos_aportados: ["Escritura pública No. 1053 del 23/11/2023 de la Notaría Cuarta de Montería"],
   },
 };
 
 const DOCS_RAPIDOS: Record<string, string[]> = {
-  primera_clase: [
-    "Escritura pública",
-    "Certificado de libertad y tradición",
-    "Sentencia judicial",
-    "Poder especial",
-    "Resolución de adjudicación",
-  ],
-  tercera_clase: [
-    "Licencia de construcción",
-    "Plano de construcción aprobado",
-    "Declaración de construcción",
-    "Certificado de libertad y tradición",
-  ],
-  rectificacion: [
-    "Certificado de tradición y libertad",
-    "Copia cédula de ciudadanía",
-    "Escritura pública",
-    "Plano topográfico",
-  ],
+  primera_clase:   ["Escritura pública", "Certificado de libertad y tradición", "Sentencia judicial", "Poder especial", "Resolución de adjudicación"],
+  tercera_clase:   ["Licencia de construcción", "Plano de construcción aprobado", "Declaración de construcción", "Certificado de libertad y tradición"],
+  rectificacion:   ["Certificado de tradición y libertad", "Copia cédula de ciudadanía", "Escritura pública", "Plano topográfico"],
+  complementacion: ["Certificado de tradición y libertad", "Escritura pública", "Copia cédula de ciudadanía", "Resolución judicial"],
 };
 
-const CAMPOS_RAPIDOS = [
-  "el área construida",
-  "el área de terreno",
-  "la dirección",
-  "la nomenclatura",
-  "el propietario",
-  "los linderos",
-  "el estrato socioeconómico",
-];
+const CAMPOS_RAPIDOS_RECT = ["el área construida", "el área de terreno", "la dirección", "la nomenclatura", "el propietario", "los linderos", "el estrato socioeconómico"];
+const CAMPOS_RAPIDOS_COMP = ["propietario", "área construida", "área de terreno", "dirección", "nombre", "documento de identidad", "linderos"];
 
 interface Props {
   tipoMutacion: TipoMutacion;
@@ -146,18 +118,13 @@ function Field({ label, required, children }: { label: string; required?: boolea
 export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLoading }: Props) {
   const mockKey = `${tipoMutacion}_${tipoOrigen}`;
   const [data, setData] = useState<SolicitudFormData>({
-    tipo_mutacion: tipoMutacion,
-    tipo_origen:   tipoOrigen,
-    numero_predial: "", folio_matricula: "",
-    documentos_aportados: [],
+    tipo_mutacion: tipoMutacion, tipo_origen: tipoOrigen,
+    numero_predial: "", folio_matricula: "", documentos_aportados: [],
   });
   const [newDoc, setNewDoc] = useState("");
 
-  const set = (k: keyof SolicitudFormData, v: unknown) =>
-    setData(p => ({ ...p, [k]: v }));
-
-  const loadMock = () =>
-    setData(p => ({ ...p, ...MOCKS[mockKey] }));
+  const set = (k: keyof SolicitudFormData, v: unknown) => setData(p => ({ ...p, [k]: v }));
+  const loadMock = () => setData(p => ({ ...p, ...MOCKS[mockKey] }));
 
   const addDoc = (doc?: string) => {
     const d = (doc ?? newDoc).trim();
@@ -165,26 +132,24 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
     setData(p => ({ ...p, documentos_aportados: [...p.documentos_aportados, d] }));
     if (!doc) setNewDoc("");
   };
-
   const removeDoc = (i: number) =>
     setData(p => ({ ...p, documentos_aportados: p.documentos_aportados.filter((_, idx) => idx !== i) }));
 
   const inp = "field-input";
-
   const needsPropietario = tipoOrigen !== "snr" && tipoOrigen !== "oficio";
   const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder";
+  const needsRadicado    = tipoOrigen === "snr" || tipoMutacion === "complementacion";
 
-  // ── Validation ──────────────────────────────────────────────
+  // ── Validation ────────────────────────────────────────────────
   const canSubmit = (() => {
     if (!data.numero_predial || !data.folio_matricula) return false;
     if (tipoOrigen === "snr")    return !!data.numero_radicado;
-    if (tipoOrigen === "oficio") {
-      return tipoMutacion === "rectificacion" ? !!data.campo_rectificado : true;
-    }
+    if (tipoOrigen === "oficio") return tipoMutacion === "rectificacion" ? !!data.campo_rectificado : true;
     if (!data.cedula_propietario || !data.nombre_propietario) return false;
     if (needsSolicitante && !data.cedula_solicitante) return false;
-    if (tipoMutacion === "tercera_clase") return !!data.area_construida_m2 && !!data.area_terreno_m2;
-    if (tipoMutacion === "rectificacion") return !!data.campo_rectificado;
+    if (tipoMutacion === "tercera_clase")   return !!data.area_construida_m2 && !!data.area_terreno_m2;
+    if (tipoMutacion === "rectificacion")   return !!data.campo_rectificado;
+    if (tipoMutacion === "complementacion") return !!data.numero_radicado && !!data.campo_complementado;
     return true;
   })();
 
@@ -205,7 +170,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
             <Field label="Número de radicado" required>
               <input className={inp} value={data.numero_radicado ?? ""} onChange={e => set("numero_radicado", e.target.value)} placeholder="2024-3312" />
             </Field>
-            <Field label="Municipio" required>
+            <Field label="Municipio">
               <input className={inp} value={data.municipio ?? ""} onChange={e => set("municipio", e.target.value)} placeholder="Montería" />
             </Field>
           </div>
@@ -243,7 +208,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
         </div>
       )}
 
-      {/* ── Propietario (todos excepto SNR / Oficio) ── */}
+      {/* ── Propietario ── */}
       {needsPropietario && (
         <div className="card p-5 space-y-4">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Propietario</h3>
@@ -270,10 +235,16 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
           <Field label="Folio de matrícula inmobiliaria" required>
             <input className={inp} value={data.folio_matricula} onChange={e => set("folio_matricula", e.target.value)} placeholder="140-XXXXX" />
           </Field>
+          {/* Radicado para complementación propietario */}
+          {needsRadicado && tipoOrigen !== "snr" && (
+            <Field label="Número de radicado" required>
+              <input className={inp} value={data.numero_radicado ?? ""} onChange={e => set("numero_radicado", e.target.value)} placeholder="2024-XXXX" />
+            </Field>
+          )}
         </div>
       </div>
 
-      {/* ── Áreas (solo Tercera Clase) ── */}
+      {/* ── Áreas (Tercera Clase) ── */}
       {tipoMutacion === "tercera_clase" && (
         <div className="card p-5 space-y-4">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Áreas</h3>
@@ -288,12 +259,12 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
         </div>
       )}
 
-      {/* ── Campo rectificado (solo Rectificación) ── */}
+      {/* ── Campo rectificado (Rectificación) ── */}
       {tipoMutacion === "rectificacion" && (
         <div className="card p-5 space-y-3">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Dato a rectificar</h3>
           <div className="flex flex-wrap gap-1.5">
-            {CAMPOS_RAPIDOS.filter(c => c !== data.campo_rectificado).map(campo => (
+            {CAMPOS_RAPIDOS_RECT.filter(c => c !== data.campo_rectificado).map(campo => (
               <button key={campo} type="button" onClick={() => set("campo_rectificado", campo)}
                 className="text-xs px-2.5 py-1 rounded-full border border-slate-600 text-slate-400 hover:border-brand-primary hover:text-brand-primary transition-all">
                 {campo}
@@ -302,6 +273,24 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
           </div>
           <Field label="Campo que se rectifica" required>
             <input className={inp} value={data.campo_rectificado ?? ""} onChange={e => set("campo_rectificado", e.target.value)} placeholder="ej: el área construida, la dirección..." />
+          </Field>
+        </div>
+      )}
+
+      {/* ── Campo complementado (Complementación propietario) ── */}
+      {tipoMutacion === "complementacion" && tipoOrigen !== "snr" && (
+        <div className="card p-5 space-y-3">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Dato a complementar</h3>
+          <div className="flex flex-wrap gap-1.5">
+            {CAMPOS_RAPIDOS_COMP.filter(c => c !== data.campo_complementado).map(campo => (
+              <button key={campo} type="button" onClick={() => set("campo_complementado", campo)}
+                className="text-xs px-2.5 py-1 rounded-full border border-slate-600 text-slate-400 hover:border-brand-primary hover:text-brand-primary transition-all">
+                {campo}
+              </button>
+            ))}
+          </div>
+          <Field label="Dato que se complementa" required>
+            <input className={inp} value={data.campo_complementado ?? ""} onChange={e => set("campo_complementado", e.target.value)} placeholder="ej: propietario, área construida..." />
           </Field>
         </div>
       )}
@@ -332,6 +321,34 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
             onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addDoc())} placeholder="Otro documento..." />
           <button type="button" onClick={() => addDoc()} className="btn-ghost px-3"><Plus size={16} /></button>
         </div>
+      </div>
+
+      {/* ── Artículos finales ── */}
+      <div className="card p-5 space-y-3">
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Artículos finales</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { id: null,              label: "Sin artículos", icon: BellMinus },
+            { id: "notificable",     label: "Notificable",   icon: Bell     },
+            { id: "no_notificable",  label: "No notificable",icon: BellOff  },
+          ] as const).map(({ id, label, icon: Icon }) => (
+            <button key={label} type="button"
+              onClick={() => set("tipo_notificacion", id)}
+              className={clsx(
+                "flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium border transition-all",
+                data.tipo_notificacion === id
+                  ? "border-brand-primary bg-blue-500/10 text-brand-primary"
+                  : "border-slate-600 text-slate-400 hover:border-slate-400 hover:text-slate-200"
+              )}>
+              <Icon size={15} />{label}
+            </button>
+          ))}
+        </div>
+        {data.tipo_notificacion && (
+          <p className="text-xs text-slate-500">
+            Se agregarán los artículos segundo al sexto + COMUNÍQUESE Y CÚMPLASE al final de la motivada.
+          </p>
+        )}
       </div>
 
       <button type="button" onClick={() => onGenerate(data)} disabled={isLoading || !canSubmit}

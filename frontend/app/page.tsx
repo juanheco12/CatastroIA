@@ -72,9 +72,10 @@ export default function Dashboard() {
   };
 
   const labelMutacion: Record<TipoMutacion, string> = {
-    primera_clase: "1ra Clase",
-    tercera_clase: "3ra Clase",
-    rectificacion: "Rectificación",
+    primera_clase:   "1ra Clase",
+    tercera_clase:   "3ra Clase",
+    rectificacion:   "Rectificación",
+    complementacion: "Complementación",
   };
   const labelOrigen: Record<TipoOrigen, string> = {
     propietario: "Propietario",

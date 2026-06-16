@@ -256,6 +256,119 @@ def _demo_rectificacion_oficio(data: SolicitudUnificada) -> str:
     return "\n\n".join([_P1_RECTIFICACION, p2, _p3_rectificacion(data), _p4_rectificacion(data, mun), _P5_RECTIFICACION])
 
 
+# ── Complementación ──────────────────────────────────────────────────────────
+
+_P1_COMPLEMENTACION = (
+    "Que la Resolución 1040 de 2023 del Instituto Geográfico Agustín Codazzi (IGAC), en su "
+    "artículo 4.5.4 numeral 1, señala que los errores en la inscripción catastral que no "
+    "corresponden con la realidad del predio."
+)
+
+_P4_COMPLEMENTACION = (
+    "Que, revisados los antecedentes catastrales del municipio de {mun}, verificada la "
+    "documentación aportada por el(la) solicitante, así como la validación correspondiente "
+    "a través de la aplicación combinada de métodos INDIRECTO y DECLARATIVO-COLABORATIVO, "
+    "en los términos del artículo 2.2.2.2.6. del Decreto 1170 de 2015, modificado por el "
+    "Decreto 148 de 2020, procede a la complementación y su correspondiente inscripción en "
+    "el catastro, conforme lo indican en los artículos 4.5.5 de la Resolución 1040 de 2023, "
+    "en concordancia del artículo 2.2.2.2.2 literal C del 1170 de 2015, modificado por el "
+    "Decreto 148 de 2020."
+)
+
+_P5_COMPLEMENTACION = (
+    "Que la complementación ordenada hace alusión a una corrección simplemente formal, la "
+    "cual no modifica el avalúo catastral del predio objeto de esta."
+)
+
+def _demo_complementacion_propietario(data: SolicitudUnificada) -> str:
+    mun   = _municipio(data)
+    docs  = ", ".join(data.documentos_aportados)
+    campo = data.campo_complementado or ""
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con "
+        f"C.C. No. {data.cedula_propietario}, en calidad de propietario(a) del predio "
+        f"identificado catastralmente con {data.numero_predial}, inscrito en la base de datos "
+        f"catastral, presentó ante la Oficina de Catastro adscrita a la Secretaria de "
+        f"Planeación del municipio de {mun}, el trámite catastral correspondiente a "
+        f"complementación de datos bajo el radicado {data.numero_radicado or 'N/A'}, soportada "
+        f"en los siguientes documentos aportados: {docs}, con folio de matrícula inmobiliaria "
+        f"{data.folio_matricula}."
+    )
+    p3 = (
+        f"Que de acuerdo con el estudio de los documentos jurídicos se verifica por parte del "
+        f"operador que procede un trámite de complementación de(la) {campo}."
+    )
+    return "\n\n".join([_P1_COMPLEMENTACION, p2, p3, _P4_COMPLEMENTACION.format(mun=mun), _P5_COMPLEMENTACION])
+
+def _demo_complementacion_snr(data: SolicitudUnificada) -> str:
+    mun  = _municipio(data)
+    docs = ", ".join(data.documentos_aportados)
+    p2 = (
+        f"Que teniendo en cuenta la interrelación catastro-registro y la colaboración armónica "
+        f"que entre estas existe, la superintendencia de notariado y registro del circuito de "
+        f"{mun}, suministró información para realizar el debido estudio jurídico, con el fin de "
+        f"inscribir en la base catastral del municipio de {mun}, las respectivas mutaciones. "
+        f"La oficina de catastro radico con el número {data.numero_radicado or 'N/A'}, el "
+        f"{data.numero_predial}, con el(los) siguiente(s) documento(s) aportado(s) por la "
+        f"oficina de instrumentos públicos: {docs}."
+    )
+    p3 = (
+        f"De acuerdo con el estudio de los documentos jurídicos y revisada la información "
+        f"vigente en el folio de matrícula inmobiliaria {data.folio_matricula}, se procede a "
+        f"realizar la respectiva complementación."
+    )
+    return "\n\n".join([_P1_COMPLEMENTACION, p2, p3, _P4_COMPLEMENTACION.format(mun=mun), _P5_COMPLEMENTACION])
+
+
+# ── Artículos finales ─────────────────────────────────────────────────────────
+
+def _articulos_finales(tipo: str, mun: str) -> str:
+    art2 = (
+        "ARTICULO SEGUNDO: La inscripción ordenada en el artículo anterior se realizará de "
+        "conformidad con lo dispuesto en el capítulo 6, artículos 4.6.1 y subsiguientes de la "
+        "Resolución 1040 de 2023 expedida por el IGAC."
+    )
+    art5 = (
+        f"ARTÍCULO QUINTO: La información física, jurídica y económica, aplicada al predio "
+        f"objeto de esta resolución, entrará en vigencia para efectos catastrales al momento de "
+        f"quedar en firme su inscripción o incorporación en las bases catastrales del municipio "
+        f"de {mun}."
+    )
+    art6 = (
+        f"ARTÍCULO SEXTO: REMITIR copia del acto administrativo, cuando quede en firme, a la "
+        f"Dirección de Rentas del municipio de {mun} para la actualización de la información "
+        f"para fines fiscales y tributarios."
+    )
+    if tipo == "notificable":
+        art3 = (
+            "ARTÍCULO TERCERO: La notificación de la presente resolución se realizará conforme "
+            "lo dispuesto en el inciso 3 del artículo 4.8.2 de la Resolución 1040 de 2023, del "
+            "Instituto Geográfico Agustín Codazzi."
+        )
+        art4 = (
+            "ARTÍCULO CUARTO: Contra la presente resolución procede el recurso de reposición "
+            "ante el secretario de Planeación, y el recurso de apelación se podrá interponer "
+            "directamente o como subsidiario al de reposición ante el superior inmediato, dentro "
+            "de los diez (10) días siguientes a la notificación, de conformidad a los artículos "
+            "76 y 77 de la Ley 1437 de 2011 y lo dispuesto en artículo 4.8.4 de la Resolución "
+            "1040 de 2023. Cuando sea rechazado el recurso de apelación procede el recurso de "
+            "queja de conformidad con lo establecido en el artículo 74 y siguientes de la Ley "
+            "1437 de 2011. Recursos que se concederán en efecto suspensivo."
+        )
+    else:  # no_notificable
+        art3 = (
+            "ARTÍCULO TERCERO: La notificación de la presente resolución se realizará conforme "
+            "lo dispuesto en el inciso 1 y 2 del artículo 4.8.2 de la Resolución 1040 de 2023, "
+            "del Instituto Geográfico Agustín Codazzi."
+        )
+        art4 = (
+            "ARTÍCULO CUARTO: Contra el presente acto administrativo no procede recurso alguno, "
+            "conforme lo preceptúa el artículo 4.8.5 de la Resolución 1040 de 2023 y el artículo "
+            "75 de la Ley 1437 de 2011."
+        )
+    return "\n\nARTÍCULOS FINALES\n\n" + "\n\n".join([art2, art3, art4, art5, art6, "COMUNÍQUESE Y CÚMPLASE"])
+
+
 def _motivada_demo(data: SolicitudUnificada) -> str:
     if data.tipo_mutacion == "primera_clase":
         if data.tipo_origen == "autorizado":
@@ -273,6 +386,11 @@ def _motivada_demo(data: SolicitudUnificada) -> str:
             return _demo_rectificacion_oficio(data)
         else:
             return _demo_rectificacion_propietario(data)
+    elif data.tipo_mutacion == "complementacion":
+        if data.tipo_origen == "snr":
+            return _demo_complementacion_snr(data)
+        else:
+            return _demo_complementacion_propietario(data)
     else:  # tercera_clase
         return _demo_tercera(data)
 
@@ -298,19 +416,24 @@ Lenguaje formal administrativo colombiano. Máximo 500 palabras.
 """
 
 def generate_motivada(data: SolicitudUnificada) -> dict:
+    tokens = 0
     if not settings.anthropic_api_key:
-        return {"texto_motivada": _motivada_demo(data), "tokens_usados": 0}
-    try:
-        client  = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        message = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1000,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": str(data.model_dump())}],
-        )
-        return {
-            "texto_motivada": message.content[0].text,
-            "tokens_usados":  message.usage.input_tokens + message.usage.output_tokens,
-        }
-    except Exception:
-        return {"texto_motivada": _motivada_demo(data), "tokens_usados": 0}
+        texto = _motivada_demo(data)
+    else:
+        try:
+            client  = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+            message = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=1200,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": str(data.model_dump())}],
+            )
+            texto  = message.content[0].text
+            tokens = message.usage.input_tokens + message.usage.output_tokens
+        except Exception:
+            texto = _motivada_demo(data)
+
+    if data.tipo_notificacion:
+        texto += _articulos_finales(data.tipo_notificacion, _municipio(data))
+
+    return {"texto_motivada": texto, "tokens_usados": tokens}
