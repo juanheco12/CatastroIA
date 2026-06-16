@@ -41,4 +41,5 @@ def generar_motivada(data: SolicitudUnificada, db: Session = Depends(get_db)):
         propietario=data.nombre_propietario or data.nombre_solicitante or "SNR",
         tipo_mutacion=f"{data.tipo_mutacion} / {data.tipo_origen}",
         tokens_usados=resultado.get("tokens_usados"),
+        articulos_finales=resultado.get("articulos_finales"),
     )

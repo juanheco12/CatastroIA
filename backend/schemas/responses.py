@@ -9,6 +9,7 @@ class MotivadaGeneradaResponse(BaseModel):
     propietario: str
     tipo_mutacion: str
     tokens_usados: Optional[int] = None
+    articulos_finales: Optional[str] = None
 
 
 class ExportacionResponse(BaseModel):

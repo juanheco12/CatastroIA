@@ -25,6 +25,7 @@ export interface MotivadaGeneradaResponse {
   propietario: string;
   tipo_mutacion: string;
   tokens_usados?: number;
+  articulos_finales?: string;
 }
 
 export interface HistorialItem {

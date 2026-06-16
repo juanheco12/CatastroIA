@@ -97,7 +97,7 @@ const DOCS_RAPIDOS: Record<string, string[]> = {
 };
 
 const CAMPOS_RAPIDOS_RECT = ["el área construida", "el área de terreno", "la dirección", "la nomenclatura", "el propietario", "los linderos", "el estrato socioeconómico"];
-const CAMPOS_RAPIDOS_COMP = ["propietario", "área construida", "área de terreno", "dirección", "nombre", "documento de identidad", "linderos"];
+const CAMPOS_RAPIDOS_COMP = ["propietario", "área construida", "área de terreno", "dirección", "nombre", "documento de identidad", "folio de matrícula"];
 
 interface Props {
   tipoMutacion: TipoMutacion;

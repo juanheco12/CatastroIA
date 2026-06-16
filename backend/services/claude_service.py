@@ -366,7 +366,7 @@ def _articulos_finales(tipo: str, mun: str) -> str:
             "conforme lo preceptúa el artículo 4.8.5 de la Resolución 1040 de 2023 y el artículo "
             "75 de la Ley 1437 de 2011."
         )
-    return "\n\nARTÍCULOS FINALES\n\n" + "\n\n".join([art2, art3, art4, art5, art6, "COMUNÍQUESE Y CÚMPLASE"])
+    return "\n\n".join([art2, art3, art4, art5, art6, "COMUNÍQUESE Y CÚMPLASE"])
 
 
 def _motivada_demo(data: SolicitudUnificada) -> str:
@@ -433,7 +433,8 @@ def generate_motivada(data: SolicitudUnificada) -> dict:
         except Exception:
             texto = _motivada_demo(data)
 
+    articulos = None
     if data.tipo_notificacion:
-        texto += _articulos_finales(data.tipo_notificacion, _municipio(data))
+        articulos = _articulos_finales(data.tipo_notificacion, _municipio(data))
 
-    return {"texto_motivada": texto, "tokens_usados": tokens}
+    return {"texto_motivada": texto, "tokens_usados": tokens, "articulos_finales": articulos}
