@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import LandingPage from "./components/LandingPage";
 import MutationSelector, { TipoMutacion, TipoOrigen } from "./components/MutationSelector";
 import FormBuilder, { SolicitudFormData } from "./components/FormBuilder";
 import PreviewMotivada from "./components/PreviewMotivada";
@@ -23,6 +24,8 @@ const TABS = [
 ];
 
 export default function Dashboard() {
+  const [showLanding, setShowLanding] = useState(true);
+  if (showLanding) return <LandingPage onStart={() => setShowLanding(false)} />;
   const [tab,      setTab]      = useState<Tab>("form");
   const [step,     setStep]     = useState<Step>("select");
   const [mutacion, setMutacion] = useState<TipoMutacion | null>(null);
