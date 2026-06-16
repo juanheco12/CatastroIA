@@ -10,7 +10,7 @@ import SettingsPanel from "./components/SettingsPanel";
 import { generarMotivada, MotivadaGeneradaResponse, HistorialDetalle } from "@/lib/api";
 import {
   FileText, Eye, History, Settings, AlertCircle, ArrowLeft,
-  Sun, Moon, Building2, House,
+  Sun, Moon, Building2, Home,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -161,7 +161,7 @@ export default function Dashboard() {
                 color: "var(--text-muted)",
               }}
             >
-              <House size={13} />
+              <Home size={13} />
               <span className="hidden sm:inline">Inicio</span>
             </button>
           </div>
