@@ -88,6 +88,18 @@ def _demo_primera_poder(data: SolicitudUnificada) -> str:
     )
     return "\n\n".join([_P1_PRIMERA, p2, _P3_PRIMERA, _p4_primera(mun)])
 
+def _demo_primera_oficio(data: SolicitudUnificada) -> str:
+    mun  = _municipio(data)
+    docs = ", ".join(data.documentos_aportados)
+    p2 = (
+        f"Ante la Oficina de Catastro de atención al público adscrita a la Secretaria de "
+        f"Planeación del municipio de {mun}, de oficio se inició la actualización catastral "
+        f"del inmueble con número predial {data.numero_predial}, inscrito en la base de datos "
+        f"catastral del municipio de {mun}, consistente en cambio de propietario, conforme a "
+        f"la documentación registral aportada: {docs}."
+    )
+    return "\n\n".join([_P1_PRIMERA, p2, _P3_PRIMERA, _p4_primera(mun)])
+
 def _demo_primera_snr(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
@@ -377,6 +389,8 @@ def _motivada_demo(data: SolicitudUnificada) -> str:
             return _demo_primera_poder(data)
         elif data.tipo_origen == "snr":
             return _demo_primera_snr(data)
+        elif data.tipo_origen == "oficio":
+            return _demo_primera_oficio(data)
         else:
             return _demo_primera_propietario(data)
     elif data.tipo_mutacion == "rectificacion":

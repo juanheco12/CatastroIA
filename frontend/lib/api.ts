@@ -90,6 +90,19 @@ export async function deleteHistorialItem(id: number) {
   return res.data;
 }
 
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export async function enviarMensajeChat(
+  mensaje: string,
+  historial: ChatMessage[]
+): Promise<{ respuesta: string; tokens_usados?: number }> {
+  const res = await api.post("/chat/mensaje", { mensaje, historial });
+  return res.data;
+}
+
 export function downloadBase64Docx(base64: string, filename: string) {
   const byteCharacters = atob(base64);
   const byteArray = new Uint8Array(Array.from(byteCharacters, (c) => c.charCodeAt(0)));

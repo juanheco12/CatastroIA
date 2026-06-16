@@ -19,6 +19,7 @@ const ORIGENES_POR_MUTACION: Record<TipoMutacion, { id: TipoOrigen; titulo: stri
     { id: "autorizado",  titulo: "De parte con autorizado",  desc: "Contacto o autorizado del propietario" },
     { id: "poder",       titulo: "De parte con poder",       desc: "Apoderado con poder notarial o TP" },
     { id: "snr",         titulo: "De la SNR",                desc: "Superintendencia de Notariado y Registro" },
+    { id: "oficio",      titulo: "De oficio",                desc: "La oficina inicia la actualización registral" },
   ],
   tercera_clase: [
     { id: "propietario", titulo: "De parte del propietario", desc: "El propietario gestiona directamente" },

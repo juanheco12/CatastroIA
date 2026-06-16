@@ -7,21 +7,23 @@ import FormBuilder, { SolicitudFormData } from "./components/FormBuilder";
 import PreviewMotivada from "./components/PreviewMotivada";
 import HistoryPanel from "./components/HistoryPanel";
 import SettingsPanel from "./components/SettingsPanel";
+import ChatBot from "./components/ChatBot";
 import { generarMotivada, MotivadaGeneradaResponse, HistorialDetalle } from "@/lib/api";
 import {
   FileText, Eye, History, Settings, AlertCircle, ArrowLeft,
-  Sun, Moon, Building2, Home,
+  Sun, Moon, Building2, Home, MessageCircle,
 } from "lucide-react";
 import clsx from "clsx";
 
-type Tab  = "form" | "preview" | "historial" | "settings";
+type Tab  = "form" | "preview" | "historial" | "settings" | "chat";
 type Step = "select" | "form";
 
 const TABS = [
-  { id: "form"      as Tab, label: "Formulario", icon: FileText },
-  { id: "preview"   as Tab, label: "Motivada",   icon: Eye      },
-  { id: "historial" as Tab, label: "Historial",  icon: History  },
-  { id: "settings"  as Tab, label: "Ajustes",    icon: Settings },
+  { id: "form"      as Tab, label: "Formulario", icon: FileText       },
+  { id: "preview"   as Tab, label: "Motivada",   icon: Eye            },
+  { id: "historial" as Tab, label: "Historial",  icon: History        },
+  { id: "chat"      as Tab, label: "Asistente",  icon: MessageCircle  },
+  { id: "settings"  as Tab, label: "Ajustes",    icon: Settings       },
 ];
 
 export default function Dashboard() {
@@ -238,6 +240,7 @@ export default function Dashboard() {
             ) : null}
 
             {tab === "historial" && <HistoryPanel onReopen={handleReopen} />}
+            {tab === "chat"      && <ChatBot />}
             {tab === "settings"  && (
               <SettingsPanel
                 theme={darkMode ? "dark" : "light"}
