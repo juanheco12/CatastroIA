@@ -20,6 +20,7 @@ export interface SolicitudFormData {
   numero_radicado?:     string;
   area_construida_m2?:  number | string;
   area_terreno_m2?:     number | string;
+  campo_rectificado?:   string;
   documentos_aportados: string[];
 }
 
@@ -68,6 +69,30 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
     area_terreno_m2:    120,
     documentos_aportados: ["Formulario de solicitud", "Copia cédula de ciudadanía", "Licencia de construcción"],
   },
+  rectificacion_propietario: {
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ",
+    cedula_propietario: "6.872.472",
+    numero_predial:     "23001000090004000000000",
+    folio_matricula:    "140-38712",
+    campo_rectificado:  "el área construida",
+    documentos_aportados: ["Certificado de tradición y libertad 140-38712", "Copia cédula de ciudadanía"],
+  },
+  rectificacion_autorizado: {
+    nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ",
+    cedula_solicitante: "1.234.567",
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ",
+    cedula_propietario: "6.872.472",
+    numero_predial:     "23001000090004000000000",
+    folio_matricula:    "140-38712",
+    campo_rectificado:  "la dirección",
+    documentos_aportados: ["Certificado de tradición y libertad 140-38712", "Documento de autorización"],
+  },
+  rectificacion_oficio: {
+    numero_predial:    "23001000090004000000000",
+    folio_matricula:   "140-38712",
+    campo_rectificado: "el propietario",
+    documentos_aportados: ["Certificado de tradición y libertad 140-38712"],
+  },
 };
 
 const DOCS_RAPIDOS: Record<string, string[]> = {
@@ -84,7 +109,23 @@ const DOCS_RAPIDOS: Record<string, string[]> = {
     "Declaración de construcción",
     "Certificado de libertad y tradición",
   ],
+  rectificacion: [
+    "Certificado de tradición y libertad",
+    "Copia cédula de ciudadanía",
+    "Escritura pública",
+    "Plano topográfico",
+  ],
 };
+
+const CAMPOS_RAPIDOS = [
+  "el área construida",
+  "el área de terreno",
+  "la dirección",
+  "la nomenclatura",
+  "el propietario",
+  "los linderos",
+  "el estrato socioeconómico",
+];
 
 interface Props {
   tipoMutacion: TipoMutacion;
@@ -130,13 +171,20 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
 
   const inp = "field-input";
 
+  const needsPropietario = tipoOrigen !== "snr" && tipoOrigen !== "oficio";
+  const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder";
+
   // ── Validation ──────────────────────────────────────────────
   const canSubmit = (() => {
     if (!data.numero_predial || !data.folio_matricula) return false;
-    if (tipoOrigen === "snr") return !!data.numero_radicado;
+    if (tipoOrigen === "snr")    return !!data.numero_radicado;
+    if (tipoOrigen === "oficio") {
+      return tipoMutacion === "rectificacion" ? !!data.campo_rectificado : true;
+    }
     if (!data.cedula_propietario || !data.nombre_propietario) return false;
-    if ((tipoOrigen === "autorizado" || tipoOrigen === "poder") && !data.cedula_solicitante) return false;
+    if (needsSolicitante && !data.cedula_solicitante) return false;
     if (tipoMutacion === "tercera_clase") return !!data.area_construida_m2 && !!data.area_terreno_m2;
+    if (tipoMutacion === "rectificacion") return !!data.campo_rectificado;
     return true;
   })();
 
@@ -165,7 +213,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
       )}
 
       {/* ── Solicitante (autorizado / poder) ── */}
-      {(tipoOrigen === "autorizado" || tipoOrigen === "poder") && (
+      {needsSolicitante && (
         <div className="card p-5 space-y-4">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
             {tipoOrigen === "autorizado" ? "Datos del autorizado" : "Datos del apoderado"}
@@ -195,8 +243,8 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
         </div>
       )}
 
-      {/* ── Propietario (todos excepto SNR) ── */}
-      {tipoOrigen !== "snr" && (
+      {/* ── Propietario (todos excepto SNR / Oficio) ── */}
+      {needsPropietario && (
         <div className="card p-5 space-y-4">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Propietario</h3>
           <div className="grid grid-cols-2 gap-4">
@@ -237,6 +285,24 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
               <input type="number" min={1} step={0.5} className={inp} value={data.area_terreno_m2 ?? ""} onChange={e => set("area_terreno_m2", e.target.value)} placeholder="120" />
             </Field>
           </div>
+        </div>
+      )}
+
+      {/* ── Campo rectificado (solo Rectificación) ── */}
+      {tipoMutacion === "rectificacion" && (
+        <div className="card p-5 space-y-3">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Dato a rectificar</h3>
+          <div className="flex flex-wrap gap-1.5">
+            {CAMPOS_RAPIDOS.filter(c => c !== data.campo_rectificado).map(campo => (
+              <button key={campo} type="button" onClick={() => set("campo_rectificado", campo)}
+                className="text-xs px-2.5 py-1 rounded-full border border-slate-600 text-slate-400 hover:border-brand-primary hover:text-brand-primary transition-all">
+                {campo}
+              </button>
+            ))}
+          </div>
+          <Field label="Campo que se rectifica" required>
+            <input className={inp} value={data.campo_rectificado ?? ""} onChange={e => set("campo_rectificado", e.target.value)} placeholder="ej: el área construida, la dirección..." />
+          </Field>
         </div>
       )}
 

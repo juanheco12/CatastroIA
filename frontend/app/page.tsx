@@ -74,12 +74,14 @@ export default function Dashboard() {
   const labelMutacion: Record<TipoMutacion, string> = {
     primera_clase: "1ra Clase",
     tercera_clase: "3ra Clase",
+    rectificacion: "Rectificación",
   };
   const labelOrigen: Record<TipoOrigen, string> = {
     propietario: "Propietario",
     autorizado:  "Autorizado",
     poder:       "Con poder",
     snr:         "SNR",
+    oficio:      "Oficio",
   };
 
   return (

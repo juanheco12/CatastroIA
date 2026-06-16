@@ -1,10 +1,10 @@
 "use client";
 
-import { Building2, Users, ChevronRight } from "lucide-react";
+import { Building2, Users, ClipboardEdit, ChevronRight } from "lucide-react";
 import clsx from "clsx";
 
-export type TipoMutacion = "primera_clase" | "tercera_clase";
-export type TipoOrigen   = "propietario"   | "autorizado" | "poder" | "snr";
+export type TipoMutacion = "primera_clase" | "tercera_clase" | "rectificacion";
+export type TipoOrigen   = "propietario"   | "autorizado" | "poder" | "snr" | "oficio";
 
 const MUTACIONES = [
   {
@@ -19,14 +19,33 @@ const MUTACIONES = [
     subtitulo: "Incorporación de construcción",
     icon: Building2,
   },
+  {
+    id: "rectificacion" as TipoMutacion,
+    titulo: "Rectificación",
+    subtitulo: "Corrección de datos catastrales",
+    icon: ClipboardEdit,
+  },
 ];
 
-const ORIGENES: { id: TipoOrigen; titulo: string; desc: string }[] = [
-  { id: "propietario", titulo: "De parte del propietario", desc: "El propietario gestiona directamente" },
-  { id: "autorizado",  titulo: "De parte con autorizado",  desc: "Contacto o autorizado del propietario" },
-  { id: "poder",       titulo: "De parte con poder",       desc: "Apoderado con poder notarial o TP" },
-  { id: "snr",         titulo: "De la SNR",                desc: "Superintendencia de Notariado y Registro" },
-];
+const ORIGENES_POR_MUTACION: Record<TipoMutacion, { id: TipoOrigen; titulo: string; desc: string }[]> = {
+  primera_clase: [
+    { id: "propietario", titulo: "De parte del propietario", desc: "El propietario gestiona directamente" },
+    { id: "autorizado",  titulo: "De parte con autorizado",  desc: "Contacto o autorizado del propietario" },
+    { id: "poder",       titulo: "De parte con poder",       desc: "Apoderado con poder notarial o TP" },
+    { id: "snr",         titulo: "De la SNR",                desc: "Superintendencia de Notariado y Registro" },
+  ],
+  tercera_clase: [
+    { id: "propietario", titulo: "De parte del propietario", desc: "El propietario gestiona directamente" },
+    { id: "autorizado",  titulo: "De parte con autorizado",  desc: "Contacto o autorizado del propietario" },
+    { id: "poder",       titulo: "De parte con poder",       desc: "Apoderado con poder notarial o TP" },
+    { id: "snr",         titulo: "De la SNR",                desc: "Superintendencia de Notariado y Registro" },
+  ],
+  rectificacion: [
+    { id: "propietario", titulo: "Por propietario",  desc: "El propietario solicita la corrección" },
+    { id: "autorizado",  titulo: "Por autorizado",   desc: "Contacto o autorizado del propietario" },
+    { id: "oficio",      titulo: "De oficio",        desc: "La oficina de catastro corrige por oficio" },
+  ],
+};
 
 interface Props {
   selectedMutacion: TipoMutacion | null;
@@ -38,6 +57,8 @@ interface Props {
 export default function MutationSelector({
   selectedMutacion, selectedOrigen, onSelectMutacion, onSelectOrigen,
 }: Props) {
+  const origenes = selectedMutacion ? ORIGENES_POR_MUTACION[selectedMutacion] : [];
+
   return (
     <div className="space-y-6">
       {/* Tipo de mutación */}
@@ -46,7 +67,7 @@ export default function MutationSelector({
           <span className="w-5 h-5 rounded-full bg-brand-primary text-white text-xs flex items-center justify-center font-bold">1</span>
           ¿Qué tipo de mutación?
         </h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {MUTACIONES.map(({ id, titulo, subtitulo, icon: Icon }) => (
             <button
               key={id}
@@ -82,7 +103,7 @@ export default function MutationSelector({
             ¿Cómo viene la solicitud?
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {ORIGENES.map(({ id, titulo, desc }) => (
+            {origenes.map(({ id, titulo, desc }) => (
               <button
                 key={id}
                 type="button"

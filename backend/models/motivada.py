@@ -1,18 +1,14 @@
 from datetime import datetime
-from sqlalchemy import String, DateTime, Text, Integer, Enum as SAEnum
+from sqlalchemy import String, DateTime, Text, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 from database.db import Base
 import enum
 
 
-class EstadoMotivada(str, enum.Enum):
+class EstadoMotivada(str, enum.Enum):  # noqa: F401 – kept for history display
     BORRADOR = "borrador"
     GENERADA = "generada"
     EXPORTADA = "exportada"
-
-
-class TipoMutacion(str, enum.Enum):
-    TERCERA_CLASE = "tercera_clase"
 
 
 class HistorialMotivada(Base):
@@ -23,9 +19,7 @@ class HistorialMotivada(Base):
     fecha_actualizacion: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
-    tipo_mutacion: Mapped[str] = mapped_column(
-        SAEnum(TipoMutacion), default=TipoMutacion.TERCERA_CLASE
-    )
+    tipo_mutacion: Mapped[str] = mapped_column(String(50), default="tercera_clase")
     numero_expediente: Mapped[str] = mapped_column(String(100), index=True)
     numero_predio: Mapped[str] = mapped_column(String(50))
     propietario_nombre: Mapped[str] = mapped_column(String(200))

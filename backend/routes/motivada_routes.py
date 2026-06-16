@@ -21,9 +21,9 @@ def generar_motivada(data: SolicitudUnificada, db: Session = Depends(get_db)):
         raise HTTPException(status_code=502, detail=str(exc))
 
     # Persist to history
-    from models.motivada import HistorialMotivada, EstadoMotivada, TipoMutacion
+    from models.motivada import HistorialMotivada, EstadoMotivada
     registro = HistorialMotivada(
-        tipo_mutacion=TipoMutacion.TERCERA_CLASE,
+        tipo_mutacion=data.tipo_mutacion,
         numero_expediente=data.numero_predial,
         numero_predio=data.numero_predial,
         propietario_nombre=data.nombre_propietario or data.nombre_solicitante or "SNR",

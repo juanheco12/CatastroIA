@@ -182,6 +182,80 @@ def _demo_tercera(data: SolicitudUnificada) -> str:
     )
 
 
+# ── Rectificación ────────────────────────────────────────────────────────────
+
+_P1_RECTIFICACION = (
+    "Que la Resolución 1040 de 2023 del Instituto Geográfico Agustín Codazzi (IGAC), en su "
+    "artículo 4.5.4 numeral 1, señala que los errores en la inscripción catastral que no "
+    "corresponden con la realidad del predio."
+)
+
+def _p3_rectificacion(data: SolicitudUnificada) -> str:
+    campo = data.campo_rectificado or "el(la)"
+    return (
+        f"De acuerdo con el estudio realizado, se procede a rectificar {campo} del predio en "
+        f"mención, soportada en el certificado tradición y libertad {data.folio_matricula}."
+    )
+
+def _p4_rectificacion(data: SolicitudUnificada, mun: str) -> str:
+    campo = data.campo_rectificado or "el(la)"
+    return (
+        f"Que, revisados los antecedentes catastrales del municipio de {mun}, verificada la "
+        f"documentación aportada por el(la) solicitante, así como la validación correspondiente "
+        f"a través de la aplicación combinada de métodos INDIRECTO y DECLARATIVO-COLABORATIVO, "
+        f"en los términos del artículo 2.2.2.2.6. del Decreto 1170 de 2015, modificado por el "
+        f"Decreto 148 de 2020, que procede la rectificación de {campo}, del presente acto y su "
+        f"correspondiente inscripción en el catastro, conforme lo indican en los artículos 4.5.4 "
+        f"y 4.6.8 de la Resolución 1040 de 2023, en concordancia del artículo 2.2.2.2.2 literal "
+        f"C del 1170 de 2015, modificado por el Decreto 148 de 2020."
+    )
+
+_P5_RECTIFICACION = (
+    "Que la rectificación ordenada hace alusión a una corrección simplemente formal, la cual "
+    "no modifica el avalúo catastral del predio objeto de esta."
+)
+
+def _demo_rectificacion_propietario(data: SolicitudUnificada) -> str:
+    mun  = _municipio(data)
+    docs = ", ".join(data.documentos_aportados)
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con "
+        f"C.C. No. {data.cedula_propietario}, en su condición de propietario del inmueble con "
+        f"número predial {data.numero_predial} inscrito en la base de datos catastral, presentó "
+        f"ante la Oficina de Catastro adscrita a la Secretaria de Planeación del municipio de "
+        f"{mun}, el trámite catastral correspondiente a rectificación general de datos del "
+        f"referido predio, soportada en los siguientes documentos aportados: {docs}."
+    )
+    return "\n\n".join([_P1_RECTIFICACION, p2, _p3_rectificacion(data), _p4_rectificacion(data, mun), _P5_RECTIFICACION])
+
+def _demo_rectificacion_autorizado(data: SolicitudUnificada) -> str:
+    mun  = _municipio(data)
+    docs = ", ".join(data.documentos_aportados)
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
+        f"CC. No. {data.cedula_solicitante}, en su condición de contacto y/o autorizado del "
+        f"(la) señor(a) {data.nombre_propietario} identificado(a) con C.C. "
+        f"{data.cedula_propietario} propietario del inmueble identificado con número predial "
+        f"{data.numero_predial} inscrito en la base de datos catastral, presentó ante la "
+        f"Oficina de Catastro adscrita a la Secretaria de Planeación del municipio de {mun}, "
+        f"el trámite catastral correspondiente a rectificación general de datos del referido "
+        f"predio, soportada en los siguientes documentos aportados: {docs}."
+    )
+    return "\n\n".join([_P1_RECTIFICACION, p2, _p3_rectificacion(data), _p4_rectificacion(data, mun), _P5_RECTIFICACION])
+
+def _demo_rectificacion_oficio(data: SolicitudUnificada) -> str:
+    mun  = _municipio(data)
+    docs = ", ".join(data.documentos_aportados)
+    p2 = (
+        f"Ante la Oficina de Catastro de atención al público adscrita a la secretaria de "
+        f"Planeación del municipio de {mun}, se presentó una solicitud de trámite catastral "
+        f"consistente en rectificación de datos, del inmueble con número predial "
+        f"{data.numero_predial}, inscrito en la base de datos catastral del municipio de {mun}, "
+        f"soportada en los siguientes documentos aportados: {docs}."
+    )
+    return "\n\n".join([_P1_RECTIFICACION, p2, _p3_rectificacion(data), _p4_rectificacion(data, mun), _P5_RECTIFICACION])
+
+
 def _motivada_demo(data: SolicitudUnificada) -> str:
     if data.tipo_mutacion == "primera_clase":
         if data.tipo_origen == "autorizado":
@@ -192,6 +266,13 @@ def _motivada_demo(data: SolicitudUnificada) -> str:
             return _demo_primera_snr(data)
         else:
             return _demo_primera_propietario(data)
+    elif data.tipo_mutacion == "rectificacion":
+        if data.tipo_origen == "autorizado":
+            return _demo_rectificacion_autorizado(data)
+        elif data.tipo_origen == "oficio":
+            return _demo_rectificacion_oficio(data)
+        else:
+            return _demo_rectificacion_propietario(data)
     else:  # tercera_clase
         return _demo_tercera(data)
 
