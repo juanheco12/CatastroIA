@@ -1,6 +1,5 @@
-import anthropic
-from config import settings
 from schemas.chat import SolicitudChat, RespuestaChat
+from services.ai_provider import call_ai, active_provider
 
 CHAT_SYSTEM_PROMPT = """Eres un Asistente Catastral especializado en la normativa catastral colombiana vigente.
 Tu función es orientar a usuarios (propietarios, notarios, gestores, funcionarios) sobre procesos catastrales en Colombia.
@@ -132,31 +131,28 @@ Tu función es orientar a usuarios (propietarios, notarios, gestores, funcionari
 Responde siempre en español, de forma profesional, concisa y orientada a resolver la duda del usuario."""
 
 
+_DEMO_MSG = (
+    "El Asistente Catastral necesita una API key para funcionar.\n\n"
+    "Opciones gratuitas:\n"
+    "• Google Gemini Flash → aistudio.google.com → 'Get API key' → agrega GOOGLE_API_KEY=tu_clave en backend/.env\n"
+    "• Groq (Llama 3) → console.groq.com → 'Create API Key' → agrega GROQ_API_KEY=tu_clave en backend/.env\n"
+    "• Anthropic Claude → console.anthropic.com → agrega ANTHROPIC_API_KEY=tu_clave en backend/.env\n\n"
+    "Reinicia el backend después de agregar la clave."
+)
+
+
 def respond(data: SolicitudChat) -> RespuestaChat:
-    if not settings.anthropic_api_key:
-        return RespuestaChat(
-            respuesta="Para usar el Asistente Catastral necesitas configurar una API key de Anthropic. Puedes obtenerla en console.anthropic.com",
-            tokens_usados=0,
-        )
+    provider = active_provider()
+    if provider == "demo":
+        return RespuestaChat(respuesta=_DEMO_MSG, tokens_usados=0)
 
     try:
-        messages = [{"role": msg.role, "content": msg.content} for msg in data.historial]
+        messages = [{"role": m.role, "content": m.content} for m in data.historial]
         messages.append({"role": "user", "content": data.mensaje})
-
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
-            system=CHAT_SYSTEM_PROMPT,
-            messages=messages,
-        )
-
-        return RespuestaChat(
-            respuesta=response.content[0].text,
-            tokens_usados=response.usage.input_tokens + response.usage.output_tokens,
-        )
+        texto, tokens = call_ai(messages, CHAT_SYSTEM_PROMPT, max_tokens=1024)
+        return RespuestaChat(respuesta=texto, tokens_usados=tokens)
     except Exception as e:
         return RespuestaChat(
-            respuesta=f"Error al procesar tu consulta: {str(e)}. Por favor intenta de nuevo.",
+            respuesta=f"Error al procesar tu consulta ({provider}): {str(e)}",
             tokens_usados=0,
         )

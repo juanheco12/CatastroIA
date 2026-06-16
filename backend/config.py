@@ -4,6 +4,8 @@ from pathlib import Path
 
 class Settings(BaseSettings):
     anthropic_api_key: str = ""
+    google_api_key: str = ""      # Gemini Flash — gratis en aistudio.google.com
+    groq_api_key: str = ""        # Groq Llama3  — gratis en console.groq.com
     database_url: str = "sqlite:///./catia.db"
     environment: str = "development"
     template_storage_path: str = "./templates"

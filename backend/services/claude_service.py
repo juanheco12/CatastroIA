@@ -1,5 +1,3 @@
-import anthropic
-from config import settings
 from schemas.solicitud import SolicitudUnificada
 
 # ── Lookup DANE → municipio ──────────────────────────────────────────────────
@@ -430,20 +428,14 @@ Lenguaje formal administrativo colombiano. Máximo 500 palabras.
 """
 
 def generate_motivada(data: SolicitudUnificada) -> dict:
+    from services.ai_provider import call_ai, active_provider
     tokens = 0
-    if not settings.anthropic_api_key:
+    if active_provider() == "demo":
         texto = _motivada_demo(data)
     else:
         try:
-            client  = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-            message = client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=1200,
-                system=SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": str(data.model_dump())}],
-            )
-            texto  = message.content[0].text
-            tokens = message.usage.input_tokens + message.usage.output_tokens
+            messages = [{"role": "user", "content": str(data.model_dump())}]
+            texto, tokens = call_ai(messages, SYSTEM_PROMPT, max_tokens=1200)
         except Exception:
             texto = _motivada_demo(data)
 
