@@ -25,7 +25,6 @@ const TABS = [
 
 export default function Dashboard() {
   const [showLanding, setShowLanding] = useState(true);
-  if (showLanding) return <LandingPage onStart={() => setShowLanding(false)} />;
   const [tab,      setTab]      = useState<Tab>("form");
   const [step,     setStep]     = useState<Step>("select");
   const [mutacion, setMutacion] = useState<TipoMutacion | null>(null);
@@ -34,6 +33,8 @@ export default function Dashboard() {
   const [formData, setFormData] = useState<SolicitudFormData | null>(null);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
+
+  if (showLanding) return <LandingPage onStart={() => setShowLanding(false)} />;
 
   const handleOrigenSelect = (v: TipoOrigen) => {
     setOrigen(v);
