@@ -1,9 +1,3 @@
-databases:
-  - name: catia-db
-    plan: free
-    databaseName: catia
-    user: catia
-
 services:
   - type: web
     name: catia-backend
@@ -18,9 +12,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: catia-db
-          property: connectionString
+        sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: GOOGLE_API_KEY

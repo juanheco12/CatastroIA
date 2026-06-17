@@ -14,7 +14,7 @@ Sistema IA para generar motivadas jurídicamente válidas para trámites de muta
 | Backend | FastAPI + Python 3.10+ |
 | IA | Claude Sonnet 4.6 (Anthropic) |
 | Documentos | python-docx |
-| Base de datos | SQLite (historial local) |
+| Base de datos | SQLite en local / PostgreSQL (Neon) en producción |
 
 ---
 
@@ -167,23 +167,33 @@ Si no hay template personalizado, el sistema genera el documento con una plantil
 
 ---
 
-## Despliegue en producción (Vercel + Render)
+## Despliegue en producción (Vercel + Render + Neon)
 
-El frontend (Next.js) se despliega en **Vercel** y el backend (FastAPI + PostgreSQL) en **Render**, usando el archivo `render.yaml` de la raíz del repo (Render Blueprint).
+El frontend (Next.js) se despliega en **Vercel**, el backend (FastAPI) en **Render**, y la base de datos PostgreSQL en **Neon** (su plan gratuito no expira, a diferencia del Postgres gratuito de Render que se borra a los 90 días). El backend se crea con el archivo `render.yaml` de la raíz del repo (Render Blueprint).
+
+### Base de datos en Neon
+
+1. Entra a [neon.tech](https://neon.tech) y crea una cuenta gratis (no pide tarjeta).
+2. Crea un proyecto nuevo (ej. `catia`). Neon crea automáticamente una base de datos y te muestra una **Connection string** del tipo:
+   ```
+   postgresql://usuario:contraseña@ep-algo-123456.region.aws.neon.tech/neondb?sslmode=require
+   ```
+3. Copia esa cadena completa — la vas a pegar en Render en el siguiente paso.
+
+> El plan gratuito de Neon no tiene fecha de expiración. Si el proyecto está inactivo se "duerme" solo, y despierta automáticamente en la siguiente consulta (sin que tengas que hacer nada manual).
 
 ### Backend en Render
 
 1. Entra a [render.com](https://render.com) → **New** → **Blueprint** → conecta este repositorio de GitHub.
-2. Render detecta `render.yaml` y crea automáticamente:
-   - Una base de datos PostgreSQL gratuita (`catia-db`)
-   - Un servicio web (`catia-backend`) apuntando a la carpeta `backend/`
+2. Render detecta `render.yaml` y crea el servicio web `catia-backend` apuntando a la carpeta `backend/`.
 3. Durante la creación te pedirá llenar las variables marcadas como secretas:
+   - `DATABASE_URL` — pega aquí la connection string de Neon del paso anterior
    - `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` y/o `GROQ_API_KEY` (al menos una)
    - `CORS_ORIGINS` — déjala en `http://localhost:3000` por ahora; se actualiza en el paso final con la URL real de Vercel
 4. Una vez desplegado, copia la URL pública del backend (algo como `https://catia-backend.onrender.com`).
 
-> El plan gratuito de Postgres en Render expira a los 90 días; pasado ese tiempo hay que migrar a un plan pago (~7 USD/mes) o crear una base nueva para seguir conservando el historial.
-> El plan gratuito del servicio web "se duerme" tras ~15 minutos sin tráfico; la primera petición después de eso tarda unos segundos en responder.
+> El plan gratuito del servicio web en Render "se duerme" tras ~15 minutos sin tráfico; la primera petición después de eso tarda unos segundos en responder.
+> Si la conexión a la base de datos falla mencionando `channel_binding`, quita ese parámetro de la connection string que copiaste de Neon (déjala terminando en `?sslmode=require`).
 
 ### Frontend en Vercel
 
