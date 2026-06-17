@@ -2,10 +2,12 @@ import axios from "axios";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
+// Render's free tier puts the backend to sleep after inactivity; waking it
+// up plus a large PDF extraction or LLM call can take well over a minute.
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 60000,
+  timeout: 120000,
 });
 
 // Simplified form data — only what's needed
@@ -46,7 +48,7 @@ export interface HistorialDetalle extends HistorialItem {
 }
 
 export async function generarMotivada(data: TerceraClaseFormData): Promise<MotivadaGeneradaResponse> {
-  const res = await api.post("/motivada/generar", data);
+  const res = await api.post("/motivada/generar", data, { timeout: 180000 });
   return res.data;
 }
 
@@ -122,6 +124,7 @@ export async function subirSoporte(file: File): Promise<SoporteInfo> {
   formData.append("file", file);
   const res = await api.post("/soportes/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: 300000,
   });
   return res.data;
 }
