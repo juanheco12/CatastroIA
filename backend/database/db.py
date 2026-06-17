@@ -25,4 +25,5 @@ def get_db():
 
 def init_db():
     import models.motivada  # noqa: F401 — registers models with Base
+    import models.soporte   # noqa: F401 — registers models with Base
     Base.metadata.create_all(bind=engine)

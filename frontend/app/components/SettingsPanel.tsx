@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Sun, Moon, FileText, Save, Check } from "lucide-react";
+import SoportesPanel from "./SoportesPanel";
 
 type Theme = "dark" | "light";
 
@@ -110,6 +111,9 @@ export default function SettingsPanel({ theme: themeProp, onThemeChange }: Props
           {saved ? <><Check size={14} />Guardado</> : <><Save size={14} />Guardar template</>}
         </button>
       </div>
+
+      {/* Base de conocimiento (soportes) */}
+      <SoportesPanel />
     </div>
   );
 }

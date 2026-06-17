@@ -1,6 +1,8 @@
 import re
+from sqlalchemy.orm import Session
 from schemas.chat import SolicitudChat, RespuestaChat, SugerenciaMotivada
 from services.ai_provider import call_ai, active_provider
+from services import soporte_service
 
 CHAT_SYSTEM_PROMPT = """Eres el Asistente Catastral de CatIA, especializado en la normativa catastral colombiana vigente.
 Ayudas a propietarios, notarios, gestores y funcionarios a resolver dudas sobre procesos catastrales en Colombia.
@@ -38,6 +40,14 @@ usando solo estos valores de ID_MUTACION: primera_clase, tercera_clase, rectific
 Si no tienes suficiente información para saber el tipo de mutación o el origen exactos, no agregues la etiqueta y en su lugar pregunta lo que falta."""
 
 
+_CONTEXTO_SOPORTES_TEMPLATE = """
+
+## Documentos de soporte cargados por la entidad
+A continuación hay extractos de documentos internos que la entidad cargó como referencia. Si son relevantes para la pregunta, básate en ellos como fuente prioritaria (junto con la Resolución 1040/2023) y cítalos por su nombre de archivo. Si no aportan nada a la pregunta, ignóralos.
+
+{contexto}"""
+
+
 _TAG_RE = re.compile(
     r'<<SUGERIR\s+tipo_mutacion="(?P<mutacion>[a-z_]+)"\s+tipo_origen="(?P<origen>[a-z]+)"\s*>>',
     re.IGNORECASE,
@@ -67,15 +77,20 @@ _DEMO_MSG = (
 )
 
 
-def respond(data: SolicitudChat) -> RespuestaChat:
+def respond(data: SolicitudChat, db: Session) -> RespuestaChat:
     provider = active_provider()
     if provider == "demo":
         return RespuestaChat(respuesta=_DEMO_MSG, tokens_usados=0)
 
     try:
+        system_prompt = CHAT_SYSTEM_PROMPT
+        contexto = soporte_service.buscar_contexto_relevante(db, data.mensaje)
+        if contexto:
+            system_prompt += _CONTEXTO_SOPORTES_TEMPLATE.format(contexto=contexto)
+
         messages = [{"role": m.role, "content": m.content} for m in data.historial]
         messages.append({"role": "user", "content": data.mensaje})
-        texto, tokens = call_ai(messages, CHAT_SYSTEM_PROMPT, max_tokens=700)
+        texto, tokens = call_ai(messages, system_prompt, max_tokens=700)
         texto, sugerencia = _extraer_sugerencia(texto)
         return RespuestaChat(respuesta=texto, tokens_usados=tokens, sugerencia=sugerencia)
     except Exception as e:

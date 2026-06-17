@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from database.db import init_db
-from routes import motivada_routes, template_routes, history_routes, chat_routes
+from routes import motivada_routes, template_routes, history_routes, chat_routes, soporte_routes
 
 
 @asynccontextmanager
@@ -31,6 +31,7 @@ app.include_router(motivada_routes.router)
 app.include_router(template_routes.router)
 app.include_router(history_routes.router)
 app.include_router(chat_routes.router)
+app.include_router(soporte_routes.router)
 
 
 @app.get("/health")

@@ -108,6 +108,34 @@ export async function enviarMensajeChat(
   return res.data;
 }
 
+export interface SoporteInfo {
+  id: number;
+  nombre_original: string;
+  tipo_archivo: string;
+  tamano_bytes: number;
+  longitud_texto: number;
+  fecha_subida: string;
+}
+
+export async function subirSoporte(file: File): Promise<SoporteInfo> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await api.post("/soportes/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+}
+
+export async function listarSoportes(): Promise<SoporteInfo[]> {
+  const res = await api.get("/soportes/");
+  return res.data;
+}
+
+export async function eliminarSoporte(id: number) {
+  const res = await api.delete(`/soportes/${id}`);
+  return res.data;
+}
+
 export function downloadBase64Docx(base64: string, filename: string) {
   const byteCharacters = atob(base64);
   const byteArray = new Uint8Array(Array.from(byteCharacters, (c) => c.charCodeAt(0)));
