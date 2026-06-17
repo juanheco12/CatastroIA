@@ -9,6 +9,13 @@ from schemas.soporte import SoporteInfoResponse
 MAX_DOCS_CONTEXTO = 2
 MAX_CHARS_POR_DOC = 4000
 
+_BLOQUE_CONTEXTO_TEMPLATE = """
+
+## Documentos de soporte cargados por la entidad
+A continuación hay extractos de documentos internos que la entidad cargó como referencia. Cítalos por su nombre de archivo cuando los uses. Si alguno contiene el texto literal de un artículo o norma, puedes citarlo entre comillas tal cual aparece; si no, no inventes una redacción exacta. Si no aportan nada a la pregunta, ignóralos.
+
+{contexto}"""
+
 _STOPWORDS = {
     "de", "la", "el", "en", "y", "a", "que", "los", "las", "un", "una", "es",
     "del", "se", "por", "con", "para", "su", "al", "lo", "como", "más", "o",
@@ -111,3 +118,10 @@ def buscar_contexto_relevante(db: Session, pregunta: str) -> str:
         bloques.append(f"--- {doc.nombre_original} ---\n{extracto}")
 
     return "\n\n".join(bloques)
+
+
+def construir_bloque_contexto(contexto: str) -> str:
+    """Envuelve un extracto de soportes con las instrucciones de uso, listo para anexar a un system prompt."""
+    if not contexto:
+        return ""
+    return _BLOQUE_CONTEXTO_TEMPLATE.format(contexto=contexto)

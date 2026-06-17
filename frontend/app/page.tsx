@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [formData, setFormData] = useState<SolicitudFormData | null>(null);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
+  const [chatContexto, setChatContexto] = useState("");
 
   useEffect(() => {
     const stored = localStorage.getItem("catia-theme");
@@ -75,6 +76,7 @@ export default function Dashboard() {
   const handleReset = () => {
     setMotivada(null); setFormData(null); setError(null);
     setStep("select"); setMutacion(null); setOrigen(null);
+    setChatContexto("");
     setTab("form");
   };
 
@@ -93,9 +95,10 @@ export default function Dashboard() {
   const labelMutacion = LABEL_MUTACION;
   const labelOrigen   = LABEL_ORIGEN;
 
-  const handleSugerirMotivada = (m: TipoMutacion, o: TipoOrigen) => {
+  const handleSugerirMotivada = (m: TipoMutacion, o: TipoOrigen, contexto: string) => {
     setMutacion(m);
     setOrigen(o);
+    setChatContexto(contexto);
     setStep("form");
     setTab("form");
   };
@@ -217,6 +220,7 @@ export default function Dashboard() {
                       tipoOrigen={origen}
                       onGenerate={handleGenerate}
                       isLoading={loading}
+                      contextoInicial={chatContexto}
                     />
                   </div>
                 )}

@@ -16,7 +16,7 @@ router = APIRouter(prefix="/motivada", tags=["motivada"])
 @router.post("/generar", response_model=MotivadaGeneradaResponse)
 def generar_motivada(data: SolicitudUnificada, db: Session = Depends(get_db)):
     try:
-        resultado = claude_service.generate_motivada(data)
+        resultado = claude_service.generate_motivada(data, db)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 

@@ -24,6 +24,7 @@ export interface SolicitudFormData {
   campo_complementado?: string;
   tipo_notificacion?:   "notificable" | "no_notificable" | null;
   documentos_aportados: string[];
+  contexto_adicional?:  string;
 }
 
 // ── Mock data ────────────────────────────────────────────────────────────────
@@ -100,10 +101,11 @@ const CAMPOS_RAPIDOS_RECT = ["el área construida", "el área de terreno", "la d
 const CAMPOS_RAPIDOS_COMP = ["propietario", "área construida", "área de terreno", "dirección", "nombre", "documento de identidad", "folio de matrícula"];
 
 interface Props {
-  tipoMutacion: TipoMutacion;
-  tipoOrigen:   TipoOrigen;
-  onGenerate:   (data: SolicitudFormData) => void;
-  isLoading:    boolean;
+  tipoMutacion:     TipoMutacion;
+  tipoOrigen:       TipoOrigen;
+  onGenerate:       (data: SolicitudFormData) => void;
+  isLoading:        boolean;
+  contextoInicial?: string;
 }
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
@@ -115,11 +117,12 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
-export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLoading }: Props) {
+export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLoading, contextoInicial }: Props) {
   const mockKey = `${tipoMutacion}_${tipoOrigen}`;
   const [data, setData] = useState<SolicitudFormData>({
     tipo_mutacion: tipoMutacion, tipo_origen: tipoOrigen,
     numero_predial: "", folio_matricula: "", documentos_aportados: [],
+    contexto_adicional: contextoInicial ?? "",
   });
   const [newDoc, setNewDoc] = useState("");
 
@@ -160,6 +163,23 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
         <button type="button" onClick={loadMock} className="btn-ghost text-xs">
           <Wand2 size={13} />Datos de prueba
         </button>
+      </div>
+
+      {/* ── Análisis del asistente IA ── */}
+      <div className="card p-5 space-y-3">
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
+          Análisis del asistente (opcional)
+        </h3>
+        <p className="text-xs text-slate-500">
+          Si vienes del chat, aquí está la conclusión que te dio el Asistente Catastral. Puedes editarla —
+          se usará como fundamento al redactar la motivada.
+        </p>
+        <textarea
+          className="field-input min-h-[100px] resize-y text-sm"
+          value={data.contexto_adicional ?? ""}
+          onChange={e => set("contexto_adicional", e.target.value)}
+          placeholder="Pega o edita aquí el razonamiento que quieres usar como base de la motivada..."
+        />
       </div>
 
       {/* ── SNR ── */}

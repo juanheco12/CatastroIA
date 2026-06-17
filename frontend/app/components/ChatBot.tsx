@@ -57,11 +57,23 @@ function BubbleBot({ text, loading }: { text: string; loading?: boolean }) {
 }
 
 interface Props {
-  onSugerirMotivada?: (tipoMutacion: TipoMutacion, tipoOrigen: TipoOrigen) => void;
+  onSugerirMotivada?: (tipoMutacion: TipoMutacion, tipoOrigen: TipoOrigen, contexto: string) => void;
+}
+
+const CHAT_STORAGE_KEY = "catia-chat-history";
+
+function cargarHistorialGuardado(): UIMessage[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 }
 
 export default function ChatBot({ onSugerirMotivada }: Props) {
-  const [messages,  setMessages]  = useState<UIMessage[]>([]);
+  const [messages,  setMessages]  = useState<UIMessage[]>(cargarHistorialGuardado);
   const [input,     setInput]     = useState("");
   const [loading,   setLoading]   = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -70,6 +82,10 @@ export default function ChatBot({ onSugerirMotivada }: Props) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  useEffect(() => {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+  }, [messages]);
 
   const send = async (texto: string) => {
     const trimmed = texto.trim();
@@ -120,7 +136,7 @@ export default function ChatBot({ onSugerirMotivada }: Props) {
         {messages.length > 0 && (
           <button
             type="button"
-            onClick={() => setMessages([])}
+            onClick={() => { setMessages([]); localStorage.removeItem(CHAT_STORAGE_KEY); }}
             className="btn-ghost text-xs"
           >
             <RotateCcw size={13} />Nueva consulta
@@ -171,7 +187,7 @@ export default function ChatBot({ onSugerirMotivada }: Props) {
                   <div className="flex pl-9 mt-1.5">
                     <button
                       type="button"
-                      onClick={() => onSugerirMotivada?.(m.sugerencia!.tipo_mutacion, m.sugerencia!.tipo_origen)}
+                      onClick={() => onSugerirMotivada?.(m.sugerencia!.tipo_mutacion, m.sugerencia!.tipo_origen, m.content)}
                       className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-brand-primary/40 text-brand-primary hover:bg-teal-500/10 transition-all"
                     >
                       <FileText size={13} />

@@ -40,3 +40,6 @@ class SolicitudUnificada(BaseModel):
 
     # ── Artículos finales ─────────────────────────────────────────
     tipo_notificacion: Optional[Literal["notificable", "no_notificable"]] = None
+
+    # ── Análisis previo del Asistente Catastral (chat) ────────────
+    contexto_adicional: Optional[str] = None

@@ -423,19 +423,35 @@ Para mutaciones de TERCERA CLASE genera 3 párrafos "Que...":
 2. Verificación documental y visita técnica: área construida y área de terreno.
 3. Validación conforme Decreto 1170 de 2015 y Resolución 1040 de 2023 artículo 4.5.1 numeral 3.
 
+Si el mensaje incluye un "Análisis previo del asistente", incorpóralo como fundamento de la motivada (sin contradecirlo ni copiarlo palabra por palabra) y ajusta los párrafos para que sean coherentes con esa conclusión.
+
+No inventes artículos, numerales, resoluciones o decretos que no conozcas con certeza. Solo transcribe el texto literal de un artículo entre comillas cuando ese texto exacto aparezca en los "Documentos de soporte" que se te indiquen; en caso contrario, menciona el artículo por su número sin pretender que es una cita textual.
+
 Sin títulos, sin markdown, párrafos separados por doble salto de línea.
 Lenguaje formal administrativo colombiano. Máximo 500 palabras.
 """
 
-def generate_motivada(data: SolicitudUnificada) -> dict:
+def generate_motivada(data: SolicitudUnificada, db) -> dict:
     from services.ai_provider import call_ai, active_provider
+    from services import soporte_service
     tokens = 0
     if active_provider() == "demo":
         texto = _motivada_demo(data)
     else:
         try:
-            messages = [{"role": "user", "content": str(data.model_dump())}]
-            texto, tokens = call_ai(messages, SYSTEM_PROMPT, max_tokens=1200)
+            query = " ".join(filter(None, [
+                data.tipo_mutacion, data.tipo_origen,
+                data.campo_rectificado, data.campo_complementado,
+            ]))
+            contexto = soporte_service.buscar_contexto_relevante(db, query)
+            system_prompt = SYSTEM_PROMPT + soporte_service.construir_bloque_contexto(contexto)
+
+            contenido = str(data.model_dump(exclude={"contexto_adicional"}))
+            if data.contexto_adicional:
+                contenido += f"\n\nAnálisis previo del asistente:\n{data.contexto_adicional}"
+
+            messages = [{"role": "user", "content": contenido}]
+            texto, tokens = call_ai(messages, system_prompt, max_tokens=1200)
         except Exception:
             texto = _motivada_demo(data)
 

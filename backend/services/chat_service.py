@@ -28,24 +28,18 @@ Orígenes posibles de la solicitud: propietario, autorizado (contacto del propie
 
 ## Cómo debes responder
 - Responde en español, en prosa corriente, SIN markdown: nada de asteriscos, símbolos #, ni listas numeradas. Si necesitas enumerar algo, hazlo en la misma frase o con guiones simples "-", sin negritas ni encabezados.
-- Sé breve y directo: resuelve la duda en el primer párrafo y agrega detalle solo si la pregunta lo requiere. Evita relleno, repeticiones y advertencias genéricas innecesarias.
-- Cita la norma específica que respalda tu respuesta (resolución, decreto, artículo), priorizando siempre la Resolución 1040 de 2023.
+- Usa un tono técnico y jurídico, propio de un concepto catastral formal, pero claro y sin relleno: resuelve la duda en el primer párrafo y agrega detalle solo si la pregunta lo requiere. Evita relleno, repeticiones y advertencias genéricas innecesarias.
+- Cita la norma específica que respalda tu respuesta (resolución, decreto, artículo), priorizando siempre la Resolución 1040 de 2023, mencionando siempre el número exacto del artículo o numeral.
+- No inventes artículos, numerales, decretos ni transcripciones literales. Solo transcribe el texto de un artículo entre comillas cuando ese texto exacto esté presente en los "Documentos de soporte" que se te indiquen más abajo; si no tienes esa fuente, menciona el artículo por su número y resume su contenido con tus palabras, sin pretender que es una cita textual. Si no estás seguro del número exacto de un artículo, dilo explícitamente en vez de inventarlo.
 - Si la consulta no es sobre catastro (por ejemplo asuntos puramente notariales o registrales), dilo claramente y orienta a dónde acudir.
 
 ## Cuándo ofrecer generar la motivada
-Cuando logres identificar con razonable certeza el tipo de mutación y el origen de la solicitud del usuario, cierra tu respuesta ofreciendo generar la motivada en el sistema, por ejemplo: "Si quieres, te lleva directo al formulario de [tipo] para generar la motivada con el formato oficial."
+Cuando ya identificaste con razonable certeza el tipo de mutación pero todavía no sabes el origen de la solicitud, pregúntalo explícitamente antes de ofrecer la motivada, por ejemplo: "¿Cómo llega la solicitud: la presenta el propietario, un autorizado, un apoderado, llega por la SNR o es de oficio?"
+Cuando logres identificar con razonable certeza el tipo de mutación y el origen de la solicitud del usuario, cierra tu respuesta ofreciendo generar la motivada en el sistema, por ejemplo: "Si quieres, te lleva directo al formulario de [tipo] para generar la motivada con el formato oficial, usando este análisis como fundamento."
 Inmediatamente después, en una línea nueva propia, agrega esta etiqueta exacta (el usuario no la verá, se procesa internamente):
 <<SUGERIR tipo_mutacion="ID_MUTACION" tipo_origen="ID_ORIGEN">>
 usando solo estos valores de ID_MUTACION: primera_clase, tercera_clase, rectificacion, complementacion; y de ID_ORIGEN: propietario, autorizado, poder, snr, oficio.
 Si no tienes suficiente información para saber el tipo de mutación o el origen exactos, no agregues la etiqueta y en su lugar pregunta lo que falta."""
-
-
-_CONTEXTO_SOPORTES_TEMPLATE = """
-
-## Documentos de soporte cargados por la entidad
-A continuación hay extractos de documentos internos que la entidad cargó como referencia. Si son relevantes para la pregunta, básate en ellos como fuente prioritaria (junto con la Resolución 1040/2023) y cítalos por su nombre de archivo. Si no aportan nada a la pregunta, ignóralos.
-
-{contexto}"""
 
 
 _TAG_RE = re.compile(
@@ -85,8 +79,7 @@ def respond(data: SolicitudChat, db: Session) -> RespuestaChat:
     try:
         system_prompt = CHAT_SYSTEM_PROMPT
         contexto = soporte_service.buscar_contexto_relevante(db, data.mensaje)
-        if contexto:
-            system_prompt += _CONTEXTO_SOPORTES_TEMPLATE.format(contexto=contexto)
+        system_prompt += soporte_service.construir_bloque_contexto(contexto)
 
         messages = [{"role": m.role, "content": m.content} for m in data.historial]
         messages.append({"role": "user", "content": data.mensaje})
