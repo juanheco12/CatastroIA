@@ -1,4 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from sqlalchemy.orm import Session
+from database.db import get_db
 from schemas.responses import TemplateInfoResponse
 from services import template_service
 
@@ -8,8 +10,8 @@ MAX_TEMPLATE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
 @router.post("/upload", response_model=TemplateInfoResponse)
-async def upload_template(file: UploadFile = File(...)):
-    """Accepts a .docx template and stores it locally."""
+async def upload_template(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Accepts a .docx template and stores it in the database."""
     if not file.filename or not file.filename.endswith(".docx"):
         raise HTTPException(status_code=400, detail="Solo se aceptan archivos .docx")
 
@@ -18,7 +20,7 @@ async def upload_template(file: UploadFile = File(...)):
         raise HTTPException(status_code=413, detail="El archivo supera el límite de 10 MB")
 
     try:
-        meta = template_service.save_template(file_bytes, file.filename)
+        meta = template_service.save_template(db, file_bytes, file.filename)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Error guardando template: {exc}")
 
@@ -32,14 +34,14 @@ async def upload_template(file: UploadFile = File(...)):
 
 
 @router.get("/info", response_model=TemplateInfoResponse)
-def get_template_info():
+def get_template_info(db: Session = Depends(get_db)):
     """Returns metadata about the currently stored template."""
-    info = template_service.get_template_info()
+    info = template_service.get_template_info(db)
     return TemplateInfoResponse(**info)
 
 
 @router.get("/campos")
-def get_template_campos():
+def get_template_campos(db: Session = Depends(get_db)):
     """Returns the list of {{FIELD}} placeholders found in the active template."""
-    info = template_service.get_template_info()
+    info = template_service.get_template_info(db)
     return {"campos": info.get("campos_detectados", []), "existe_template": info.get("existe", False)}

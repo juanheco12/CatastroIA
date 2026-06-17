@@ -160,7 +160,45 @@ Si no hay template personalizado, el sistema genera el documento con una plantil
 
 ## Notas de arquitectura
 
-- El historial se almacena en SQLite local (`catia.db`) — no requiere infraestructura externa
+- En desarrollo local, el historial se almacena en SQLite (`catia.db`); en producción se usa PostgreSQL (ver despliegue abajo)
 - Los archivos exportados se guardan en `backend/exports/`
-- El template activo se guarda en `backend/templates/`
+- El template activo y los documentos de soporte se guardan en la base de datos (no en el disco), para que sobrevivan a reinicios del servidor
 - La clave Anthropic nunca sale del backend
+
+---
+
+## Despliegue en producción (Vercel + Render)
+
+El frontend (Next.js) se despliega en **Vercel** y el backend (FastAPI + PostgreSQL) en **Render**, usando el archivo `render.yaml` de la raíz del repo (Render Blueprint).
+
+### Backend en Render
+
+1. Entra a [render.com](https://render.com) → **New** → **Blueprint** → conecta este repositorio de GitHub.
+2. Render detecta `render.yaml` y crea automáticamente:
+   - Una base de datos PostgreSQL gratuita (`catia-db`)
+   - Un servicio web (`catia-backend`) apuntando a la carpeta `backend/`
+3. Durante la creación te pedirá llenar las variables marcadas como secretas:
+   - `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` y/o `GROQ_API_KEY` (al menos una)
+   - `CORS_ORIGINS` — déjala en `http://localhost:3000` por ahora; se actualiza en el paso final con la URL real de Vercel
+4. Una vez desplegado, copia la URL pública del backend (algo como `https://catia-backend.onrender.com`).
+
+> El plan gratuito de Postgres en Render expira a los 90 días; pasado ese tiempo hay que migrar a un plan pago (~7 USD/mes) o crear una base nueva para seguir conservando el historial.
+> El plan gratuito del servicio web "se duerme" tras ~15 minutos sin tráfico; la primera petición después de eso tarda unos segundos en responder.
+
+### Frontend en Vercel
+
+1. Entra a [vercel.com](https://vercel.com) → **Add New** → **Project** → importa este repositorio.
+2. En **Root Directory** selecciona `frontend` (el repo tiene backend y frontend juntos).
+3. En **Environment Variables** agrega:
+   - `NEXT_PUBLIC_API_BASE_URL` = la URL del backend en Render (paso anterior)
+4. Despliega. Vercel te da una URL pública, por ejemplo `https://catia-ia.vercel.app`.
+
+### Conectar ambos
+
+Vuelve a Render → tu servicio `catia-backend` → **Environment** → edita `CORS_ORIGINS` con la URL de Vercel (sin `/` al final), por ejemplo:
+
+```
+CORS_ORIGINS=https://catia-ia.vercel.app
+```
+
+Guarda y espera el redeploy automático. A partir de ahí la app funciona 100% en la nube, sin necesidad de correr nada en local.

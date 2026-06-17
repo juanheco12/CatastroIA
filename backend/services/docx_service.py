@@ -5,6 +5,7 @@ from docx import Document
 from docx.oxml.ns import qn
 from copy import deepcopy
 from schemas.tercera_clase import TerceraClaseInput
+from database.db import SessionLocal
 from services.template_service import load_template_bytes
 
 
@@ -98,7 +99,11 @@ def generate_docx(data: TerceraClaseInput, texto_motivada: str) -> bytes:
     """
     replacements = _build_replacements(data, texto_motivada)
 
-    template_bytes = load_template_bytes()
+    db = SessionLocal()
+    try:
+        template_bytes = load_template_bytes(db)
+    finally:
+        db.close()
 
     if template_bytes:
         doc = Document(io.BytesIO(template_bytes))

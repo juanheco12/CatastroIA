@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from database.db import init_db
 from routes import motivada_routes, template_routes, history_routes, chat_routes, soporte_routes
+from config import settings
 
 
 @asynccontextmanager
@@ -21,7 +22,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

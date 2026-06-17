@@ -19,8 +19,6 @@ env/
 
 # Generated files
 backend/exports/
-backend/templates/template_activo.docx
-backend/templates/template_meta.json
 
 # Node
 node_modules/
