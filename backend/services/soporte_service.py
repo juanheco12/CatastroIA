@@ -1,13 +1,14 @@
 import io
 import re
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, func, case
 from docx import Document
 from models.soporte import SoporteDocumento
 from schemas.soporte import SoporteInfoResponse
 
 MAX_DOCS_CONTEXTO = 2
 MAX_CHARS_POR_DOC = 4000
+MAX_PALABRAS_CLAVE = 12
 
 _BLOQUE_CONTEXTO_TEMPLATE = """
 
@@ -70,8 +71,27 @@ def guardar_soporte(db: Session, file_bytes: bytes, filename: str) -> SoporteInf
 
 
 def listar_soportes(db: Session) -> list[SoporteInfoResponse]:
-    docs = db.scalars(select(SoporteDocumento).order_by(SoporteDocumento.fecha_subida.desc())).all()
-    return [_a_response(d) for d in docs]
+    filas = db.execute(
+        select(
+            SoporteDocumento.id,
+            SoporteDocumento.nombre_original,
+            SoporteDocumento.tipo_archivo,
+            SoporteDocumento.tamano_bytes,
+            func.length(SoporteDocumento.contenido_texto).label("longitud_texto"),
+            SoporteDocumento.fecha_subida,
+        ).order_by(SoporteDocumento.fecha_subida.desc())
+    ).all()
+    return [
+        SoporteInfoResponse(
+            id=f.id,
+            nombre_original=f.nombre_original,
+            tipo_archivo=f.tipo_archivo,
+            tamano_bytes=f.tamano_bytes,
+            longitud_texto=f.longitud_texto,
+            fecha_subida=f.fecha_subida,
+        )
+        for f in filas
+    ]
 
 
 def eliminar_soporte(db: Session, soporte_id: int) -> bool:
@@ -90,34 +110,37 @@ def _palabras_clave(texto: str) -> list[str]:
 
 def buscar_contexto_relevante(db: Session, pregunta: str) -> str:
     """Puntúa los soportes guardados por solapamiento de palabras clave con la pregunta
-    y devuelve un extracto de los más relevantes, listo para inyectar en el prompt."""
-    docs = db.scalars(select(SoporteDocumento)).all()
-    if not docs:
-        return ""
+    y devuelve un extracto de los más relevantes, listo para inyectar en el prompt.
 
-    claves = set(_palabras_clave(pregunta))
+    La puntuación y el recorte del texto se hacen en SQL para no transferir ni
+    procesar en Python el contenido completo de cada documento (puede pesar
+    decenas o cientos de MB) en cada mensaje del chat."""
+    claves = list(set(_palabras_clave(pregunta)))[:MAX_PALABRAS_CLAVE]
     if not claves:
         return ""
 
-    puntuados = []
-    for doc in docs:
-        texto_lower = doc.contenido_texto.lower()
-        puntaje = sum(texto_lower.count(palabra) for palabra in claves)
-        if puntaje > 0:
-            puntuados.append((puntaje, doc))
+    contenido_lower = func.lower(SoporteDocumento.contenido_texto)
+    puntaje = sum(
+        case((contenido_lower.like(f"%{palabra}%"), 1), else_=0) for palabra in claves
+    )
 
-    if not puntuados:
+    subq = select(
+        SoporteDocumento.nombre_original.label("nombre"),
+        func.substr(SoporteDocumento.contenido_texto, 1, MAX_CHARS_POR_DOC).label("extracto"),
+        puntaje.label("puntaje"),
+    ).subquery()
+
+    filas = db.execute(
+        select(subq.c.nombre, subq.c.extracto)
+        .where(subq.c.puntaje > 0)
+        .order_by(subq.c.puntaje.desc())
+        .limit(MAX_DOCS_CONTEXTO)
+    ).all()
+
+    if not filas:
         return ""
 
-    puntuados.sort(key=lambda x: x[0], reverse=True)
-    mejores = puntuados[:MAX_DOCS_CONTEXTO]
-
-    bloques = []
-    for _, doc in mejores:
-        extracto = doc.contenido_texto[:MAX_CHARS_POR_DOC]
-        bloques.append(f"--- {doc.nombre_original} ---\n{extracto}")
-
-    return "\n\n".join(bloques)
+    return "\n\n".join(f"--- {nombre} ---\n{extracto}" for nombre, extracto in filas)
 
 
 def construir_bloque_contexto(contexto: str) -> str:

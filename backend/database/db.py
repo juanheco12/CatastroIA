@@ -10,9 +10,14 @@ if _database_url.startswith("postgres://"):
 
 _is_sqlite = _database_url.startswith("sqlite")
 
+# pool_pre_ping evita el error "SSL connection has been closed unexpectedly":
+# Neon cierra conexiones inactivas y, sin esto, SQLAlchemy intenta reusar una
+# conexión muerta del pool en vez de detectarla y reconectar.
 engine = create_engine(
     _database_url,
     connect_args={"check_same_thread": False} if _is_sqlite else {},
+    pool_pre_ping=True,
+    **({} if _is_sqlite else {"pool_recycle": 280}),
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
