@@ -17,12 +17,22 @@ export default function SoportesPanel() {
   const [soportes, setSoportes] = useState<SoporteInfo[]>([]);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [loadingList, setLoadingList] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoadingList(true);
     try {
       setSoportes(await listarSoportes());
-    } catch {/* ignore */}
+      setLoadError(null);
+    } catch {
+      // El backend puede tardar en despertar (cold start) — no asumir que los
+      // documentos se perdieron, solo que la lista no cargó esta vez.
+      setLoadError("No se pudo cargar la lista de documentos. El servidor puede estar despertando, intenta de nuevo en unos segundos.");
+    } finally {
+      setLoadingList(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -112,6 +122,34 @@ export default function SoportesPanel() {
           <AlertCircle size={16} />
           {error}
         </div>
+      )}
+
+      {loadError && (
+        <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm" style={{ color: "var(--text)" }}>
+          <AlertCircle size={16} className="shrink-0" />
+          <span className="flex-1">{loadError}</span>
+          <button
+            type="button"
+            onClick={load}
+            className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded hover:bg-white/10 shrink-0"
+          >
+            <RefreshCw size={12} />
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {loadingList && soportes.length === 0 && !loadError && (
+        <p className="text-xs flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
+          <RefreshCw size={14} className="animate-spin" />
+          Cargando documentos...
+        </p>
+      )}
+
+      {!loadingList && !loadError && soportes.length === 0 && (
+        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+          Aún no has subido documentos de referencia.
+        </p>
       )}
 
       {soportes.length > 0 && (
