@@ -6,7 +6,7 @@ from services import soporte_service
 
 router = APIRouter(prefix="/soportes", tags=["soportes"])
 
-MAX_SOPORTE_SIZE = 15 * 1024 * 1024  # 15 MB
+MAX_SOPORTE_SIZE = 50 * 1024 * 1024  # 50 MB
 EXTENSIONES_VALIDAS = {"pdf", "docx", "txt"}
 
 
@@ -22,7 +22,7 @@ async def upload_soporte(file: UploadFile = File(...), db: Session = Depends(get
 
     file_bytes = await file.read()
     if len(file_bytes) > MAX_SOPORTE_SIZE:
-        raise HTTPException(status_code=413, detail="El archivo supera el límite de 15 MB")
+        raise HTTPException(status_code=413, detail="El archivo supera el límite de 50 MB")
 
     try:
         return soporte_service.guardar_soporte(db, file_bytes, file.filename)
