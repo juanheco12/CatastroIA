@@ -16,11 +16,36 @@ def _call_anthropic(messages: list[dict], system: str, max_tokens: int) -> tuple
     return r.content[0].text, r.usage.input_tokens + r.usage.output_tokens
 
 
+_gemini_model_name: str | None = None
+
+
+def _resolve_gemini_model() -> str:
+    """
+    Model names get renamed/retired by Google over time, so ask the API
+    which ones are currently available instead of hardcoding one.
+    """
+    global _gemini_model_name
+    if _gemini_model_name:
+        return _gemini_model_name
+    import google.generativeai as genai
+    candidates = [
+        m.name for m in genai.list_models()
+        if "generateContent" in m.supported_generation_methods
+    ]
+    flash = sorted(
+        (c for c in candidates if "flash" in c.lower() and "8b" not in c.lower()),
+        reverse=True,
+    )
+    chosen = (flash or sorted(candidates, reverse=True) or ["models/gemini-1.5-flash"])[0]
+    _gemini_model_name = chosen
+    return chosen
+
+
 def _call_gemini(messages: list[dict], system: str, max_tokens: int) -> tuple[str, int]:
     import google.generativeai as genai
     genai.configure(api_key=settings.google_api_key)
     model = genai.GenerativeModel(
-        "gemini-1.5-flash",
+        _resolve_gemini_model(),
         system_instruction=system,
         generation_config={"max_output_tokens": max_tokens},
     )
