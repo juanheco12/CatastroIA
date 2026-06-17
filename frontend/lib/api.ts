@@ -95,10 +95,15 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface SugerenciaMotivada {
+  tipo_mutacion: string;
+  tipo_origen: string;
+}
+
 export async function enviarMensajeChat(
   mensaje: string,
   historial: ChatMessage[]
-): Promise<{ respuesta: string; tokens_usados?: number }> {
+): Promise<{ respuesta: string; tokens_usados?: number; sugerencia?: SugerenciaMotivada | null }> {
   const res = await api.post("/chat/mensaje", { mensaje, historial });
   return res.data;
 }

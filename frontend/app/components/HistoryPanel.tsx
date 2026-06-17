@@ -78,7 +78,7 @@ export default function HistoryPanel({ onReopen }: HistoryPanelProps) {
     if (!confirm(`¿Eliminar ${selected.size} registro${selected.size > 1 ? "s" : ""}?`)) return;
     setDeleting(true);
     try {
-      await Promise.all([...selected].map(id => deleteHistorialItem(id)));
+      await Promise.all(Array.from(selected).map(id => deleteHistorialItem(id)));
       setItems(prev => prev.filter(x => !selected.has(x.id)));
       if (expanded !== null && selected.has(expanded)) setExpanded(null);
       setSelected(new Set());

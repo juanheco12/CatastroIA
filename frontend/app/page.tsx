@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import LandingPage from "./components/LandingPage";
-import MutationSelector, { TipoMutacion, TipoOrigen } from "./components/MutationSelector";
+import MutationSelector, { TipoMutacion, TipoOrigen, LABEL_MUTACION, LABEL_ORIGEN } from "./components/MutationSelector";
 import FormBuilder, { SolicitudFormData } from "./components/FormBuilder";
 import PreviewMotivada from "./components/PreviewMotivada";
 import HistoryPanel from "./components/HistoryPanel";
@@ -90,18 +90,14 @@ export default function Dashboard() {
     setTab("preview");
   };
 
-  const labelMutacion: Record<TipoMutacion, string> = {
-    primera_clase:   "1ra Clase",
-    tercera_clase:   "3ra Clase",
-    rectificacion:   "Rectificación",
-    complementacion: "Complementación",
-  };
-  const labelOrigen: Record<TipoOrigen, string> = {
-    propietario: "Propietario",
-    autorizado:  "Autorizado",
-    poder:       "Con poder",
-    snr:         "SNR",
-    oficio:      "Oficio",
+  const labelMutacion = LABEL_MUTACION;
+  const labelOrigen   = LABEL_ORIGEN;
+
+  const handleSugerirMotivada = (m: TipoMutacion, o: TipoOrigen) => {
+    setMutacion(m);
+    setOrigen(o);
+    setStep("form");
+    setTab("form");
   };
 
   return (
@@ -240,7 +236,7 @@ export default function Dashboard() {
             ) : null}
 
             {tab === "historial" && <HistoryPanel onReopen={handleReopen} />}
-            {tab === "chat"      && <ChatBot />}
+            {tab === "chat"      && <ChatBot onSugerirMotivada={handleSugerirMotivada} />}
             {tab === "settings"  && (
               <SettingsPanel
                 theme={darkMode ? "dark" : "light"}

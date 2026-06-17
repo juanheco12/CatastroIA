@@ -2,8 +2,13 @@
 
 import { useState, useRef, useEffect } from "react";
 import { enviarMensajeChat, ChatMessage } from "@/lib/api";
-import { Send, Bot, User, Sparkles, RotateCcw } from "lucide-react";
+import { Send, Bot, User, Sparkles, RotateCcw, FileText } from "lucide-react";
+import { TipoMutacion, TipoOrigen, LABEL_MUTACION, LABEL_ORIGEN } from "./MutationSelector";
 import clsx from "clsx";
+
+interface UIMessage extends ChatMessage {
+  sugerencia?: { tipo_mutacion: TipoMutacion; tipo_origen: TipoOrigen } | null;
+}
 
 const PREGUNTAS_RAPIDAS = [
   "¿Qué documentos se necesitan para una mutación de primera clase?",
@@ -51,8 +56,12 @@ function BubbleBot({ text, loading }: { text: string; loading?: boolean }) {
   );
 }
 
-export default function ChatBot() {
-  const [messages,  setMessages]  = useState<ChatMessage[]>([]);
+interface Props {
+  onSugerirMotivada?: (tipoMutacion: TipoMutacion, tipoOrigen: TipoOrigen) => void;
+}
+
+export default function ChatBot({ onSugerirMotivada }: Props) {
+  const [messages,  setMessages]  = useState<UIMessage[]>([]);
   const [input,     setInput]     = useState("");
   const [loading,   setLoading]   = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -66,13 +75,17 @@ export default function ChatBot() {
     const trimmed = texto.trim();
     if (!trimmed || loading) return;
     setInput("");
-    const userMsg: ChatMessage = { role: "user", content: trimmed };
+    const userMsg: UIMessage = { role: "user", content: trimmed };
     const newHistory = [...messages, userMsg];
     setMessages(newHistory);
     setLoading(true);
     try {
       const res = await enviarMensajeChat(trimmed, messages);
-      setMessages([...newHistory, { role: "assistant", content: res.respuesta }]);
+      setMessages([...newHistory, {
+        role: "assistant",
+        content: res.respuesta,
+        sugerencia: res.sugerencia as UIMessage["sugerencia"],
+      }]);
     } catch {
       setMessages([...newHistory, {
         role: "assistant",
@@ -149,11 +162,25 @@ export default function ChatBot() {
           </div>
         ) : (
           <>
-            {messages.map((m, i) =>
-              m.role === "user"
-                ? <BubbleUser key={i} text={m.content} />
-                : <BubbleBot  key={i} text={m.content} />
-            )}
+            {messages.map((m, i) => (
+              <div key={i}>
+                {m.role === "user"
+                  ? <BubbleUser text={m.content} />
+                  : <BubbleBot  text={m.content} />}
+                {m.role === "assistant" && m.sugerencia && (
+                  <div className="flex pl-9 mt-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onSugerirMotivada?.(m.sugerencia!.tipo_mutacion, m.sugerencia!.tipo_origen)}
+                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-brand-primary/40 text-brand-primary hover:bg-teal-500/10 transition-all"
+                    >
+                      <FileText size={13} />
+                      Generar motivada — {LABEL_MUTACION[m.sugerencia.tipo_mutacion]} · {LABEL_ORIGEN[m.sugerencia.tipo_origen]}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
             {loading && <BubbleBot text="" loading />}
           </>
         )}

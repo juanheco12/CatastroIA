@@ -38,6 +38,21 @@ const ORIGENES_POR_MUTACION: Record<TipoMutacion, { id: TipoOrigen; titulo: stri
   ],
 };
 
+export const LABEL_MUTACION: Record<TipoMutacion, string> = {
+  primera_clase:   "1ra Clase",
+  tercera_clase:   "3ra Clase",
+  rectificacion:   "Rectificación",
+  complementacion: "Complementación",
+};
+
+export const LABEL_ORIGEN: Record<TipoOrigen, string> = {
+  propietario: "Propietario",
+  autorizado:  "Autorizado",
+  poder:       "Con poder",
+  snr:         "SNR",
+  oficio:      "Oficio",
+};
+
 interface Props {
   selectedMutacion: TipoMutacion | null;
   selectedOrigen:   TipoOrigen   | null;
