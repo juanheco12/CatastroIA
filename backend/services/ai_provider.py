@@ -3,12 +3,42 @@ Unified LLM caller.  Priority: Anthropic → Google Gemini → Groq → None
 """
 import json
 from pathlib import Path
+from typing import Callable
 from config import settings
 
-# Persisted across cold starts (Render free tier sleeps and restarts the
-# process, wiping the in-memory cache below, but keeps the disk) so we only
-# pay for the genai.list_models() round trip once instead of on every wake-up.
-_GEMINI_MODEL_CACHE_FILE = Path(settings.exports_path) / ".gemini_model_cache.json"
+
+def _make_model_resolver(cache_filename: str, discover_fn: Callable[[], str]) -> Callable[..., str]:
+    """
+    Model names get renamed/retired by Google over time, so ask the API which
+    ones are currently available instead of hardcoding one. The result is
+    cached in memory and on disk — persisted across cold starts (Render free
+    tier wipes the in-memory cache on every sleep/wake, but keeps the disk) —
+    so repeated calls skip the extra list_models() round trip.
+    """
+    cache_file = Path(settings.exports_path) / cache_filename
+    state: dict[str, str | None] = {"name": None}
+
+    def resolver(force_refresh: bool = False) -> str:
+        if force_refresh:
+            state["name"] = None
+        elif state["name"]:
+            return state["name"]
+        elif cache_file.exists():
+            try:
+                state["name"] = json.loads(cache_file.read_text())["model"]
+                return state["name"]
+            except Exception:
+                pass
+
+        chosen = discover_fn()
+        state["name"] = chosen
+        try:
+            cache_file.write_text(json.dumps({"model": chosen}))
+        except Exception:
+            pass
+        return chosen
+
+    return resolver
 
 
 def _call_anthropic(messages: list[dict], system: str, max_tokens: int) -> tuple[str, int]:
@@ -21,9 +51,6 @@ def _call_anthropic(messages: list[dict], system: str, max_tokens: int) -> tuple
         messages=messages,
     )
     return r.content[0].text, r.usage.input_tokens + r.usage.output_tokens
-
-
-_gemini_model_name: str | None = None
 
 
 def _discover_gemini_model() -> str:
@@ -39,32 +66,20 @@ def _discover_gemini_model() -> str:
     return (flash or sorted(candidates, reverse=True) or ["models/gemini-1.5-flash"])[0]
 
 
-def _resolve_gemini_model(force_refresh: bool = False) -> str:
-    """
-    Model names get renamed/retired by Google over time, so ask the API
-    which ones are currently available instead of hardcoding one. The result
-    is cached in memory and on disk so repeated calls — and repeated cold
-    starts on Render's free tier — skip the extra list_models() round trip.
-    """
-    global _gemini_model_name
-    if force_refresh:
-        _gemini_model_name = None
-    elif _gemini_model_name:
-        return _gemini_model_name
-    elif _GEMINI_MODEL_CACHE_FILE.exists():
-        try:
-            _gemini_model_name = json.loads(_GEMINI_MODEL_CACHE_FILE.read_text())["model"]
-            return _gemini_model_name
-        except Exception:
-            pass
+_resolve_gemini_model = _make_model_resolver(".gemini_model_cache.json", _discover_gemini_model)
 
-    chosen = _discover_gemini_model()
-    _gemini_model_name = chosen
-    try:
-        _GEMINI_MODEL_CACHE_FILE.write_text(json.dumps({"model": chosen}))
-    except Exception:
-        pass
-    return chosen
+
+def _discover_gemini_embed_model() -> str:
+    import google.generativeai as genai
+    candidates = [
+        m.name for m in genai.list_models()
+        if "embedContent" in m.supported_generation_methods
+    ]
+    preferido = sorted(c for c in candidates if "text-embedding" in c.lower())
+    return (preferido or sorted(candidates) or ["models/text-embedding-004"])[0]
+
+
+_resolve_gemini_embed_model = _make_model_resolver(".gemini_embed_model_cache.json", _discover_gemini_embed_model)
 
 
 def _generate_with_gemini(model_name: str, messages: list[dict], system: str, max_tokens: int) -> str:
@@ -95,6 +110,33 @@ def _call_gemini(messages: list[dict], system: str, max_tokens: int) -> tuple[st
         # Cached model name may be stale (Google retired it) — rediscover once and retry.
         text = _generate_with_gemini(_resolve_gemini_model(force_refresh=True), messages, system, max_tokens)
     return text, 0  # Gemini free tier doesn't return token counts reliably
+
+
+def embed_texts(texts: list[str], task_type: str) -> list[list[float]]:
+    """
+    Embeddings de Gemini para busqueda semantica (RAG). task_type debe ser
+    "retrieval_document" al indexar fragmentos o "retrieval_query" al
+    embeber la pregunta del usuario — Gemini usa vectores asimetricos segun
+    el caso, lo que mejora la calidad de la busqueda.
+    """
+    import google.generativeai as genai
+    genai.configure(api_key=settings.google_api_key)
+
+    def _lote(textos: list[str], model: str) -> list[list[float]]:
+        resultado = genai.embed_content(model=model, content=textos, task_type=task_type)
+        return resultado["embedding"]
+
+    model = _resolve_gemini_embed_model()
+    embeddings: list[list[float]] = []
+    TAM_LOTE = 90  # margen bajo el limite de 100 textos por llamada de la API
+    for i in range(0, len(texts), TAM_LOTE):
+        lote = texts[i:i + TAM_LOTE]
+        try:
+            embeddings.extend(_lote(lote, model))
+        except Exception:
+            model = _resolve_gemini_embed_model(force_refresh=True)
+            embeddings.extend(_lote(lote, model))
+    return embeddings
 
 
 def _call_groq(messages: list[dict], system: str, max_tokens: int) -> tuple[str, int]:

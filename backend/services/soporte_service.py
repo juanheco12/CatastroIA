@@ -1,14 +1,21 @@
 import io
 import re
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func, case
+from sqlalchemy import select, func, case, exists
 from docx import Document
-from models.soporte import SoporteDocumento
+from database.db import IS_SQLITE
+from models.soporte import SoporteDocumento, SoporteChunk
 from schemas.soporte import SoporteInfoResponse
+from services import ai_provider
 
 MAX_DOCS_CONTEXTO = 2
 MAX_CHARS_POR_DOC = 4000
 MAX_PALABRAS_CLAVE = 12
+
+TAM_CHUNK = 1500
+SOLAPE_CHUNK = 200
+MAX_CHUNKS_POR_DOC = 400  # acota el costo de embeddings para documentos enormes
+MAX_CHUNKS_CONTEXTO = 6
 
 _BLOQUE_CONTEXTO_TEMPLATE = """
 
@@ -52,6 +59,36 @@ def _a_response(doc: SoporteDocumento) -> SoporteInfoResponse:
     )
 
 
+def _chunkear_texto(texto: str) -> list[str]:
+    texto = texto.strip()
+    if not texto:
+        return []
+    chunks = []
+    inicio = 0
+    n = len(texto)
+    while inicio < n and len(chunks) < MAX_CHUNKS_POR_DOC:
+        fin = min(inicio + TAM_CHUNK, n)
+        chunks.append(texto[inicio:fin])
+        if fin == n:
+            break
+        inicio = fin - SOLAPE_CHUNK
+    return chunks
+
+
+def _indexar_chunks(db: Session, doc: SoporteDocumento) -> None:
+    """Genera embeddings para los fragmentos del documento y los guarda para
+    busqueda semantica (RAG). Falla en silencio: si los embeddings no estan
+    disponibles, el documento sigue accesible por la busqueda por palabras
+    clave (_buscar_contexto_legacy)."""
+    fragmentos = _chunkear_texto(doc.contenido_texto)
+    if not fragmentos:
+        return
+    embeddings = ai_provider.embed_texts(fragmentos, task_type="retrieval_document")
+    for orden, (texto, vector) in enumerate(zip(fragmentos, embeddings)):
+        db.add(SoporteChunk(soporte_id=doc.id, orden=orden, texto=texto, embedding=vector))
+    db.commit()
+
+
 def guardar_soporte(db: Session, file_bytes: bytes, filename: str) -> SoporteInfoResponse:
     tipo_archivo = filename.rsplit(".", 1)[-1].lower()
     texto = _extraer_texto(file_bytes, tipo_archivo)
@@ -67,6 +104,13 @@ def guardar_soporte(db: Session, file_bytes: bytes, filename: str) -> SoporteInf
     db.add(doc)
     db.commit()
     db.refresh(doc)
+
+    if not IS_SQLITE:
+        try:
+            _indexar_chunks(db, doc)
+        except Exception:
+            pass
+
     return _a_response(doc)
 
 
@@ -98,7 +142,7 @@ def eliminar_soporte(db: Session, soporte_id: int) -> bool:
     doc = db.get(SoporteDocumento, soporte_id)
     if not doc:
         return False
-    db.delete(doc)
+    db.delete(doc)  # los chunks se eliminan en cascada (ON DELETE CASCADE)
     db.commit()
     return True
 
@@ -108,13 +152,10 @@ def _palabras_clave(texto: str) -> list[str]:
     return [p for p in palabras if p not in _STOPWORDS and len(p) > 2]
 
 
-def buscar_contexto_relevante(db: Session, pregunta: str) -> str:
-    """Puntúa los soportes guardados por solapamiento de palabras clave con la pregunta
-    y devuelve un extracto de los más relevantes, listo para inyectar en el prompt.
-
-    La puntuación y el recorte del texto se hacen en SQL para no transferir ni
-    procesar en Python el contenido completo de cada documento (puede pesar
-    decenas o cientos de MB) en cada mensaje del chat."""
+def _buscar_contexto_legacy(db: Session, pregunta: str) -> str:
+    """Busqueda por solapamiento de palabras clave (sin embeddings). Se usa
+    como respaldo si los embeddings fallan o en SQLite (desarrollo local,
+    donde no esta disponible la extension pgvector)."""
     claves = list(set(_palabras_clave(pregunta)))[:MAX_PALABRAS_CLAVE]
     if not claves:
         return ""
@@ -141,6 +182,49 @@ def buscar_contexto_relevante(db: Session, pregunta: str) -> str:
         return ""
 
     return "\n\n".join(f"--- {nombre} ---\n{extracto}" for nombre, extracto in filas)
+
+
+def _backfill_chunks_faltantes(db: Session) -> None:
+    """Indexa documentos subidos antes de activar el RAG, o que fallaron al
+    indexarse en su momento (p. ej. por una caida temporal de la API de
+    embeddings)."""
+    pendientes = db.scalars(
+        select(SoporteDocumento).where(
+            ~exists().where(SoporteChunk.soporte_id == SoporteDocumento.id)
+        )
+    ).all()
+    for doc in pendientes:
+        try:
+            _indexar_chunks(db, doc)
+        except Exception:
+            pass
+
+
+def buscar_contexto_relevante(db: Session, pregunta: str) -> str:
+    """Busqueda semantica (RAG): embebe la pregunta y recupera, por similitud
+    de coseno calculada en la base de datos (pgvector), los fragmentos de
+    los documentos de soporte mas relevantes — sin transferir ni procesar en
+    Python el contenido completo de cada documento."""
+    if IS_SQLITE:
+        return _buscar_contexto_legacy(db, pregunta)
+
+    try:
+        _backfill_chunks_faltantes(db)
+        vector_pregunta = ai_provider.embed_texts([pregunta], task_type="retrieval_query")[0]
+
+        filas = db.execute(
+            select(SoporteDocumento.nombre_original, SoporteChunk.texto)
+            .join(SoporteDocumento, SoporteChunk.soporte_id == SoporteDocumento.id)
+            .order_by(SoporteChunk.embedding.cosine_distance(vector_pregunta))
+            .limit(MAX_CHUNKS_CONTEXTO)
+        ).all()
+    except Exception:
+        return _buscar_contexto_legacy(db, pregunta)
+
+    if not filas:
+        return ""
+
+    return "\n\n".join(f"--- {nombre} ---\n{texto}" for nombre, texto in filas)
 
 
 def construir_bloque_contexto(contexto: str) -> str:
