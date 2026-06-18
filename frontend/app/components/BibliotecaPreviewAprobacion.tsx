@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   obtenerDetallePlantilla, previewGeneracionPlantilla, generarFinalPlantilla, downloadBase64Docx,
-  PlantillaDetalle, PreviewGeneracionResponse, labelCategoria, labelTipoCampo,
+  PlantillaDetalle, PreviewGeneracionResponse, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
 import { RefreshCw, AlertCircle, FileText, Download, Eye, ArrowLeft } from "lucide-react";
 
@@ -127,13 +127,17 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
           ))}
         </div>
         <div>
-          <label className="field-label">Tipo de trámite (opcional)</label>
-          <input
+          <label className="field-label">Origen de la solicitud (opcional)</label>
+          <select
             className="field-input"
             value={tipoTramiteManual}
             onChange={(e) => { setTipoTramiteManual(e.target.value); setPreview(null); setListo(false); }}
-            placeholder="Ej: Propietario, Oficio, SNR, Con poder..."
-          />
+          >
+            <option value="">Sin especificar</option>
+            {ORIGENES_TRAMITE.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 

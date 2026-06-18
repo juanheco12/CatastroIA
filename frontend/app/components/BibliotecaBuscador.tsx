@@ -1,28 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   buscarPlantillasPorFiltros, buscarPlantillaSemantica,
   PlantillaInfo, ResultadoBusqueda, BusquedaSemanticaResponse,
-  CATEGORIAS_MOTIVADA, labelCategoria,
+  CATEGORIAS_MOTIVADA, ORIGENES_TRAMITE, labelCategoria, labelOrigenTramite,
 } from "@/lib/api";
-import { Search, Sparkles, AlertCircle, Star, FileSearch, ListFilter } from "lucide-react";
+import { Search, Sparkles, AlertCircle, Star, FileSearch, ListFilter, RefreshCw } from "lucide-react";
 import clsx from "clsx";
 
 interface BibliotecaBuscadorProps {
   onSeleccionar: (plantilla: PlantillaInfo) => void;
+  /** Preseleccionan y bloquean categoría/origen — usado por el flujo guiado
+   * que arranca desde las tarjetas de "tipo de mutación" del Formulario. */
+  categoriaPreset?: string;
+  origenPreset?: string;
+  bloquearFiltros?: boolean;
 }
 
-export default function BibliotecaBuscador({ onSeleccionar }: BibliotecaBuscadorProps) {
-  const [modo, setModo] = useState<"filtros" | "semantica">("semantica");
+export default function BibliotecaBuscador({
+  onSeleccionar, categoriaPreset, origenPreset, bloquearFiltros = false,
+}: BibliotecaBuscadorProps) {
+  const [modo, setModo] = useState<"filtros" | "semantica">("filtros");
 
-  // Modo filtros
-  const [categoriaFiltro, setCategoriaFiltro] = useState("");
+  // Modo filtros — es el modo por defecto: elegir categoría (y opcionalmente
+  // origen) muestra de una vez todos los casos .docx que coinciden, sin
+  // forzar a describir el caso en texto libre.
+  const [categoriaFiltro, setCategoriaFiltro] = useState(categoriaPreset ?? "");
   const [keyword, setKeyword] = useState("");
-  const [tipoTramite, setTipoTramite] = useState("");
+  const [tipoTramite, setTipoTramite] = useState(origenPreset ?? "");
   const [resultadosFiltro, setResultadosFiltro] = useState<PlantillaInfo[] | null>(null);
 
-  // Modo semantica
+  // Modo semantica (búsqueda libre por descripción del caso, opcional)
   const [descripcion, setDescripcion] = useState("");
   const [categoriaSemantica, setCategoriaSemantica] = useState("");
   const [resultadoSemantico, setResultadoSemantico] = useState<BusquedaSemanticaResponse | null>(null);
@@ -46,6 +55,16 @@ export default function BibliotecaBuscador({ onSeleccionar }: BibliotecaBuscador
       setBuscando(false);
     }
   };
+
+  // Al elegir categoría (y/o origen) la lista de coincidencias aparece sola,
+  // sin tener que pulsar "Buscar" — esa es la búsqueda por coincidencia que
+  // se pidió: categoría + origen → todos los casos que apliquen.
+  useEffect(() => {
+    if (modo === "filtros" && (categoriaFiltro || tipoTramite || bloquearFiltros)) {
+      handleBuscarFiltros();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoriaFiltro, tipoTramite, modo]);
 
   const handleBuscarSemantica = async () => {
     if (!descripcion.trim()) {
@@ -82,7 +101,7 @@ export default function BibliotecaBuscador({ onSeleccionar }: BibliotecaBuscador
       </div>
       <div className="flex items-center gap-2 text-xs flex-wrap" style={{ color: "var(--text-muted)" }}>
         <span>{labelCategoria(r.plantilla.categoria)}</span>
-        {r.plantilla.tipo_tramite_manual && <span>· {r.plantilla.tipo_tramite_manual}</span>}
+        {r.plantilla.tipo_tramite_manual && <span>· {labelOrigenTramite(r.plantilla.tipo_tramite_manual)}</span>}
         <span>· usada {r.plantilla.contador_uso}x</span>
         {mostrarScore && <span className="ml-auto font-mono">{(r.score * 100).toFixed(0)}% similitud</span>}
       </div>
@@ -92,32 +111,91 @@ export default function BibliotecaBuscador({ onSeleccionar }: BibliotecaBuscador
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Buscar plantilla para un caso nuevo</h2>
-        <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-          Encuentra la motivada activa más parecida al caso que vas a tramitar. El texto jurídico nunca
-          se reescribe — solo se sustituyen los datos variables que confirmes después.
-        </p>
-      </div>
+      {!bloquearFiltros && (
+        <div>
+          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Buscar plantilla para un caso nuevo</h2>
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+            Elige categoría y origen para ver todos los casos .docx que coinciden. El texto jurídico nunca
+            se reescribe — solo se sustituyen los datos variables que confirmes después.
+          </p>
+        </div>
+      )}
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setModo("semantica")}
-          className={clsx("flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all",
-            modo === "semantica" ? "border-brand-primary bg-teal-500/10 text-brand-primary" : "btn-ghost")}
-        >
-          <Sparkles size={13} />Por descripción del caso
-        </button>
-        <button
-          type="button"
-          onClick={() => setModo("filtros")}
-          className={clsx("flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all",
-            modo === "filtros" ? "border-brand-primary bg-teal-500/10 text-brand-primary" : "btn-ghost")}
-        >
-          <ListFilter size={13} />Por filtros
-        </button>
-      </div>
+      {!bloquearFiltros && (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setModo("filtros")}
+            className={clsx("flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all",
+              modo === "filtros" ? "border-brand-primary bg-teal-500/10 text-brand-primary" : "btn-ghost")}
+          >
+            <ListFilter size={13} />Por categoría (recomendado)
+          </button>
+          <button
+            type="button"
+            onClick={() => setModo("semantica")}
+            className={clsx("flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all",
+              modo === "semantica" ? "border-brand-primary bg-teal-500/10 text-brand-primary" : "btn-ghost")}
+          >
+            <Sparkles size={13} />Por descripción del caso
+          </button>
+        </div>
+      )}
+
+      {modo === "filtros" && (
+        <div className="space-y-3">
+          {bloquearFiltros ? (
+            <p className="text-xs flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
+              {buscando && <RefreshCw size={12} className="animate-spin" />}
+              Mostrando casos de <strong style={{ color: "var(--text)" }}>{labelCategoria(categoriaFiltro)}</strong>
+              {" "}· origen <strong style={{ color: "var(--text)" }}>{labelOrigenTramite(tipoTramite)}</strong>
+            </p>
+          ) : (
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div>
+                <label className="field-label">Categoría</label>
+                <select className="field-input" value={categoriaFiltro} onChange={(e) => setCategoriaFiltro(e.target.value)}>
+                  <option value="">Todas</option>
+                  {CATEGORIAS_MOTIVADA.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="field-label">Origen de la solicitud</label>
+                <select className="field-input" value={tipoTramite} onChange={(e) => setTipoTramite(e.target.value)}>
+                  <option value="">Todos</option>
+                  {ORIGENES_TRAMITE.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="field-label">Palabra clave</label>
+                <input className="field-input" placeholder="Ej: predio urbano" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+              </div>
+            </div>
+          )}
+          {!bloquearFiltros && (
+            <button type="button" onClick={handleBuscarFiltros} disabled={buscando} className="btn-primary">
+              <Search size={15} />{buscando ? "Buscando..." : "Buscar"}
+            </button>
+          )}
+
+          {resultadosFiltro && (
+            <div className="space-y-2 pt-2">
+              {resultadosFiltro.length === 0 ? (
+                <div className="flex items-center gap-2 py-8 justify-center" style={{ color: "var(--text-muted)" }}>
+                  <FileSearch size={18} />
+                  <span className="text-sm">Sin resultados para estos filtros.</span>
+                </div>
+              ) : (
+                resultadosFiltro.map((p) => renderResultado({ plantilla: p, score: 0 }, false, false))
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {modo === "semantica" && (
         <div className="space-y-3">
@@ -167,46 +245,6 @@ export default function BibliotecaBuscador({ onSeleccionar }: BibliotecaBuscador
                   </p>
                   <div className="space-y-2">{resultadoSemantico.alternativas.map((r) => renderResultado(r))}</div>
                 </>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {modo === "filtros" && (
-        <div className="space-y-3">
-          <div className="grid sm:grid-cols-3 gap-3">
-            <div>
-              <label className="field-label">Categoría</label>
-              <select className="field-input" value={categoriaFiltro} onChange={(e) => setCategoriaFiltro(e.target.value)}>
-                <option value="">Todas</option>
-                {CATEGORIAS_MOTIVADA.map((c) => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="field-label">Palabra clave</label>
-              <input className="field-input" placeholder="Ej: predio urbano" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
-            </div>
-            <div>
-              <label className="field-label">Tipo de trámite</label>
-              <input className="field-input" placeholder="Ej: Propietario" value={tipoTramite} onChange={(e) => setTipoTramite(e.target.value)} />
-            </div>
-          </div>
-          <button type="button" onClick={handleBuscarFiltros} disabled={buscando} className="btn-primary">
-            <Search size={15} />{buscando ? "Buscando..." : "Buscar"}
-          </button>
-
-          {resultadosFiltro && (
-            <div className="space-y-2 pt-2">
-              {resultadosFiltro.length === 0 ? (
-                <div className="flex items-center gap-2 py-8 justify-center" style={{ color: "var(--text-muted)" }}>
-                  <FileSearch size={18} />
-                  <span className="text-sm">Sin resultados para estos filtros.</span>
-                </div>
-              ) : (
-                resultadosFiltro.map((p) => renderResultado({ plantilla: p, score: 0 }, false, false))
               )}
             </div>
           )}

@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import {
   pendientesRevision, obtenerDetallePlantilla, aprobarPlantilla, marcarPlantillaAtipico,
   PlantillaInfo, PlantillaDetalle, CampoManualInput,
-  CATEGORIAS_MOTIVADA, TIPOS_CAMPO_VARIABLE, labelCategoria, labelTipoCampo,
+  CATEGORIAS_MOTIVADA, TIPOS_CAMPO_VARIABLE, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
 import {
   RefreshCw, AlertCircle, FileWarning, CheckCircle2, MousePointerClick,
-  X, ClipboardList, Tag,
+  X, ClipboardList, Tag, Info,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -247,6 +247,9 @@ export default function BibliotecaRevisionPanel({ onCambio }: BibliotecaRevision
             <RefreshCw size={13} className={clsx(loadingLista && "animate-spin")} />
           </button>
         </div>
+        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+          Plantillas recién subidas o re-versionadas, esperando que confirmes sus datos variables.
+        </p>
 
         {loadError && (
           <div className="text-xs text-brand-danger flex items-center gap-1.5">
@@ -304,6 +307,17 @@ export default function BibliotecaRevisionPanel({ onCambio }: BibliotecaRevision
 
         {selectedId && detalle && !loadingDetalle && (
           <div className="space-y-4">
+            <div className="flex items-start gap-2 p-3 rounded-lg border bg-teal-500/5" style={{ borderColor: "var(--border)" }}>
+              <Info size={15} className="shrink-0 mt-0.5 text-brand-primary" />
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Esta plantilla no se puede usar en un caso nuevo hasta que la apruebes. Resalta en el texto
+                qué partes son datos variables (predial, cédula, fechas...): confirma o descarta lo que el
+                sistema detectó solo, y marca a mano el nombre del propietario y la dirección (eso nunca se
+                detecta automáticamente). Elige categoría y origen — se usan después para que la plantilla
+                aparezca al buscar por coincidencia — y aprueba para activarla.
+              </p>
+            </div>
+
             <div>
               <h3 className="text-base font-semibold" style={{ color: "var(--text)" }}>{detalle.nombre_original}</h3>
               {detalle.motivo_revision_pendiente && (
@@ -327,13 +341,13 @@ export default function BibliotecaRevisionPanel({ onCambio }: BibliotecaRevision
                 </select>
               </div>
               <div>
-                <label className="field-label">Tipo de trámite (opcional)</label>
-                <input
-                  className="field-input"
-                  placeholder="Ej: Propietario, Oficio, SNR, Con poder..."
-                  value={tipoTramiteManual}
-                  onChange={(e) => setTipoTramiteManual(e.target.value)}
-                />
+                <label className="field-label">Origen de la solicitud (opcional)</label>
+                <select className="field-input" value={tipoTramiteManual} onChange={(e) => setTipoTramiteManual(e.target.value)}>
+                  <option value="">Sin especificar</option>
+                  {ORIGENES_TRAMITE.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

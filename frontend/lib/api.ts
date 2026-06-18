@@ -169,6 +169,22 @@ export const CATEGORIAS_MOTIVADA: { value: string; label: string }[] = [
   { value: "complementacion", label: "Complementación" },
 ];
 
+// Mismos códigos que TipoOrigen en MutationSelector — se reutiliza tal cual
+// para que "tipo_tramite_manual" funcione como filtro de origen tanto en el
+// Formulario (flujo IA) como en la Biblioteca (flujo de plantillas reales).
+export const ORIGENES_TRAMITE: { value: string; label: string }[] = [
+  { value: "propietario", label: "Propietario" },
+  { value: "autorizado", label: "Autorizado" },
+  { value: "poder", label: "Con poder" },
+  { value: "snr", label: "SNR" },
+  { value: "oficio", label: "Oficio" },
+];
+
+export function labelOrigenTramite(origen: string | null | undefined): string {
+  if (!origen) return "Sin especificar";
+  return ORIGENES_TRAMITE.find((o) => o.value === origen)?.label ?? origen;
+}
+
 export const TIPOS_CAMPO_VARIABLE: { value: string; label: string }[] = [
   { value: "nombre_propietario", label: "Nombre del propietario" },
   { value: "direccion", label: "Dirección" },

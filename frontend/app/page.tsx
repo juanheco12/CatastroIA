@@ -9,7 +9,9 @@ import HistoryPanel from "./components/HistoryPanel";
 import SettingsPanel from "./components/SettingsPanel";
 import ChatBot from "./components/ChatBot";
 import BibliotecaPanel from "./components/BibliotecaPanel";
-import { generarMotivada, MotivadaGeneradaResponse, HistorialDetalle } from "@/lib/api";
+import BibliotecaFlujoCategoria from "./components/BibliotecaFlujoCategoria";
+import BibliotecaPreviewAprobacion from "./components/BibliotecaPreviewAprobacion";
+import { generarMotivada, MotivadaGeneradaResponse, HistorialDetalle, PlantillaInfo } from "@/lib/api";
 import {
   FileText, Eye, History, Settings, AlertCircle, ArrowLeft,
   Sun, Moon, Building2, Home, MessageCircle, Library,
@@ -17,7 +19,7 @@ import {
 import clsx from "clsx";
 
 type Tab  = "form" | "preview" | "historial" | "biblioteca" | "settings" | "chat";
-type Step = "select" | "form";
+type Step = "select" | "form" | "biblioteca";
 
 const TABS = [
   { id: "form"        as Tab, label: "Formulario", icon: FileText       },
@@ -35,6 +37,8 @@ export default function Dashboard() {
   const [step,     setStep]     = useState<Step>("select");
   const [mutacion, setMutacion] = useState<TipoMutacion | null>(null);
   const [origen,   setOrigen]   = useState<TipoOrigen   | null>(null);
+  const [bibliotecaCategoria, setBibliotecaCategoria] = useState<string | null>(null);
+  const [bibliotecaPlantillaId, setBibliotecaPlantillaId] = useState<number | null>(null);
   const [motivada, setMotivada] = useState<MotivadaGeneradaResponse | null>(null);
   const [formData, setFormData] = useState<SolicitudFormData | null>(null);
   const [loading,  setLoading]  = useState(false);
@@ -59,6 +63,18 @@ export default function Dashboard() {
 
   const handleOrigenSelect = (v: TipoOrigen) => { setOrigen(v); setStep("form"); };
 
+  const handleSelectCategoriaBiblioteca = (categoria: string) => {
+    setBibliotecaCategoria(categoria);
+    setBibliotecaPlantillaId(null);
+    setStep("biblioteca");
+  };
+
+  const handleVolverDesdeBiblioteca = () => {
+    setBibliotecaCategoria(null);
+    setBibliotecaPlantillaId(null);
+    setStep("select");
+  };
+
   const handleGenerate = async (data: SolicitudFormData) => {
     setLoading(true);
     setError(null);
@@ -78,6 +94,7 @@ export default function Dashboard() {
   const handleReset = () => {
     setMotivada(null); setFormData(null); setError(null);
     setStep("select"); setMutacion(null); setOrigen(null);
+    setBibliotecaCategoria(null); setBibliotecaPlantillaId(null);
     setChatContexto("");
     setTab("form");
   };
@@ -210,6 +227,7 @@ export default function Dashboard() {
                     selectedOrigen={origen}
                     onSelectMutacion={(v) => { setMutacion(v); setOrigen(null); setStep("select"); }}
                     onSelectOrigen={handleOrigenSelect}
+                    onSelectCategoriaBiblioteca={handleSelectCategoriaBiblioteca}
                   />
                 )}
                 {step === "form" && mutacion && origen && (
@@ -224,6 +242,24 @@ export default function Dashboard() {
                       isLoading={loading}
                       contextoInicial={chatContexto}
                     />
+                  </div>
+                )}
+                {step === "biblioteca" && bibliotecaCategoria && (
+                  <div className="space-y-4">
+                    <button type="button" onClick={handleVolverDesdeBiblioteca} className="btn-ghost text-xs">
+                      <ArrowLeft size={13} />Cambiar tipo de mutación
+                    </button>
+                    {bibliotecaPlantillaId ? (
+                      <BibliotecaPreviewAprobacion
+                        plantillaId={bibliotecaPlantillaId}
+                        onVolver={() => setBibliotecaPlantillaId(null)}
+                      />
+                    ) : (
+                      <BibliotecaFlujoCategoria
+                        categoria={bibliotecaCategoria}
+                        onSeleccionarPlantilla={(p: PlantillaInfo) => setBibliotecaPlantillaId(p.id)}
+                      />
+                    )}
                   </div>
                 )}
               </>
