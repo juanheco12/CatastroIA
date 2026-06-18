@@ -36,25 +36,36 @@ def get_db():
         db.close()
 
 
-def init_db():
-    import models.motivada  # noqa: F401 — registers models with Base
-    import models.soporte   # noqa: F401 — registers models with Base
-    import models.template  # noqa: F401 — registers models with Base
+def _tiene_columna_vector(tabla) -> bool:
+    from pgvector.sqlalchemy import Vector
+    return any(isinstance(c.type, Vector) for c in tabla.columns)
 
-    # soporte_chunks usa el tipo `vector` (extensión pgvector) para la
-    # busqueda semantica del Asistente. Se crea aparte y de forma tolerante a
-    # fallos para que, si pgvector no estuviera disponible, el resto de la
-    # app (motivadas, historial, soportes sin RAG) siga funcionando.
-    tablas_principales = [
-        t for name, t in Base.metadata.tables.items() if name != "soporte_chunks"
-    ]
+
+def init_db():
+    import models.motivada     # noqa: F401 — registers models with Base
+    import models.soporte      # noqa: F401 — registers models with Base
+    import models.template     # noqa: F401 — registers models with Base
+    import models.biblioteca   # noqa: F401 — registers models with Base
+
+    # Las tablas con columna `vector` (extensión pgvector) se crean aparte y
+    # de forma tolerante a fallos para que, si pgvector no estuviera
+    # disponible (p. ej. SQLite local), el resto de la app siga funcionando.
+    tablas_vector = [t for t in Base.metadata.tables.values() if _tiene_columna_vector(t)]
+    tablas_principales = [t for t in Base.metadata.tables.values() if t not in tablas_vector]
     Base.metadata.create_all(bind=engine, tables=tablas_principales)
 
-    if _is_sqlite:
-        return
+    # La extension solo existe en Postgres. Bajo SQLite se omite ese paso,
+    # pero las tablas con columna vector se siguen creando igual: en SQLite
+    # la columna queda con afinidad generica (acepta NULL/texto sin la
+    # extension) y varias de estas tablas (p. ej. plantillas_motivada) son
+    # el almacen principal de su funcionalidad, no solo un indice auxiliar.
+    if not _is_sqlite:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        except Exception:
+            pass
     try:
-        with engine.begin() as conn:
-            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        Base.metadata.create_all(bind=engine, tables=[Base.metadata.tables["soporte_chunks"]])
+        Base.metadata.create_all(bind=engine, tables=tablas_vector)
     except Exception:
         pass

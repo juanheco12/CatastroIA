@@ -152,3 +152,265 @@ export function downloadBase64Docx(base64: string, filename: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// ── Biblioteca de motivadas reutilizables ──
+// Modo estricto: estos endpoints nunca reescriben texto jurídico con IA.
+// embed_texts() solo se usa para indexar/buscar por similitud (en el backend).
+
+export const CATEGORIAS_MOTIVADA: { value: string; label: string }[] = [
+  { value: "mutacion_primera_clase", label: "Mutación de primera clase" },
+  { value: "mutacion_segunda_clase", label: "Mutación de segunda clase" },
+  { value: "mutacion_tercera_clase", label: "Mutación de tercera clase" },
+  { value: "mutacion_cuarta_clase", label: "Mutación de cuarta clase" },
+  { value: "mutacion_quinta_clase", label: "Mutación de quinta clase" },
+  { value: "cambio_referencia_catastral", label: "Cambio de referencia catastral" },
+  { value: "cancelacion_inscripcion_catastral", label: "Cancelación de inscripción catastral" },
+  { value: "rectificacion_general_datos", label: "Rectificación general de datos" },
+  { value: "complementacion", label: "Complementación" },
+];
+
+export const TIPOS_CAMPO_VARIABLE: { value: string; label: string }[] = [
+  { value: "nombre_propietario", label: "Nombre del propietario" },
+  { value: "direccion", label: "Dirección" },
+  { value: "identificacion", label: "Identificación (CC/NIT)" },
+  { value: "numero_predial", label: "Número predial" },
+  { value: "matricula_inmobiliaria", label: "Matrícula inmobiliaria" },
+  { value: "numero_resolucion", label: "Número de resolución" },
+  { value: "radicado", label: "Radicado" },
+  { value: "acto_administrativo", label: "Acto administrativo" },
+  { value: "escritura", label: "Escritura" },
+  { value: "oficina_registro", label: "Oficina de registro" },
+  { value: "area", label: "Área" },
+  { value: "fecha", label: "Fecha" },
+  { value: "otro", label: "Otro" },
+];
+
+export function labelCategoria(categoria: string | null | undefined): string {
+  if (!categoria) return "Sin categoría";
+  return CATEGORIAS_MOTIVADA.find((c) => c.value === categoria)?.label ?? categoria;
+}
+
+export function labelTipoCampo(tipo: string): string {
+  return TIPOS_CAMPO_VARIABLE.find((t) => t.value === tipo)?.label ?? tipo;
+}
+
+export interface CampoVariable {
+  id: number;
+  tipo_campo: string;
+  texto_original: string;
+  offset_inicio: number;
+  offset_fin: number;
+  tipo_identificacion?: string | null;
+  origen_deteccion: string;
+  confirmado: boolean;
+}
+
+export interface PlantillaInfo {
+  id: number;
+  nombre_original: string;
+  categoria?: string | null;
+  categorias_candidatas: string;
+  estado: string;
+  motivo_revision_pendiente?: string | null;
+  tipo_tramite_manual?: string | null;
+  tamano_bytes: number;
+  contador_uso: number;
+  fecha_ultimo_uso?: string | null;
+  es_favorita: boolean;
+  fecha_subida: string;
+  fecha_revision?: string | null;
+  revisado_por?: string | null;
+}
+
+export interface PlantillaDetalle extends PlantillaInfo {
+  contenido_texto: string;
+  campos: CampoVariable[];
+}
+
+export interface ItemIngesta {
+  nombre_original: string;
+  estado: string;
+  categoria?: string | null;
+  categorias_candidatas: string[];
+  motivo_revision_pendiente?: string | null;
+  plantilla_id?: number | null;
+  error?: string | null;
+}
+
+export interface IngestaResumen {
+  total_archivos: number;
+  total_ingestados: number;
+  total_errores: number;
+  distribucion_categorias: Record<string, number>;
+  total_casos_atipicos: number;
+  items: ItemIngesta[];
+}
+
+export interface CampoManualInput {
+  tipo_campo: string;
+  texto_original: string;
+  offset_inicio: number;
+  offset_fin: number;
+  tipo_identificacion?: string | null;
+}
+
+export interface AprobarPlantillaInput {
+  categoria?: string | null;
+  tipo_tramite_manual?: string | null;
+  campos_confirmados_ids?: number[];
+  campos_manuales?: CampoManualInput[];
+  revisado_por?: string | null;
+}
+
+export interface NuevaVersionResponse {
+  plantilla_id: number;
+  numero_version_anterior: number;
+  estado: string;
+  mensaje: string;
+}
+
+export interface ResultadoBusqueda {
+  plantilla: PlantillaInfo;
+  score: number;
+  razon?: string | null;
+}
+
+export interface BusquedaSemanticaResponse {
+  encontrado: boolean;
+  mejor?: ResultadoBusqueda | null;
+  alternativas: ResultadoBusqueda[];
+  mensaje?: string | null;
+}
+
+export interface CampoReemplazadoPreview {
+  campo_id: number;
+  tipo_campo: string;
+  valor_anterior: string;
+  valor_nuevo: string;
+}
+
+export interface PreviewGeneracionResponse {
+  texto_previsto: string;
+  campos_reemplazados: CampoReemplazadoPreview[];
+  fundamento_legal?: string | null;
+  parte_resolutiva?: string | null;
+}
+
+export interface GenerarFinalResponse {
+  filename: string;
+  content_base64: string;
+  size_bytes: number;
+}
+
+export async function ingestarZipBiblioteca(file: File): Promise<IngestaResumen> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await api.post("/biblioteca/ingestar-zip", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 300000,
+  });
+  return res.data;
+}
+
+export async function nuevaVersionPlantilla(
+  plantillaId: number,
+  file: File,
+  motivoCambio: string,
+  cambiadoPor?: string
+): Promise<NuevaVersionResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("motivo_cambio", motivoCambio);
+  if (cambiadoPor) formData.append("cambiado_por", cambiadoPor);
+  const res = await api.post(`/biblioteca/${plantillaId}/nueva-version`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 300000,
+  });
+  return res.data;
+}
+
+export async function listarPlantillas(params?: {
+  categoria?: string; estado?: string; tipo_tramite?: string; q?: string;
+}): Promise<PlantillaInfo[]> {
+  const res = await api.get("/biblioteca/", { params });
+  return res.data;
+}
+
+export async function pendientesRevision(): Promise<PlantillaInfo[]> {
+  const res = await api.get("/biblioteca/pendientes-revision");
+  return res.data;
+}
+
+export async function masUsadasPlantillas(limite = 10): Promise<PlantillaInfo[]> {
+  const res = await api.get("/biblioteca/mas-usadas", { params: { limite } });
+  return res.data;
+}
+
+export async function buscarPlantillasPorFiltros(params: {
+  categoria?: string; tipo_tramite?: string; keyword?: string;
+}): Promise<PlantillaInfo[]> {
+  const res = await api.get("/biblioteca/buscar", { params });
+  return res.data;
+}
+
+export async function buscarPlantillaSemantica(
+  descripcionCaso: string, categoria?: string
+): Promise<BusquedaSemanticaResponse> {
+  const res = await api.post("/biblioteca/buscar-semantica", {
+    descripcion_caso: descripcionCaso,
+    categoria: categoria || undefined,
+  });
+  return res.data;
+}
+
+export async function obtenerDetallePlantilla(id: number): Promise<PlantillaDetalle> {
+  const res = await api.get(`/biblioteca/${id}`);
+  return res.data;
+}
+
+export async function descargarPlantillaOriginal(id: number): Promise<GenerarFinalResponse> {
+  const res = await api.get(`/biblioteca/${id}/descargar`);
+  return res.data;
+}
+
+export async function eliminarPlantilla(id: number) {
+  const res = await api.delete(`/biblioteca/${id}`);
+  return res.data;
+}
+
+export async function aprobarPlantilla(id: number, data: AprobarPlantillaInput): Promise<PlantillaDetalle> {
+  const res = await api.post(`/biblioteca/${id}/aprobar`, data);
+  return res.data;
+}
+
+export async function marcarPlantillaAtipico(
+  id: number, motivo: string, revisadoPor?: string
+): Promise<PlantillaInfo> {
+  const res = await api.post(`/biblioteca/${id}/marcar-atipico`, {
+    motivo, revisado_por: revisadoPor,
+  });
+  return res.data;
+}
+
+export async function marcarPlantillaFavorita(id: number, favorita: boolean): Promise<PlantillaInfo> {
+  const res = await api.post(`/biblioteca/${id}/favorito`, null, { params: { favorita } });
+  return res.data;
+}
+
+export async function previewGeneracionPlantilla(
+  id: number, valores: Record<number, string>, tipoTramiteManual?: string
+): Promise<PreviewGeneracionResponse> {
+  const res = await api.post(`/biblioteca/${id}/preview-generacion`, {
+    valores, tipo_tramite_manual: tipoTramiteManual || undefined, aprobado: false,
+  });
+  return res.data;
+}
+
+export async function generarFinalPlantilla(
+  id: number, valores: Record<number, string>, tipoTramiteManual?: string
+): Promise<GenerarFinalResponse> {
+  const res = await api.post(`/biblioteca/${id}/generar-final`, {
+    valores, tipo_tramite_manual: tipoTramiteManual || undefined, aprobado: true,
+  });
+  return res.data;
+}
