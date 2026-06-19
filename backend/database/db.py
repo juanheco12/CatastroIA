@@ -50,8 +50,22 @@ def init_db():
     # Las tablas con columna `vector` (extensión pgvector) se crean aparte y
     # de forma tolerante a fallos para que, si pgvector no estuviera
     # disponible (p. ej. SQLite local), el resto de la app siga funcionando.
-    tablas_vector = [t for t in Base.metadata.tables.values() if _tiene_columna_vector(t)]
-    tablas_principales = [t for t in Base.metadata.tables.values() if t not in tablas_vector]
+    # Las tablas que tienen una FK hacia una tabla-vector (p. ej.
+    # versiones_plantilla_motivada -> plantillas_motivada) deben crearse en
+    # ese mismo paso posterior: si se crean antes, Postgres rechaza la FK
+    # porque la tabla referenciada todavia no existe.
+    todas = list(Base.metadata.tables.values())
+    tablas_vector = {t for t in todas if _tiene_columna_vector(t)}
+    cambiado = True
+    while cambiado:
+        cambiado = False
+        for t in todas:
+            if t in tablas_vector:
+                continue
+            if any(fk.column.table in tablas_vector for fk in t.foreign_keys):
+                tablas_vector.add(t)
+                cambiado = True
+    tablas_principales = [t for t in todas if t not in tablas_vector]
     Base.metadata.create_all(bind=engine, tables=tablas_principales)
 
     # La extension solo existe en Postgres. Bajo SQLite se omite ese paso,
@@ -66,6 +80,6 @@ def init_db():
         except Exception:
             pass
     try:
-        Base.metadata.create_all(bind=engine, tables=tablas_vector)
+        Base.metadata.create_all(bind=engine, tables=list(tablas_vector))
     except Exception:
         pass
