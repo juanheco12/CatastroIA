@@ -20,6 +20,11 @@ export interface SolicitudFormData {
   numero_radicado?:     string;
   area_construida_m2?:  number | string;
   area_terreno_m2?:     number | string;
+  folio_matriz?:        string;
+  folios_resultantes:   string[];
+  numero_escritura?:    string;
+  fecha_escritura?:     string;
+  notaria?:             string;
   campo_rectificado?:   string;
   campo_complementado?: string;
   tipo_notificacion?:   "notificable" | "no_notificable" | null;
@@ -51,6 +56,39 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
     numero_radicado: "2024-3312", numero_predial: "23001000100039002700000",
     folio_matricula: "140-133775", municipio: "Montería",
     documentos_aportados: ["Escritura pública No. 1053 del 23/11/2023 de la Notaría Cuarta de Montería, debidamente registrada en el folio de matrícula inmobiliaria 140-133775"],
+  },
+  segunda_clase_propietario: {
+    nombre_propietario: "JUAN CARLOS HERRERA OQUENDO", cedula_propietario: "78.027.389",
+    numero_predial: "00-01-00-00-0001-1335-0-00-00-0000", folio_matricula: "140-191374",
+    folio_matriz: "140-96493", folios_resultantes: ["140-191373", "140-191374", "140-191375"],
+    numero_escritura: "1308", fecha_escritura: "06/06/2024", notaria: "Notaria segunda de Montería",
+    municipio: "Montería",
+    documentos_aportados: ["Carta de solicitud", "Certificados de tradición de la matrícula inmobiliaria No. 140-96493", "Escritura pública 1308 del 06/06/2024 de la Notaria segunda de Montería y plano"],
+  },
+  segunda_clase_poder: {
+    nombre_solicitante: "JUAN CARLOS HERRERA OQUENDO", tipo_doc_solicitante: "CC", cedula_solicitante: "78.027.389",
+    nombre_propietario: "MARIA TERESA OQUENDO PEREZ", cedula_propietario: "23.456.789",
+    numero_predial: "00-01-00-00-0001-1335-0-00-00-0000", folio_matricula: "140-191374",
+    folio_matriz: "140-96493", folios_resultantes: ["140-191373", "140-191374", "140-191375"],
+    numero_escritura: "1308", fecha_escritura: "06/06/2024", notaria: "Notaria segunda de Montería",
+    municipio: "Montería",
+    documentos_aportados: ["Carta de solicitud", "Poder especial", "Certificados de tradición de la matrícula inmobiliaria No. 140-96493", "Escritura pública 1308 del 06/06/2024 de la Notaria segunda de Montería y plano"],
+  },
+  segunda_clase_autorizado: {
+    nombre_solicitante: "JUAN CARLOS HERRERA OQUENDO", cedula_solicitante: "78.027.389",
+    nombre_propietario: "MARIA TERESA OQUENDO PEREZ", cedula_propietario: "23.456.789",
+    numero_predial: "00-01-00-00-0001-1335-0-00-00-0000", folio_matricula: "140-191374",
+    folio_matriz: "140-96493", folios_resultantes: ["140-191373", "140-191374", "140-191375"],
+    numero_escritura: "1308", fecha_escritura: "06/06/2024", notaria: "Notaria segunda de Montería",
+    municipio: "Montería",
+    documentos_aportados: ["Carta de solicitud", "Documento de autorización", "Certificados de tradición de la matrícula inmobiliaria No. 140-96493", "Escritura pública 1308 del 06/06/2024 de la Notaria segunda de Montería y plano"],
+  },
+  segunda_clase_oficio: {
+    numero_predial: "00-01-00-00-0001-1335-0-00-00-0000", folio_matricula: "140-191374",
+    folio_matriz: "140-96493", folios_resultantes: ["140-191373", "140-191374", "140-191375"],
+    numero_escritura: "1308", fecha_escritura: "06/06/2024", notaria: "Notaria segunda de Montería",
+    municipio: "Montería",
+    documentos_aportados: ["Certificados de tradición de la matrícula inmobiliaria No. 140-96493", "Escritura pública 1308 del 06/06/2024 de la Notaria segunda de Montería y plano"],
   },
   tercera_clase_propietario: {
     nombre_propietario: "María Fernanda Gómez Restrepo", cedula_propietario: "43512876",
@@ -92,6 +130,7 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
 
 const DOCS_RAPIDOS: Record<string, string[]> = {
   primera_clase:   ["Escritura pública", "Certificado de libertad y tradición", "Sentencia judicial", "Poder especial", "Resolución de adjudicación"],
+  segunda_clase:   ["Carta de solicitud", "Certificado de tradición y libertad", "Escritura pública", "Plano", "Poder especial"],
   tercera_clase:   ["Licencia de construcción", "Plano de construcción aprobado", "Declaración de construcción", "Certificado de libertad y tradición"],
   rectificacion:   ["Certificado de tradición y libertad", "Copia cédula de ciudadanía", "Escritura pública", "Plano topográfico"],
   complementacion: ["Certificado de tradición y libertad", "Escritura pública", "Copia cédula de ciudadanía", "Resolución judicial"],
@@ -122,9 +161,11 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
   const [data, setData] = useState<SolicitudFormData>({
     tipo_mutacion: tipoMutacion, tipo_origen: tipoOrigen,
     numero_predial: "", folio_matricula: "", documentos_aportados: [],
+    folios_resultantes: [],
     contexto_adicional: contextoInicial ?? "",
   });
   const [newDoc, setNewDoc] = useState("");
+  const [newFolio, setNewFolio] = useState("");
 
   const set = (k: keyof SolicitudFormData, v: unknown) => setData(p => ({ ...p, [k]: v }));
   const loadMock = () => setData(p => ({ ...p, ...MOCKS[mockKey] }));
@@ -138,6 +179,15 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
   const removeDoc = (i: number) =>
     setData(p => ({ ...p, documentos_aportados: p.documentos_aportados.filter((_, idx) => idx !== i) }));
 
+  const addFolio = () => {
+    const f = newFolio.trim();
+    if (!f || data.folios_resultantes.includes(f)) return;
+    setData(p => ({ ...p, folios_resultantes: [...p.folios_resultantes, f] }));
+    setNewFolio("");
+  };
+  const removeFolio = (i: number) =>
+    setData(p => ({ ...p, folios_resultantes: p.folios_resultantes.filter((_, idx) => idx !== i) }));
+
   const inp = "field-input";
   const needsPropietario = tipoOrigen !== "snr" && tipoOrigen !== "oficio";
   const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder";
@@ -146,6 +196,10 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
   // ── Validation ────────────────────────────────────────────────
   const canSubmit = (() => {
     if (!data.numero_predial || !data.folio_matricula) return false;
+    if (tipoMutacion === "segunda_clase") {
+      if (!data.folio_matriz || data.folios_resultantes.length < 2) return false;
+      if (!data.numero_escritura || !data.fecha_escritura || !data.notaria) return false;
+    }
     if (tipoOrigen === "snr")    return !!data.numero_radicado;
     if (tipoOrigen === "oficio") return tipoMutacion === "rectificacion" ? !!data.campo_rectificado : true;
     if (!data.cedula_propietario || !data.nombre_propietario) return false;
@@ -263,6 +317,45 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
           )}
         </div>
       </div>
+
+      {/* ── Desenglobe (Segunda Clase) ── */}
+      {tipoMutacion === "segunda_clase" && (
+        <div className="card p-5 space-y-4">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Desenglobe</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Folio matriz" required>
+              <input className={inp} value={data.folio_matriz ?? ""} onChange={e => set("folio_matriz", e.target.value)} placeholder="140-XXXXX" />
+            </Field>
+            <Field label="Número de escritura" required>
+              <input className={inp} value={data.numero_escritura ?? ""} onChange={e => set("numero_escritura", e.target.value)} placeholder="1308" />
+            </Field>
+            <Field label="Fecha de escritura" required>
+              <input className={inp} value={data.fecha_escritura ?? ""} onChange={e => set("fecha_escritura", e.target.value)} placeholder="06/06/2024" />
+            </Field>
+            <Field label="Notaría" required>
+              <input className={inp} value={data.notaria ?? ""} onChange={e => set("notaria", e.target.value)} placeholder="Notaria segunda de Montería" />
+            </Field>
+          </div>
+          <Field label="Folios resultantes del desenglobe" required>
+            <div className="space-y-1.5">
+              {data.folios_resultantes.map((folio, i) => (
+                <div key={i} className="flex items-center gap-2 group">
+                  <span className="flex-1 text-sm text-slate-300 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50">{folio}</span>
+                  <button type="button" onClick={() => removeFolio(i)} className="opacity-0 group-hover:opacity-100 p-1 text-brand-danger hover:bg-red-500/10 rounded transition-all">
+                    <Minus size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-1.5">
+              <input className={clsx(inp, "flex-1")} value={newFolio} onChange={e => setNewFolio(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addFolio())} placeholder="140-XXXXX" />
+              <button type="button" onClick={addFolio} className="btn-ghost px-3"><Plus size={16} /></button>
+            </div>
+          </Field>
+          <p className="text-xs text-slate-500">Se requieren al menos 2 folios resultantes.</p>
+        </div>
+      )}
 
       {/* ── Áreas (Tercera Clase) ── */}
       {tipoMutacion === "tercera_clase" && (

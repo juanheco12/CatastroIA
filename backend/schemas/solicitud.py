@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Literal
 
 
-TipoMutacion  = Literal["primera_clase", "tercera_clase", "rectificacion", "complementacion"]
+TipoMutacion  = Literal["primera_clase", "segunda_clase", "tercera_clase", "rectificacion", "complementacion"]
 TipoOrigen    = Literal["propietario", "autorizado", "poder", "snr", "oficio"]
 
 
@@ -33,6 +33,13 @@ class SolicitudUnificada(BaseModel):
     # ── Tercera Clase ────────────────────────────────────────────
     area_construida_m2: Optional[float] = None
     area_terreno_m2:    Optional[float] = None
+
+    # ── Segunda Clase (desenglobe / agregación) ───────────────────
+    folio_matriz:        Optional[str] = None
+    folios_resultantes:  list[str] = Field(default_factory=list)
+    numero_escritura:    Optional[str] = None
+    fecha_escritura:     Optional[str] = None
+    notaria:             Optional[str] = None
 
     # ── Rectificación / Complementación ──────────────────────────
     campo_rectificado:   Optional[str] = None

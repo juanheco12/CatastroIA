@@ -19,6 +19,15 @@ def _municipio(data: SolicitudUnificada) -> str:
     clean = data.numero_predial.replace("-", "").replace(" ", "")
     return _MUNICIPIOS.get(clean[:5], "el municipio")
 
+def _lista_y(items: list[str]) -> str:
+    """Une una lista al estilo español: 'a, b y c'."""
+    items = [i for i in items if i]
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    return ", ".join(items[:-1]) + f" y {items[-1]}"
+
 # ── Demo motivadas ────────────────────────────────────────────────────────────
 
 _P1_PRIMERA = (
@@ -190,6 +199,124 @@ def _demo_tercera(data: SolicitudUnificada) -> str:
         f"2023, en concordancia del artículo 2.2.2.2.2 literal C del Decreto 1170 de 2015, "
         f"modificado por el Decreto 148 de 2020."
     )
+
+
+# ── Segunda Clase (desenglobe) ───────────────────────────────────────────────
+# Texto literal reutilizado de motivadas reales aprobadas: esta categoría
+# nunca pasa por el LLM (ver generate_motivada), solo sustitución de campos.
+
+_P1_SEGUNDA = (
+    "Que la Resolución 1040 de 2023 del Instituto Geográfico Agustín Codazzi (IGAC), en el "
+    "artículo 4.5.1 numeral 2) señala que las mutaciones de segunda clase, son aquellas que "
+    "involucran cambios en los linderos de los predios por agregación o segregación o en las "
+    "que se modifiquen los coeficientes de copropiedad en predios sujetos al régimen de "
+    "propiedad horizontal."
+)
+
+def _p3_segunda(data: SolicitudUnificada, mun: str) -> str:
+    return (
+        f"Que la descripción de los linderos del(los) predios identificado(s) con número "
+        f"predial {data.numero_predial} (los) cuales se crean en el presente acto "
+        f"administrativo son acorde con la realidad física del(los) inmueble(s) y la "
+        f"Escritura pública {data.numero_escritura} del {data.fecha_escritura} de la "
+        f"{data.notaria}, que el(las) área(s) de terreno relacionada(s) en la escritura antes "
+        f"mencionada es(son) congruente(s) con el(las) área(s) producto de la restitución "
+        f"cartográfica digital para estos predios."
+    )
+
+def _p4_segunda(mun: str) -> str:
+    return (
+        f"Que el software de gestión catastral, con el cual se administra la base de datos "
+        f"catastral del municipio de {mun}, recalcula las áreas de terreno geográficas y las "
+        f"adopta como las áreas definitivas de los predios resultantes, corrigiendo, si es el "
+        f"caso las disparidades que se encuentren en los mismos."
+    )
+
+def _p5_segunda(mun: str) -> str:
+    return (
+        f"Que, revisados los antecedentes catastrales del municipio de {mun}, verificada la "
+        f"documentación aportada por el(la) solicitante, por parte de un funcionario de esta "
+        f"entidad, así como la validación correspondiente de la información que reposa en la "
+        f"base catastral a través de la aplicación combinada de métodos DIRECTO, INDIRECTO y "
+        f"COLABORATIVO, en los términos del artículo 2.2.2.2.6. del Decreto 1170 de 2015, "
+        f"modificado por el Decreto 148 de 2020, que procede la mutación de segunda clase, por "
+        f"desenglobe y su correspondiente inscripción en el catastro."
+    )
+
+def _demo_segunda_propietario(data: SolicitudUnificada) -> str:
+    mun    = _municipio(data)
+    docs   = ", ".join(data.documentos_aportados)
+    folios = _lista_y(data.folios_resultantes)
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con cedula de "
+        f"ciudadanía No. {data.cedula_propietario}, propietario del inmueble con matrícula "
+        f"inmobiliaria No. {data.folio_matricula}, segregado del folio matriz "
+        f"{data.folio_matriz}, vinculado al número predial {data.numero_predial} inscrito en "
+        f"la base de datos catastral, presento ante la Oficina de Catastro adscrita a la "
+        f"secretaria de Planeación del municipio de {mun}, solicitud de trámite catastral de "
+        f"mutación de segunda clase desenglobe de los folios de matrícula inmobiliaria "
+        f"{folios}, soportada en los siguientes documentos aportados: {docs}."
+    )
+    return "\n\n".join([_P1_SEGUNDA, p2, _p3_segunda(data, mun), _p4_segunda(mun), _p5_segunda(mun)])
+
+def _demo_segunda_poder(data: SolicitudUnificada) -> str:
+    mun    = _municipio(data)
+    docs   = ", ".join(data.documentos_aportados)
+    folios = _lista_y(data.folios_resultantes)
+    tp_txt = f", TP. {data.tp_solicitante}" if data.tp_solicitante else ""
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
+        f"{data.tipo_doc_solicitante or 'cedula de ciudadanía'} No. {data.cedula_solicitante}"
+        f"{tp_txt}, en calidad de apoderado del señor(a) {data.nombre_propietario}, "
+        f"identificado con CC. {data.cedula_propietario}, propietario del inmueble con "
+        f"matrícula inmobiliaria No. {data.folio_matricula}, segregado del folio matriz "
+        f"{data.folio_matriz}, vinculado al número predial {data.numero_predial} inscrito en "
+        f"la base de datos catastral, presento ante la Oficina de Catastro adscrita a la "
+        f"secretaria de Planeación del municipio de {mun}, solicitud de trámite catastral de "
+        f"mutación de segunda clase desenglobe de los folios de matrícula inmobiliaria "
+        f"{folios}, soportada en los siguientes documentos aportados: {docs}."
+    )
+    return "\n\n".join([_P1_SEGUNDA, p2, _p3_segunda(data, mun), _p4_segunda(mun), _p5_segunda(mun)])
+
+def _demo_segunda_autorizado(data: SolicitudUnificada) -> str:
+    mun    = _municipio(data)
+    docs   = ", ".join(data.documentos_aportados)
+    folios = _lista_y(data.folios_resultantes)
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con cedula de "
+        f"ciudadanía No. {data.cedula_solicitante}, en condición de contacto y/o autorizado "
+        f"del señor(a) {data.nombre_propietario}, identificado con CC. {data.cedula_propietario}, "
+        f"propietario del inmueble con matrícula inmobiliaria No. {data.folio_matricula}, "
+        f"segregado del folio matriz {data.folio_matriz}, vinculado al número predial "
+        f"{data.numero_predial} inscrito en la base de datos catastral, presento ante la "
+        f"Oficina de Catastro adscrita a la secretaria de Planeación del municipio de {mun}, "
+        f"solicitud de trámite catastral de mutación de segunda clase desenglobe de los "
+        f"folios de matrícula inmobiliaria {folios}, soportada en los siguientes documentos "
+        f"aportados: {docs}."
+    )
+    return "\n\n".join([_P1_SEGUNDA, p2, _p3_segunda(data, mun), _p4_segunda(mun), _p5_segunda(mun)])
+
+def _demo_segunda_oficio(data: SolicitudUnificada) -> str:
+    mun    = _municipio(data)
+    docs   = ", ".join(data.documentos_aportados)
+    folios = _lista_y(data.folios_resultantes)
+    p2 = (
+        f"Que la oficina de catastro, adscrita a la secretaria de planeación, se radica de "
+        f"manera oficiosa un trámite catastral el cual consiste en una mutación de segunda "
+        f"clase, desenglobe, de los folios de matrícula inmobiliaria {folios}, soportada en "
+        f"los siguientes documentos aportados: {docs}."
+    )
+    return "\n\n".join([_P1_SEGUNDA, p2, _p3_segunda(data, mun), _p4_segunda(mun), _p5_segunda(mun)])
+
+def _demo_segunda(data: SolicitudUnificada) -> str:
+    if data.tipo_origen == "poder":
+        return _demo_segunda_poder(data)
+    elif data.tipo_origen == "autorizado":
+        return _demo_segunda_autorizado(data)
+    elif data.tipo_origen == "oficio":
+        return _demo_segunda_oficio(data)
+    else:
+        return _demo_segunda_propietario(data)
 
 
 # ── Rectificación ────────────────────────────────────────────────────────────
@@ -380,7 +507,9 @@ def _articulos_finales(tipo: str, mun: str) -> str:
 
 
 def _motivada_demo(data: SolicitudUnificada) -> str:
-    if data.tipo_mutacion == "primera_clase":
+    if data.tipo_mutacion == "segunda_clase":
+        return _demo_segunda(data)
+    elif data.tipo_mutacion == "primera_clase":
         if data.tipo_origen == "autorizado":
             return _demo_primera_autorizado(data)
         elif data.tipo_origen == "poder":
@@ -435,7 +564,12 @@ def generate_motivada(data: SolicitudUnificada, db) -> dict:
     from services.ai_provider import call_ai, active_provider
     from services import soporte_service
     tokens = 0
-    if active_provider() == "demo":
+    # Segunda clase reutiliza texto legal literal aportado por el usuario: nunca
+    # pasa por el LLM, sin importar el proveedor de IA configurado, para
+    # garantizar que el texto se mantenga idéntico al documento aprobado.
+    if data.tipo_mutacion == "segunda_clase":
+        texto = _motivada_demo(data)
+    elif active_provider() == "demo":
         texto = _motivada_demo(data)
     else:
         try:

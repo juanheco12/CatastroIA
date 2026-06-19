@@ -1,24 +1,27 @@
 "use client";
 
-import { Building2, Users, ClipboardEdit, FilePlus2, ChevronRight, Library } from "lucide-react";
+import { Building2, Users, ClipboardEdit, FilePlus2, ChevronRight, Library, SplitSquareHorizontal } from "lucide-react";
 import clsx from "clsx";
 import { CATEGORIAS_MOTIVADA } from "@/lib/api";
 
-export type TipoMutacion = "primera_clase" | "tercera_clase" | "rectificacion" | "complementacion";
+export type TipoMutacion = "primera_clase" | "segunda_clase" | "tercera_clase" | "rectificacion" | "complementacion";
 export type TipoOrigen   = "propietario"   | "autorizado" | "poder" | "snr" | "oficio";
 
 const MUTACIONES = [
   { id: "primera_clase"   as TipoMutacion, titulo: "Primera Clase",   subtitulo: "Cambio de propietario",          icon: Users        },
+  { id: "segunda_clase"   as TipoMutacion, titulo: "Segunda Clase",   subtitulo: "Desenglobe / agregación de predios", icon: SplitSquareHorizontal },
   { id: "tercera_clase"   as TipoMutacion, titulo: "Tercera Clase",   subtitulo: "Incorporación de construcción",   icon: Building2    },
   { id: "rectificacion"   as TipoMutacion, titulo: "Rectificación",   subtitulo: "Corrección de datos catastrales", icon: ClipboardEdit },
   { id: "complementacion" as TipoMutacion, titulo: "Complementación", subtitulo: "Adición de datos faltantes",      icon: FilePlus2    },
 ];
 
-// Categorías de la Biblioteca que no tienen redacción IA propia (las otras 4
+// Categorías de la Biblioteca que no tienen redacción IA propia (las otras
 // ya están cubiertas arriba bajo otro id/etiqueta). Estas usan motivadas
-// reales ya subidas y aprobadas, no texto generado desde cero.
+// reales ya subidas y aprobadas, no texto generado desde cero. La Biblioteca
+// queda reservada para los casos atípicos de cada mutación.
 const CATEGORIAS_CUBIERTAS_POR_IA = new Set([
-  "mutacion_primera_clase", "mutacion_tercera_clase", "rectificacion_general_datos", "complementacion",
+  "mutacion_primera_clase", "mutacion_segunda_clase", "mutacion_tercera_clase",
+  "rectificacion_general_datos", "complementacion",
 ]);
 const CATEGORIAS_BIBLIOTECA = CATEGORIAS_MOTIVADA.filter((c) => !CATEGORIAS_CUBIERTAS_POR_IA.has(c.value));
 
@@ -29,6 +32,12 @@ const ORIGENES_POR_MUTACION: Record<TipoMutacion, { id: TipoOrigen; titulo: stri
     { id: "poder",       titulo: "De parte con poder",       desc: "Apoderado con poder notarial o TP" },
     { id: "snr",         titulo: "De la SNR",                desc: "Superintendencia de Notariado y Registro" },
     { id: "oficio",      titulo: "De oficio",                desc: "La oficina inicia la actualización registral" },
+  ],
+  segunda_clase: [
+    { id: "propietario", titulo: "De parte del propietario", desc: "El propietario gestiona directamente" },
+    { id: "autorizado",  titulo: "De parte con autorizado",  desc: "Contacto o autorizado del propietario" },
+    { id: "poder",       titulo: "De parte con poder",       desc: "Apoderado con poder notarial o TP" },
+    { id: "oficio",      titulo: "De oficio",                desc: "La oficina inicia el desenglobe de oficio" },
   ],
   tercera_clase: [
     { id: "propietario", titulo: "De parte del propietario", desc: "El propietario gestiona directamente" },
@@ -49,6 +58,7 @@ const ORIGENES_POR_MUTACION: Record<TipoMutacion, { id: TipoOrigen; titulo: stri
 
 export const LABEL_MUTACION: Record<TipoMutacion, string> = {
   primera_clase:   "1ra Clase",
+  segunda_clase:   "2da Clase",
   tercera_clase:   "3ra Clase",
   rectificacion:   "Rectificación",
   complementacion: "Complementación",
