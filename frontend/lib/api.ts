@@ -49,6 +49,12 @@ export interface HistorialDetalle extends HistorialItem {
 
 export async function generarMotivada(data: TerceraClaseFormData): Promise<MotivadaGeneradaResponse> {
   const res = await api.post("/motivada/generar", data, { timeout: 180000 });
+  // Render/Neon despertando de un cold start a veces deja pasar una respuesta
+  // 200 que no es el JSON esperado (p. ej. una página de error del proxy).
+  // Se valida la forma para no propagar un objeto roto que reviente el render.
+  if (typeof res.data?.texto_motivada !== "string") {
+    throw new Error("El servidor respondió de forma inesperada. Intenta de nuevo en unos segundos.");
+  }
   return res.data;
 }
 

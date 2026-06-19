@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-from database.db import init_db
+from database.db import init_db, get_db
 from routes import motivada_routes, template_routes, history_routes, chat_routes, soporte_routes, biblioteca_routes
 from config import settings
 
@@ -37,5 +39,14 @@ app.include_router(biblioteca_routes.router)
 
 
 @app.get("/health")
-def health_check():
-    return {"status": "ok", "servicio": "CatIA API v1.0.0"}
+def health_check(db: Session = Depends(get_db)):
+    # Hace una consulta real para que el ping de keep-alive también evite que
+    # el cómputo de Neon (Postgres) entre en autosuspend de forma
+    # independiente al spin-down de Render — si solo se hace ping aquí sin
+    # tocar la base, la base puede seguir durmiéndose entre pings.
+    db_status = "ok"
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception:
+        db_status = "error"
+    return {"status": "ok", "servicio": "CatIA API v1.0.0", "db": db_status}

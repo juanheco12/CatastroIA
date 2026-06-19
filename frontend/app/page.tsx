@@ -85,7 +85,8 @@ export default function Dashboard() {
       setTab("preview");
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(detail ?? "Error al conectar con el servidor. ¿Está corriendo el backend?");
+      const message = err instanceof Error ? err.message : undefined;
+      setError(detail ?? message ?? "Error al conectar con el servidor. ¿Está corriendo el backend?");
     } finally {
       setLoading(false);
     }
