@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  pendientesRevision, obtenerDetallePlantilla, aprobarPlantilla, marcarPlantillaAtipico,
+  pendientesRevision, obtenerDetallePlantilla, aprobarPlantilla, marcarPlantillaAtipico, extractErrorMessage,
   PlantillaInfo, PlantillaDetalle, CampoManualInput,
   CATEGORIAS_MOTIVADA, TIPOS_CAMPO_VARIABLE, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
@@ -155,8 +155,7 @@ export default function BibliotecaRevisionPanel({ onCambio }: BibliotecaRevision
       setDetalle(null);
       onCambio?.();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setAccionError(msg ?? "Error al aprobar la plantilla.");
+      setAccionError(extractErrorMessage(err, "Error al aprobar la plantilla."));
     } finally {
       setAccionEnCurso(false);
     }
@@ -175,8 +174,7 @@ export default function BibliotecaRevisionPanel({ onCambio }: BibliotecaRevision
       setDetalle(null);
       onCambio?.();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setAccionError(msg ?? "Error al marcar el caso como atípico.");
+      setAccionError(extractErrorMessage(err, "Error al marcar el caso como atípico."));
     } finally {
       setAccionEnCurso(false);
     }

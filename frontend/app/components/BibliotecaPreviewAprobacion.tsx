@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  obtenerDetallePlantilla, previewGeneracionPlantilla, generarFinalPlantilla, downloadBase64Docx,
+  obtenerDetallePlantilla, previewGeneracionPlantilla, generarFinalPlantilla, downloadBase64Docx, extractErrorMessage,
   PlantillaDetalle, PreviewGeneracionResponse, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
 import { RefreshCw, AlertCircle, FileText, Download, Eye, ArrowLeft } from "lucide-react";
@@ -52,8 +52,7 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
       setPreview(res);
       setListo(true);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg ?? "Error al generar la vista previa.");
+      setError(extractErrorMessage(err, "Error al generar la vista previa."));
     } finally {
       setGenerandoPreview(false);
     }
@@ -66,8 +65,7 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
       const res = await generarFinalPlantilla(plantillaId, valores, tipoTramiteManual || undefined);
       downloadBase64Docx(res.content_base64, res.filename);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg ?? "Error al generar el documento final.");
+      setError(extractErrorMessage(err, "Error al generar el documento final."));
     } finally {
       setGenerandoFinal(false);
     }

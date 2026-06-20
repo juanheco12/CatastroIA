@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { listarSoportes, subirSoporte, eliminarSoporte, SoporteInfo } from "@/lib/api";
+import { listarSoportes, subirSoporte, eliminarSoporte, extractErrorMessage, SoporteInfo } from "@/lib/api";
 import { Upload, FileCheck, AlertCircle, RefreshCw, Trash2, BookOpen } from "lucide-react";
 import clsx from "clsx";
 
@@ -53,8 +53,7 @@ export default function SoportesPanel() {
       }
       await load();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg ?? "Error al subir el documento");
+      setError(extractErrorMessage(err, "Error al subir el documento"));
     } finally {
       setUploading(false);
     }

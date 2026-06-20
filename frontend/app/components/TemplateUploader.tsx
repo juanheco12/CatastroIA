@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getTemplateInfo, uploadTemplate } from "@/lib/api";
+import { getTemplateInfo, uploadTemplate, extractErrorMessage } from "@/lib/api";
 import { Upload, FileCheck, Tag, AlertCircle, RefreshCw } from "lucide-react";
 import clsx from "clsx";
 
@@ -46,8 +46,7 @@ export default function TemplateUploader() {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg ?? "Error al subir el template");
+      setError(extractErrorMessage(err, "Error al subir el template"));
     } finally {
       setUploading(false);
     }

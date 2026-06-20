@@ -30,6 +30,24 @@ function asArray<T>(data: unknown): T[] {
   return Array.isArray(data) ? (data as T[]) : [];
 }
 
+// FastAPI/Pydantic v2 manda errores de validación (422) como un array de
+// objetos {type, loc, msg, ...}, no como un string. Si ese array se renderiza
+// directamente (p. ej. setError(err.response.data.detail)), React revienta
+// con "Objects are not valid as a React child" (error #31). Esta función
+// siempre devuelve un string, sin importar la forma real de `detail`.
+export function extractErrorMessage(err: unknown, fallback: string): string {
+  const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+  if (typeof detail === "string" && detail) return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail
+      .map((d) => (typeof d === "string" ? d : (d as { msg?: string })?.msg))
+      .filter(Boolean)
+      .join("; ") || fallback;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
+
 // Simplified form data — only what's needed
 export interface TerceraClaseFormData {
   nombre_propietario: string;

@@ -11,7 +11,7 @@ import ChatBot from "./components/ChatBot";
 import BibliotecaPanel from "./components/BibliotecaPanel";
 import BibliotecaFlujoCategoria from "./components/BibliotecaFlujoCategoria";
 import BibliotecaPreviewAprobacion from "./components/BibliotecaPreviewAprobacion";
-import { generarMotivada, MotivadaGeneradaResponse, HistorialDetalle, PlantillaInfo } from "@/lib/api";
+import { generarMotivada, extractErrorMessage, MotivadaGeneradaResponse, HistorialDetalle, PlantillaInfo } from "@/lib/api";
 import {
   FileText, Eye, History, Settings, AlertCircle, ArrowLeft,
   Sun, Moon, Building2, Home, MessageCircle, Library,
@@ -84,9 +84,7 @@ export default function Dashboard() {
       setMotivada(result);
       setTab("preview");
     } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      const message = err instanceof Error ? err.message : undefined;
-      setError(detail ?? message ?? "Error al conectar con el servidor. ¿Está corriendo el backend?");
+      setError(extractErrorMessage(err, "Error al conectar con el servidor. ¿Está corriendo el backend?"));
     } finally {
       setLoading(false);
     }

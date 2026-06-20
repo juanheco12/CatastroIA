@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ingestarZipBiblioteca, IngestaResumen, labelCategoria } from "@/lib/api";
+import { ingestarZipBiblioteca, extractErrorMessage, IngestaResumen, labelCategoria } from "@/lib/api";
 import { Upload, RefreshCw, AlertCircle, CheckCircle2, FileWarning } from "lucide-react";
 import clsx from "clsx";
 
@@ -27,8 +27,7 @@ export default function BibliotecaUploader({ onIngestaCompleta }: BibliotecaUplo
       setResumen(data);
       onIngestaCompleta?.(data);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg ?? "Error al subir el archivo .zip");
+      setError(extractErrorMessage(err, "Error al subir el archivo .zip"));
     } finally {
       setUploading(false);
     }
