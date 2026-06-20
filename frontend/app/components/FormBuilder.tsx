@@ -30,10 +30,7 @@ export interface SolicitudFormData {
   campo_complementado?: string;
   numero_predial_nuevo?:string;
   fecha_efectos?:       string;
-  componente_catastral?:    string;
-  encargado_componente?:    string;
-  numero_informe_tecnico?:  string;
-  fecha_informe_tecnico?:   string;
+  direccion_predio?:        string;
   parrafos_informe_tecnico: string[];
   tipo_notificacion?:   "notificable" | "no_notificable" | null;
   documentos_aportados: string[];
@@ -172,49 +169,48 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
   cuarta_clase_propietario: {
     nombre_propietario: "LUIS FERNANDO RAMIREZ TORRES", cedula_propietario: "9.345.678",
     numero_predial: "23001000090010000000000", folio_matricula: "140-55210",
-    municipio: "Montería",
-    componente_catastral: "físico", encargado_componente: "Ing. Patricia Salazar Mejía",
-    numero_informe_tecnico: "IT-2025-0142", fecha_informe_tecnico: "15/05/2025",
+    direccion_predio: "Calle 45 No. 12-30, barrio Cantaclaro", municipio: "Montería",
     parrafos_informe_tecnico: [
-      "Que, como resultado de la visita técnica realizada al predio, se constató una variación en el área construida respecto de lo registrado en la base catastral.",
-      "Que conforme al levantamiento planimétrico efectuado, se recomienda actualizar el componente físico del predio de acuerdo con las condiciones verificadas en terreno.",
+      "Que el(la) solicitante manifiesta lo siguiente: \"el avalúo catastral asignado a mi predio no corresponde con las condiciones reales del inmueble, motivo por el cual solicito sea revisado y ajustado conforme a los valores actuales del sector.\"",
+      "Que mediante el Decreto Municipal No. 0187 de 2024, la administración municipal adoptó la actualización de las zonas homogéneas geoeconómicas y físicas del municipio de Montería.",
+      "Que de conformidad con el Decreto Nacional 1170 de 2015, modificado por el Decreto 148 de 2020, los avalúos catastrales deben reflejar las condiciones reales del mercado inmobiliario.",
+      "Que conforme al estudio económico y al Plan de Ordenamiento Territorial vigente, el predio se ubica en una zona homogénea geoeconómica cuyo valor de referencia difiere del registrado actualmente en la base catastral.",
     ],
-    documentos_aportados: ["Informe técnico del componente físico", "Acta de visita técnica"],
+    documentos_aportados: ["Solicitud", "Certificado de tradición y libertad", "Avalúo comercial"],
   },
   cuarta_clase_autorizado: {
     nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ", cedula_solicitante: "1.234.567",
     nombre_propietario: "LUIS FERNANDO RAMIREZ TORRES", cedula_propietario: "9.345.678",
     numero_predial: "23001000090010000000000", folio_matricula: "140-55210",
-    municipio: "Montería",
-    componente_catastral: "jurídico", encargado_componente: "Dr. Mauricio Pineda Salgado",
-    numero_informe_tecnico: "IT-2025-0143", fecha_informe_tecnico: "16/05/2025",
+    direccion_predio: "Calle 45 No. 12-30, barrio Cantaclaro", municipio: "Montería",
     parrafos_informe_tecnico: [
-      "Que, revisada la documentación jurídica del predio, se identificó una inconsistencia entre el propietario inscrito en la base catastral y el titular registral vigente.",
+      "Que el(la) propietario(a) manifiesta lo siguiente: \"el valor catastral vigente no guarda relación con el estado actual del inmueble, por lo cual solicito su revisión.\"",
+      "Que mediante el Decreto Municipal No. 0187 de 2024, la administración municipal adoptó la actualización de las zonas homogéneas geoeconómicas y físicas del municipio de Montería.",
+      "Que conforme al estudio económico vigente, el predio se ubica en una zona homogénea geoeconómica cuyo valor de referencia difiere del registrado actualmente en la base catastral.",
     ],
-    documentos_aportados: ["Informe técnico del componente jurídico", "Certificado de tradición y libertad"],
+    documentos_aportados: ["Certificado de tradición y libertad", "Cédula de ciudadanía"],
   },
   cuarta_clase_poder: {
     nombre_solicitante: "JORGE LUIS MARTINEZ RUIZ", tipo_doc_solicitante: "CC",
     cedula_solicitante: "9.876.543", tp_solicitante: "45678",
     nombre_propietario: "LUIS FERNANDO RAMIREZ TORRES", cedula_propietario: "9.345.678",
     numero_predial: "23001000090010000000000", folio_matricula: "140-55210",
-    municipio: "Montería",
-    componente_catastral: "económico", encargado_componente: "Ec. Sandra Milena Vergara",
-    numero_informe_tecnico: "IT-2025-0144", fecha_informe_tecnico: "17/05/2025",
+    direccion_predio: "Calle 45 No. 12-30, barrio Cantaclaro", municipio: "Montería",
     parrafos_informe_tecnico: [
-      "Que, de acuerdo con el estudio de zonas homogéneas geoeconómicas vigente, se recomienda ajustar el componente económico del predio acorde con los valores de referencia del sector.",
+      "Que el(la) propietario(a) manifiesta lo siguiente: \"solicito la revisión del avalúo catastral de mi predio, dado que no corresponde con las condiciones reales del mismo.\"",
+      "Que mediante el Decreto Nacional 1170 de 2015, modificado por el Decreto 148 de 2020, se establecen los métodos de avalúo aplicables a la revisión solicitada.",
+      "Que conforme al estudio económico y al Plan de Ordenamiento Territorial vigente, el predio se ubica en una zona homogénea geoeconómica cuyo valor de referencia difiere del registrado actualmente en la base catastral.",
     ],
-    documentos_aportados: ["Poder especial", "Informe técnico del componente económico"],
+    documentos_aportados: ["Poder especial", "Certificado de tradición y libertad", "Avalúo comercial"],
   },
   cuarta_clase_oficio: {
     numero_predial: "23001000090010000000000", folio_matricula: "140-55210",
-    municipio: "Montería",
-    componente_catastral: "físico", encargado_componente: "Ing. Patricia Salazar Mejía",
-    numero_informe_tecnico: "IT-2025-0145", fecha_informe_tecnico: "18/05/2025",
+    direccion_predio: "Calle 45 No. 12-30, barrio Cantaclaro", municipio: "Montería",
     parrafos_informe_tecnico: [
-      "Que la oficina de catastro, de manera oficiosa, ordenó la verificación técnica del predio con ocasión de las inconsistencias detectadas en el proceso de actualización catastral del municipio.",
+      "Que mediante el Decreto Municipal No. 0187 de 2024, la administración municipal adoptó la actualización de las zonas homogéneas geoeconómicas y físicas del municipio de Montería.",
+      "Que conforme al estudio económico vigente, el predio se ubica en una zona homogénea geoeconómica cuyo valor de referencia difiere del registrado actualmente en la base catastral, motivo por el cual la oficina de catastro inicia de oficio la revisión correspondiente.",
     ],
-    documentos_aportados: ["Informe técnico del componente físico"],
+    documentos_aportados: ["Solicitud", "Certificado de tradición y libertad"],
   },
   cancelacion_oficio: {
     nombre_propietario: "MARIA TERESA OQUENDO PEREZ", cedula_propietario: "23.456.789",
@@ -229,7 +225,7 @@ const DOCS_RAPIDOS: Record<string, string[]> = {
   primera_clase:   ["Escritura pública", "Certificado de libertad y tradición", "Sentencia judicial", "Poder especial", "Resolución de adjudicación"],
   segunda_clase:   ["Carta de solicitud", "Certificado de tradición y libertad", "Escritura pública", "Plano", "Poder especial"],
   tercera_clase:   ["Licencia de construcción", "Plano de construcción aprobado", "Declaración de construcción", "Certificado de libertad y tradición"],
-  cuarta_clase:    ["Informe técnico del componente físico", "Informe técnico del componente jurídico", "Informe técnico del componente económico", "Acta de visita técnica"],
+  cuarta_clase:    ["Solicitud", "Certificado de tradición y libertad", "Escritura pública", "Cédula de ciudadanía", "Avalúo comercial", "Poder especial"],
   rectificacion:   ["Certificado de tradición y libertad", "Copia cédula de ciudadanía", "Escritura pública", "Plano topográfico"],
   complementacion: ["Certificado de tradición y libertad", "Escritura pública", "Copia cédula de ciudadanía", "Resolución judicial"],
   cancelacion:     ["Carta de solicitud", "Extrajuicio notarial", "Cédula de ciudadanía", "Certificado de tradición y libertad"],
@@ -513,31 +509,15 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
         </div>
       )}
 
-      {/* ── Informe técnico (Cuarta Clase) ── */}
+      {/* ── Revisión de avalúo catastral (Cuarta Clase) ── */}
       {tipoMutacion === "cuarta_clase" && (
         <div className="card p-5 space-y-4">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
-            Informe técnico del componente
+            Revisión de avalúo catastral
           </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Componente catastral">
-              <select className={inp} value={data.componente_catastral ?? ""} onChange={e => set("componente_catastral", e.target.value)}>
-                <option value="">Seleccionar...</option>
-                <option value="físico">Físico</option>
-                <option value="jurídico">Jurídico</option>
-                <option value="económico">Económico</option>
-              </select>
-            </Field>
-            <Field label="Encargado del componente">
-              <input className={inp} value={data.encargado_componente ?? ""} onChange={e => set("encargado_componente", e.target.value)} placeholder="Nombre del funcionario" />
-            </Field>
-            <Field label="Número de informe técnico">
-              <input className={inp} value={data.numero_informe_tecnico ?? ""} onChange={e => set("numero_informe_tecnico", e.target.value)} placeholder="IT-2025-0142" />
-            </Field>
-            <Field label="Fecha del informe">
-              <input className={inp} value={data.fecha_informe_tecnico ?? ""} onChange={e => set("fecha_informe_tecnico", e.target.value)} placeholder="15/05/2025" />
-            </Field>
-          </div>
+          <Field label="Dirección del predio">
+            <input className={inp} value={data.direccion_predio ?? ""} onChange={e => set("direccion_predio", e.target.value)} placeholder="Calle 45 No. 12-30, barrio Cantaclaro" />
+          </Field>
 
           <div>
             <label className="field-label">Subir informe técnico (PDF / Word / TXT)</label>

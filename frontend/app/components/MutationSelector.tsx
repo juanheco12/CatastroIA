@@ -11,7 +11,7 @@ const MUTACIONES = [
   { id: "primera_clase"   as TipoMutacion, titulo: "Primera Clase",   subtitulo: "Cambio de propietario",          icon: Users        },
   { id: "segunda_clase"   as TipoMutacion, titulo: "Segunda Clase",   subtitulo: "Desenglobe / agregación de predios", icon: SplitSquareHorizontal },
   { id: "tercera_clase"   as TipoMutacion, titulo: "Tercera Clase",   subtitulo: "Incorporación de construcción",   icon: Building2    },
-  { id: "cuarta_clase"    as TipoMutacion, titulo: "Cuarta Clase",    subtitulo: "Informe técnico del componente",  icon: FileSearch   },
+  { id: "cuarta_clase"    as TipoMutacion, titulo: "Cuarta Clase",    subtitulo: "Revisión de avalúo catastral",    icon: FileSearch   },
   { id: "rectificacion"   as TipoMutacion, titulo: "Rectificación",   subtitulo: "Corrección de datos catastrales", icon: ClipboardEdit },
   { id: "complementacion" as TipoMutacion, titulo: "Complementación", subtitulo: "Adición de datos faltantes",      icon: FilePlus2    },
   { id: "cancelacion"     as TipoMutacion, titulo: "Cancelación",     subtitulo: "Cancelación de inscripción catastral", icon: FileX    },

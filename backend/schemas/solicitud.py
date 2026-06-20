@@ -49,11 +49,8 @@ class SolicitudUnificada(BaseModel):
     numero_predial_nuevo: Optional[str] = None
     fecha_efectos:        Optional[str] = None
 
-    # ── Cuarta Clase (informe técnico del componente) ──────────────
-    componente_catastral:     Optional[str] = None
-    encargado_componente:     Optional[str] = None
-    numero_informe_tecnico:   Optional[str] = None
-    fecha_informe_tecnico:    Optional[str] = None
+    # ── Cuarta Clase (revisión de avalúo catastral) ────────────────
+    direccion_predio:         Optional[str] = None
     parrafos_informe_tecnico: list[str] = Field(default_factory=list)
 
     # ── Artículos finales ─────────────────────────────────────────

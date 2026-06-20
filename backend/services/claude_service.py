@@ -434,73 +434,95 @@ def _demo_cancelacion(data: SolicitudUnificada) -> str:
         return _demo_cancelacion_propietario(data)
 
 
-# ── Cuarta Clase (informe técnico del componente) ────────────────────────────
-# A diferencia de las demás categorías, el cuerpo de esta motivada no sale de
-# un párrafo legal fijo: lo aporta el informe técnico que redacta el
-# encargado del componente (físico/jurídico/económico), y el usuario elige
-# qué párrafos de ese informe se incorporan (parrafos_informe_tecnico). Por
-# eso tampoco pasa por el LLM: el texto del informe se inserta tal cual lo
-# eligió el usuario, sin que la IA lo reescriba.
+# ── Cuarta Clase (revisión de avalúo catastral) ──────────────────────────────
+# El párrafo de apertura y el de cierre son fijos (artículo 4.7.4 de la
+# Resolución 1040 de 2023). El cuerpo intermedio no sale de un párrafo legal
+# fijo: lo aporta el estudio económico/informe técnico, y el usuario elige
+# qué párrafos se incorporan (parrafos_informe_tecnico). Por eso esa parte
+# tampoco pasa por el LLM: el texto se inserta tal cual lo eligió el usuario,
+# sin que la IA lo reescriba.
+
+_P1_CUARTA = (
+    "Que la Resolución 1040 de 2023 del Instituto Geográfico Agustín Codazzi (IGAC), en el "
+    "capítulo 7 artículo 4.7.4 revisión del avalúo catastral, considera que el propietario, "
+    "poseedor o las entidades encargadas de funciones relacionadas con la tierra, podrán "
+    "solicitar la revisión del avalúo catastral del predio de interés a partir del día "
+    "siguiente a la fecha de la resolución que inscriba el predio o el acto que haya "
+    "modificado el avalúo en el catastro."
+)
+
+_P1B_CUARTA = (
+    "Esta solicitud puede realizarse independientemente del proceso catastral por el que se "
+    "determinó el avalúo a revisar. En la solicitud de revisión, el solicitante deberá "
+    "indicar la o las vigencias sobre las cuales hace la petición y las pruebas presentadas "
+    "deben corresponder específicamente a dichas vigencias. Los avalúos resultantes del "
+    "trámite de la solicitud tendrán la vigencia fiscal que se indique en el acto "
+    "administrativo en firme, correspondiente a las vigencias objeto de la solicitud."
+)
 
 def _apertura_cuarta(data: SolicitudUnificada, mun: str) -> str:
     docs = ", ".join(data.documentos_aportados)
-    if data.tipo_origen == "autorizado":
-        return (
-            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con CC No. "
-            f"{data.cedula_solicitante}, en condición de contacto y/o autorizado del señor(a) "
-            f"{data.nombre_propietario}, identificado con C.C. {data.cedula_propietario}, "
-            f"propietario del inmueble identificado con número predial {data.numero_predial}, "
-            f"inscrito en la base de datos catastral del municipio de {mun}, presentó ante la "
-            f"Oficina de Catastro adscrita a la Secretaría de Planeación del municipio de {mun} "
-            f"una solicitud de trámite catastral, soportada en los siguientes documentos "
-            f"aportados: {docs}."
-        )
-    elif data.tipo_origen == "poder":
+    direccion_txt = f", ubicado en {data.direccion_predio}" if data.direccion_predio else ""
+    if data.tipo_origen == "poder":
         tp_txt = f", TP. {data.tp_solicitante}" if data.tp_solicitante else ""
         return (
             f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
-            f"{data.tipo_doc_solicitante or 'CC'} No. {data.cedula_solicitante}{tp_txt}, en su "
-            f"condición de apoderado del señor(a) {data.nombre_propietario}, identificado con "
-            f"C.C. {data.cedula_propietario}, propietario del inmueble identificado con número "
-            f"predial {data.numero_predial}, inscrito en la base de datos catastral del "
-            f"municipio de {mun}, presentó ante la Oficina de Catastro adscrita a la Secretaría "
-            f"de Planeación del municipio de {mun} una solicitud de trámite catastral, "
-            f"soportada en los siguientes documentos aportados: {docs}."
+            f"{data.tipo_doc_solicitante or 'CC'}. {data.cedula_solicitante}{tp_txt}, quien "
+            f"actúa en calidad de apoderado del señor(a) {data.nombre_propietario} en su "
+            f"condición de propietario, del inmueble con número predial "
+            f"{data.numero_predial}{direccion_txt} de la zona urbana del municipio de {mun} "
+            f"con matrícula inmobiliaria {data.folio_matricula}, inscrito en la base de datos "
+            f"catastral de la Secretaría de Planeación del municipio de {mun}, el trámite "
+            f"catastral correspondiente a revisión de avalúo catastral del referido predio, "
+            f"soportado con los siguientes documentos: {docs}."
+        )
+    elif data.tipo_origen == "autorizado":
+        return (
+            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con C.C. "
+            f"{data.cedula_solicitante}, quien actúa en calidad de autorizado del señor(a) "
+            f"{data.nombre_propietario} en su condición de propietario, del inmueble con "
+            f"número predial {data.numero_predial}{direccion_txt} de la zona urbana del "
+            f"municipio de {mun} con matrícula inmobiliaria {data.folio_matricula}, inscrito "
+            f"en la base de datos catastral de la Secretaría de Planeación del municipio de "
+            f"{mun}, el trámite catastral correspondiente a revisión de avalúo catastral del "
+            f"referido predio, soportado con los siguientes documentos: {docs}."
         )
     elif data.tipo_origen == "oficio":
         return (
             f"Que la Oficina de Catastro adscrita a la Secretaría de Planeación del municipio "
-            f"de {mun}, se radica de manera oficiosa un trámite catastral sobre el predio "
-            f"identificado con número predial {data.numero_predial}, inscrito en la base de "
-            f"datos catastral del municipio de {mun}, soportado en los siguientes documentos: "
-            f"{docs}."
+            f"de {mun}, se radica de manera oficiosa el trámite catastral correspondiente a "
+            f"revisión de avalúo catastral del inmueble con número predial "
+            f"{data.numero_predial}{direccion_txt} con matrícula inmobiliaria "
+            f"{data.folio_matricula}, inscrito en la base de datos catastral del municipio de "
+            f"{mun}, soportado con los siguientes documentos: {docs}."
         )
     else:  # propietario
         return (
-            f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con C.C. No. "
-            f"{data.cedula_propietario}, propietario del inmueble identificado con número "
-            f"predial {data.numero_predial}, inscrito en la base de datos catastral del "
-            f"municipio de {mun}, presentó ante la Oficina de Catastro adscrita a la Secretaría "
-            f"de Planeación del municipio de {mun} una solicitud de trámite catastral, "
-            f"soportada en los siguientes documentos aportados: {docs}."
+            f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con C.C. "
+            f"{data.cedula_propietario}, en su condición de propietario, del inmueble con "
+            f"número predial {data.numero_predial}{direccion_txt} de la zona urbana del "
+            f"municipio de {mun} con matrícula inmobiliaria {data.folio_matricula}, inscrito "
+            f"en la base de datos catastral de la Secretaría de Planeación del municipio de "
+            f"{mun}, el trámite catastral correspondiente a revisión de avalúo catastral del "
+            f"referido predio, soportado con los siguientes documentos: {docs}."
         )
 
-def _p_informe_cuarta(data: SolicitudUnificada, mun: str) -> str:
-    informe_txt   = f" No. {data.numero_informe_tecnico}" if data.numero_informe_tecnico else ""
-    fecha_txt     = f" de fecha {data.fecha_informe_tecnico}" if data.fecha_informe_tecnico else ""
-    encargado_txt = f", suscrito por {data.encargado_componente}" if data.encargado_componente else ""
-    componente    = data.componente_catastral or "componente catastral"
+def _p_cierre_cuarta(mun: str) -> str:
     return (
-        f"Que mediante informe técnico{informe_txt}{fecha_txt}{encargado_txt}, emitido por el "
-        f"encargado del componente {componente}, respecto del predio identificado con número "
-        f"predial {data.numero_predial}, inscrito en la base de datos catastral del municipio "
-        f"de {mun}, se determinaron los siguientes hallazgos y conclusiones:"
+        f"Que, revisados los antecedentes catastrales del municipio de {mun}, verificada la "
+        f"documentación aportada por el(la) solicitante, así como la validación "
+        f"correspondiente a través de la aplicación combinada de métodos DIRECTOS, INDIRECTO "
+        f"y DECLARATIVO COLABORATIVO, en los términos del artículo 2.2.2.2.6. del Decreto "
+        f"1170 de 2015, modificado por el Decreto 148 de 2020, se confirma el avalúo "
+        f"catastral del predio en el presente acto, conforme lo indican el artículo 4.7.4 de "
+        f"la Resolución 1040 de 2023, en concordancia del artículo 2.2.2.2.2 literal C del "
+        f"1170 de 2015, modificado por el Decreto 148 de 2020."
     )
 
 def _demo_cuarta(data: SolicitudUnificada) -> str:
     mun    = _municipio(data)
     cuerpo = [p.strip() for p in data.parrafos_informe_tecnico if p.strip()]
-    return "\n\n".join([_apertura_cuarta(data, mun), _p_informe_cuarta(data, mun), *cuerpo])
+    return "\n\n".join([_P1_CUARTA, _P1B_CUARTA, _apertura_cuarta(data, mun), *cuerpo, _p_cierre_cuarta(mun)])
 
 
 # ── Rectificación ────────────────────────────────────────────────────────────
