@@ -15,9 +15,14 @@ interface PreviewMotivadaProps {
 function CopyButton({ getText, label }: { getText: () => string; label: string }) {
   const [copied, setCopied] = useState(false);
   const handle = async () => {
-    await navigator.clipboard.writeText(getText());
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    try {
+      await navigator.clipboard.writeText(getText());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // Portapapeles no disponible (contexto no seguro o permiso denegado);
+      // no hay nada más que hacer aquí, el usuario puede seleccionar el texto a mano.
+    }
   };
   return (
     <button type="button" onClick={handle}

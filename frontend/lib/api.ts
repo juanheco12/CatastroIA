@@ -10,6 +10,26 @@ export const api = axios.create({
   timeout: 120000,
 });
 
+// Si el backend/proxy está despertando de un cold start, una respuesta 200
+// a veces no trae JSON (p. ej. una página intermedia). axios no valida el
+// shape de la respuesta, así que sin esto un body inesperado se propaga tal
+// cual al estado de un componente y revienta en render (ej. items.map en
+// HistoryPanel) en vez de mostrar el mensaje de error.
+api.interceptors.response.use((response) => {
+  const contentType = String(response.headers?.["content-type"] ?? "");
+  if (!contentType.includes("application/json")) {
+    return Promise.reject(new Error("El servidor respondió de forma inesperada. Intenta de nuevo en unos segundos."));
+  }
+  return response;
+});
+
+// Las funciones que devuelven listas asumen que res.data ya es un array;
+// esto evita que un body malformado (cold start) llegue como string/objeto
+// y rompa un .map() en el render de un componente.
+function asArray<T>(data: unknown): T[] {
+  return Array.isArray(data) ? (data as T[]) : [];
+}
+
 // Simplified form data — only what's needed
 export interface TerceraClaseFormData {
   nombre_propietario: string;
@@ -85,7 +105,7 @@ export async function uploadTemplate(file: File) {
 
 export async function getHistorial(params?: { buscar?: string; skip?: number; limit?: number }) {
   const res = await api.get("/historial/", { params });
-  return res.data as HistorialItem[];
+  return asArray<HistorialItem>(res.data);
 }
 
 export async function getHistorialDetalle(id: number) {
@@ -137,7 +157,7 @@ export async function subirSoporte(file: File): Promise<SoporteInfo> {
 
 export async function listarSoportes(): Promise<SoporteInfo[]> {
   const res = await api.get("/soportes/");
-  return res.data;
+  return asArray<SoporteInfo>(res.data);
 }
 
 export async function eliminarSoporte(id: number) {
@@ -355,24 +375,24 @@ export async function listarPlantillas(params?: {
   categoria?: string; estado?: string; tipo_tramite?: string; q?: string;
 }): Promise<PlantillaInfo[]> {
   const res = await api.get("/biblioteca/", { params });
-  return res.data;
+  return asArray<PlantillaInfo>(res.data);
 }
 
 export async function pendientesRevision(): Promise<PlantillaInfo[]> {
   const res = await api.get("/biblioteca/pendientes-revision");
-  return res.data;
+  return asArray<PlantillaInfo>(res.data);
 }
 
 export async function masUsadasPlantillas(limite = 10): Promise<PlantillaInfo[]> {
   const res = await api.get("/biblioteca/mas-usadas", { params: { limite } });
-  return res.data;
+  return asArray<PlantillaInfo>(res.data);
 }
 
 export async function buscarPlantillasPorFiltros(params: {
   categoria?: string; tipo_tramite?: string; keyword?: string;
 }): Promise<PlantillaInfo[]> {
   const res = await api.get("/biblioteca/buscar", { params });
-  return res.data;
+  return asArray<PlantillaInfo>(res.data);
 }
 
 export async function buscarPlantillaSemantica(

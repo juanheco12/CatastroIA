@@ -17,6 +17,12 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           Puede deberse a que el servidor estaba despertando de un periodo de inactividad.
           Intenta de nuevo en unos segundos.
         </p>
+        {error.message && (
+          <p className="text-xs font-mono px-3 py-2 rounded-lg border break-words" style={{ color: "var(--text-muted)", borderColor: "var(--border)", backgroundColor: "var(--muted)" }}>
+            {error.message}
+            {error.digest && <span className="block opacity-60">digest: {error.digest}</span>}
+          </p>
+        )}
         <button
           type="button"
           onClick={reset}
