@@ -1,10 +1,10 @@
 "use client";
 
-import { Building2, Users, ClipboardEdit, FilePlus2, ChevronRight, Library, SplitSquareHorizontal } from "lucide-react";
+import { Building2, Users, ClipboardEdit, FilePlus2, ChevronRight, Library, SplitSquareHorizontal, FileX } from "lucide-react";
 import clsx from "clsx";
 import { CATEGORIAS_MOTIVADA } from "@/lib/api";
 
-export type TipoMutacion = "primera_clase" | "segunda_clase" | "tercera_clase" | "rectificacion" | "complementacion";
+export type TipoMutacion = "primera_clase" | "segunda_clase" | "tercera_clase" | "rectificacion" | "complementacion" | "cancelacion";
 export type TipoOrigen   = "propietario"   | "autorizado" | "poder" | "snr" | "oficio";
 
 const MUTACIONES = [
@@ -13,6 +13,7 @@ const MUTACIONES = [
   { id: "tercera_clase"   as TipoMutacion, titulo: "Tercera Clase",   subtitulo: "Incorporación de construcción",   icon: Building2    },
   { id: "rectificacion"   as TipoMutacion, titulo: "Rectificación",   subtitulo: "Corrección de datos catastrales", icon: ClipboardEdit },
   { id: "complementacion" as TipoMutacion, titulo: "Complementación", subtitulo: "Adición de datos faltantes",      icon: FilePlus2    },
+  { id: "cancelacion"     as TipoMutacion, titulo: "Cancelación",     subtitulo: "Cancelación de inscripción catastral", icon: FileX    },
 ];
 
 // Categorías de la Biblioteca que no tienen redacción IA propia (las otras
@@ -21,7 +22,7 @@ const MUTACIONES = [
 // queda reservada para los casos atípicos de cada mutación.
 const CATEGORIAS_CUBIERTAS_POR_IA = new Set([
   "mutacion_primera_clase", "mutacion_segunda_clase", "mutacion_tercera_clase",
-  "rectificacion_general_datos", "complementacion",
+  "rectificacion_general_datos", "complementacion", "cancelacion_inscripcion_catastral",
 ]);
 const CATEGORIAS_BIBLIOTECA = CATEGORIAS_MOTIVADA.filter((c) => !CATEGORIAS_CUBIERTAS_POR_IA.has(c.value));
 
@@ -54,6 +55,11 @@ const ORIGENES_POR_MUTACION: Record<TipoMutacion, { id: TipoOrigen; titulo: stri
     { id: "propietario", titulo: "Por propietario", desc: "El propietario solicita la adición" },
     { id: "snr",         titulo: "De la SNR",       desc: "Superintendencia de Notariado y Registro" },
   ],
+  cancelacion: [
+    { id: "propietario", titulo: "De parte del poseedor", desc: "El poseedor gestiona directamente" },
+    { id: "poder",       titulo: "De parte con poder",    desc: "Apoderado con poder notarial o TP" },
+    { id: "oficio",      titulo: "De oficio",             desc: "La oficina inicia la cancelación de oficio" },
+  ],
 };
 
 export const LABEL_MUTACION: Record<TipoMutacion, string> = {
@@ -62,6 +68,7 @@ export const LABEL_MUTACION: Record<TipoMutacion, string> = {
   tercera_clase:   "3ra Clase",
   rectificacion:   "Rectificación",
   complementacion: "Complementación",
+  cancelacion:     "Cancelación",
 };
 
 export const LABEL_ORIGEN: Record<TipoOrigen, string> = {
@@ -93,7 +100,7 @@ export default function MutationSelector({
           <span className="w-5 h-5 rounded-full bg-brand-primary text-white text-xs flex items-center justify-center font-bold">1</span>
           ¿Qué tipo de mutación?
         </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
           {MUTACIONES.map(({ id, titulo, subtitulo, icon: Icon }) => (
             <button
               key={id}

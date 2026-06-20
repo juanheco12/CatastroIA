@@ -319,6 +319,121 @@ def _demo_segunda(data: SolicitudUnificada) -> str:
         return _demo_segunda_propietario(data)
 
 
+# ── Cancelación de inscripción catastral ─────────────────────────────────────
+# Texto literal reutilizado de motivadas reales aprobadas: esta categoría
+# nunca pasa por el LLM (ver generate_motivada), solo sustitución de campos.
+
+_P1_CANCELACION = (
+    "Que la Resolución 1040 de 2023 del Instituto Geográfico Agustín Codazzi (IGAC), en su "
+    "artículo 4.5.6, señala que en caso de que se deba cancelar o cambiar un predio de una "
+    "entidad territorial a otra, ya sea por solicitud de parte o orden judicial o "
+    "administrativa, se procederá a cancelar el predio en la base de datos catastral "
+    "correspondiente y a inscribirlo en la base de datos catastral respectiva, manteniendo "
+    "la trazabilidad con el número predial anterior."
+)
+
+def _p3_cancelacion(data: SolicitudUnificada) -> str:
+    return (
+        f"Que, en atención a la solicitud presentada y una vez verificada la documentación "
+        f"aportada, se determina que procede la cancelación del predio identificado con "
+        f"referencia catastral {data.numero_predial}."
+    )
+
+def _p4_cancelacion(data: SolicitudUnificada) -> str:
+    ref_nueva = data.numero_predial_nuevo or "N/A"
+    return (
+        f"Lo anterior, teniendo en cuenta que en la base catastral figura el(la) señor(a) "
+        f"{data.nombre_propietario} como poseedor(a) de la mejora objeto de cancelación, la "
+        f"cual hace parte de la manzana correspondiente al predio de mayor extensión. "
+        f"Asimismo, se constató que el(la) señor(a) {data.nombre_propietario} ya se "
+        f"encuentra inscrito(a) como poseedor(a) de la mejora identificada con referencia "
+        f"catastral {ref_nueva}."
+    )
+
+def _p5_cancelacion(data: SolicitudUnificada) -> str:
+    return (
+        f"En consecuencia, mediante el acto administrativo que resuelva el presente "
+        f"radicado, en su artículo primero se dispondrá la cancelación de la mejora antes "
+        f"mencionada, con efectos a partir del {data.fecha_efectos}."
+    )
+
+def _p6_cancelacion(mun: str) -> str:
+    return (
+        f"Que el sistema de gestión catastral, con el cual se administra la base de datos "
+        f"catastral del municipio de {mun}, recalcula las áreas de terreno geográficas y las "
+        f"adopta como las áreas definitivas de los predios resultantes, corrigiendo, si es el "
+        f"caso las disparidades que se encuentren en los mismos."
+    )
+
+def _p7_cancelacion(data: SolicitudUnificada, mun: str) -> str:
+    return (
+        f"Que, revisados los antecedentes catastrales del municipio de {mun}, verificada la "
+        f"documentación aportada por el(la) solicitante, así como la validación "
+        f"correspondiente a través de la aplicación del método DIRECTO, en los términos del "
+        f"artículo 2.2.2.2.6. del Decreto 1170 de 2015, modificado por el Decreto 148 de "
+        f"2020, que procede la cancelación de inscripción catastral del predio con "
+        f"referencia No. {data.numero_predial}, conforme lo indican en los artículos 4.5.6 y "
+        f"4.6.10 de la Resolución 1040 de 2023, en concordancia con el artículo 2.2.2.2 "
+        f"literal C del 1170 de 2015, modificado por el Decreto 148 de 2020."
+    )
+
+def _demo_cancelacion_propietario(data: SolicitudUnificada) -> str:
+    mun  = _municipio(data)
+    docs = ", ".join(data.documentos_aportados)
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con CC. "
+        f"{data.cedula_propietario}, en su condición de poseedor(a) del inmueble con número "
+        f"predial {data.numero_predial}, inscrito en la base de datos catastral, solicita "
+        f"ante la Oficina de Catastro adscrita a la secretaria de Planeación del municipio "
+        f"de {mun}, un trámite catastral correspondiente a cancelación de inscripción "
+        f"catastral, soportada en los siguientes documentos aportados: {docs}."
+    )
+    return "\n\n".join([
+        _P1_CANCELACION, p2, _p3_cancelacion(data), _p4_cancelacion(data),
+        _p5_cancelacion(data), _p6_cancelacion(mun), _p7_cancelacion(data, mun),
+    ])
+
+def _demo_cancelacion_poder(data: SolicitudUnificada) -> str:
+    mun  = _municipio(data)
+    docs = ", ".join(data.documentos_aportados)
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con CC. "
+        f"{data.cedula_solicitante}, quien actúa como apoderado del señor(a) "
+        f"{data.nombre_propietario}, identificado con CC. {data.cedula_propietario}, en su "
+        f"condición de poseedor(a) del inmueble con número predial {data.numero_predial}, "
+        f"inscrito en la base de datos catastral, solicita ante la Oficina de Catastro "
+        f"adscrita a la secretaria de Planeación del municipio de {mun}, un trámite "
+        f"catastral correspondiente a cancelación de inscripción catastral, soportada en "
+        f"los siguientes documentos aportados: {docs}."
+    )
+    return "\n\n".join([
+        _P1_CANCELACION, p2, _p3_cancelacion(data), _p4_cancelacion(data),
+        _p5_cancelacion(data), _p6_cancelacion(mun), _p7_cancelacion(data, mun),
+    ])
+
+def _demo_cancelacion_oficio(data: SolicitudUnificada) -> str:
+    mun  = _municipio(data)
+    docs = ", ".join(data.documentos_aportados)
+    p2 = (
+        f"Que, la Oficina de Catastro adscrita a la secretaria de Planeación del municipio "
+        f"de {mun}, se radica de manera oficiosa un trámite catastral que corresponde a una "
+        f"cancelación de inscripción catastral, sobre el predio identificado con referencia "
+        f"catastral {data.numero_predial}, soportada en los siguientes documentos: {docs}."
+    )
+    return "\n\n".join([
+        _P1_CANCELACION, p2, _p3_cancelacion(data), _p4_cancelacion(data),
+        _p5_cancelacion(data), _p6_cancelacion(mun), _p7_cancelacion(data, mun),
+    ])
+
+def _demo_cancelacion(data: SolicitudUnificada) -> str:
+    if data.tipo_origen == "poder":
+        return _demo_cancelacion_poder(data)
+    elif data.tipo_origen == "oficio":
+        return _demo_cancelacion_oficio(data)
+    else:
+        return _demo_cancelacion_propietario(data)
+
+
 # ── Rectificación ────────────────────────────────────────────────────────────
 
 _P1_RECTIFICACION = (
@@ -509,6 +624,8 @@ def _articulos_finales(tipo: str, mun: str) -> str:
 def _motivada_demo(data: SolicitudUnificada) -> str:
     if data.tipo_mutacion == "segunda_clase":
         return _demo_segunda(data)
+    elif data.tipo_mutacion == "cancelacion":
+        return _demo_cancelacion(data)
     elif data.tipo_mutacion == "primera_clase":
         if data.tipo_origen == "autorizado":
             return _demo_primera_autorizado(data)
@@ -564,10 +681,11 @@ def generate_motivada(data: SolicitudUnificada, db) -> dict:
     from services.ai_provider import call_ai, active_provider
     from services import soporte_service
     tokens = 0
-    # Segunda clase reutiliza texto legal literal aportado por el usuario: nunca
-    # pasa por el LLM, sin importar el proveedor de IA configurado, para
-    # garantizar que el texto se mantenga idéntico al documento aprobado.
-    if data.tipo_mutacion == "segunda_clase":
+    # Segunda clase y cancelación reutilizan texto legal literal aportado por el
+    # usuario: nunca pasan por el LLM, sin importar el proveedor de IA
+    # configurado, para garantizar que el texto se mantenga idéntico al
+    # documento aprobado.
+    if data.tipo_mutacion in ("segunda_clase", "cancelacion"):
         texto = _motivada_demo(data)
     elif active_provider() == "demo":
         texto = _motivada_demo(data)

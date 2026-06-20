@@ -27,6 +27,8 @@ export interface SolicitudFormData {
   notaria?:             string;
   campo_rectificado?:   string;
   campo_complementado?: string;
+  numero_predial_nuevo?:string;
+  fecha_efectos?:       string;
   tipo_notificacion?:   "notificable" | "no_notificable" | null;
   documentos_aportados: string[];
   contexto_adicional?:  string;
@@ -126,6 +128,29 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
     folio_matricula: "140-133775", municipio: "Montería",
     documentos_aportados: ["Escritura pública No. 1053 del 23/11/2023 de la Notaría Cuarta de Montería"],
   },
+  cancelacion_propietario: {
+    nombre_propietario: "DAYAN FERNANDO BAENA ESCORCIA", cedula_propietario: "1.067.946.214",
+    numero_predial: "01-03-00-00-0471-0001-5-00-00-0001", folio_matricula: "140-191374",
+    numero_predial_nuevo: "01-03-00-00-0471-0002-5-00-00-0001", fecha_efectos: "01/07/2025",
+    municipio: "Montería",
+    documentos_aportados: ["Carta de solicitud", "Extrajuicio No. 4947 del 18/10/2024 de la Notaria segunda de Montería"],
+  },
+  cancelacion_poder: {
+    nombre_solicitante: "JORGE LUIS MARTINEZ RUIZ", tipo_doc_solicitante: "CC",
+    cedula_solicitante: "9.876.543", tp_solicitante: "45678",
+    nombre_propietario: "DAYAN FERNANDO BAENA ESCORCIA", cedula_propietario: "1.067.946.214",
+    numero_predial: "01-03-00-00-0471-0001-5-00-00-0001", folio_matricula: "140-191374",
+    numero_predial_nuevo: "01-03-00-00-0471-0002-5-00-00-0001", fecha_efectos: "01/07/2025",
+    municipio: "Montería",
+    documentos_aportados: ["Carta de solicitud", "Poder especial", "Extrajuicio No. 4947 del 18/10/2024 de la Notaria segunda de Montería"],
+  },
+  cancelacion_oficio: {
+    nombre_propietario: "MARIA TERESA OQUENDO PEREZ", cedula_propietario: "23.456.789",
+    numero_predial: "01-05-00-00-0034-0013-5-00-00-0001", folio_matricula: "140-96493",
+    numero_predial_nuevo: "01-05-00-00-0034-0014-5-00-00-0001", fecha_efectos: "01/07/2025",
+    municipio: "Montería",
+    documentos_aportados: ["Solicitud", "Extraproceso del 03/06/2025 de la Notaria tercera de Montería", "Cédula de ciudadanía"],
+  },
 };
 
 const DOCS_RAPIDOS: Record<string, string[]> = {
@@ -134,6 +159,7 @@ const DOCS_RAPIDOS: Record<string, string[]> = {
   tercera_clase:   ["Licencia de construcción", "Plano de construcción aprobado", "Declaración de construcción", "Certificado de libertad y tradición"],
   rectificacion:   ["Certificado de tradición y libertad", "Copia cédula de ciudadanía", "Escritura pública", "Plano topográfico"],
   complementacion: ["Certificado de tradición y libertad", "Escritura pública", "Copia cédula de ciudadanía", "Resolución judicial"],
+  cancelacion:     ["Carta de solicitud", "Extrajuicio notarial", "Cédula de ciudadanía", "Certificado de tradición y libertad"],
 };
 
 const CAMPOS_RAPIDOS_RECT = ["el área construida", "el área de terreno", "la dirección", "la nomenclatura", "el propietario", "los linderos", "el estrato socioeconómico"];
@@ -189,7 +215,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
     setData(p => ({ ...p, folios_resultantes: p.folios_resultantes.filter((_, idx) => idx !== i) }));
 
   const inp = "field-input";
-  const needsPropietario = tipoOrigen !== "snr" && tipoOrigen !== "oficio";
+  const needsPropietario = tipoMutacion === "cancelacion" ? true : (tipoOrigen !== "snr" && tipoOrigen !== "oficio");
   const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder";
   const needsRadicado    = tipoOrigen === "snr" || tipoMutacion === "complementacion";
 
@@ -199,6 +225,12 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
     if (tipoMutacion === "segunda_clase") {
       if (!data.folio_matriz || data.folios_resultantes.length < 2) return false;
       if (!data.numero_escritura || !data.fecha_escritura || !data.notaria) return false;
+    }
+    if (tipoMutacion === "cancelacion") {
+      if (!data.nombre_propietario || !data.cedula_propietario) return false;
+      if (!data.numero_predial_nuevo || !data.fecha_efectos) return false;
+      if (needsSolicitante && !data.cedula_solicitante) return false;
+      return true;
     }
     if (tipoOrigen === "snr")    return !!data.numero_radicado;
     if (tipoOrigen === "oficio") return tipoMutacion === "rectificacion" ? !!data.campo_rectificado : true;
@@ -285,7 +317,9 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
       {/* ── Propietario ── */}
       {needsPropietario && (
         <div className="card p-5 space-y-4">
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Propietario</h3>
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
+            {tipoMutacion === "cancelacion" ? "Poseedor" : "Propietario"}
+          </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <Field label="Nombre completo" required>
@@ -354,6 +388,21 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
             </div>
           </Field>
           <p className="text-xs text-slate-500">Se requieren al menos 2 folios resultantes.</p>
+        </div>
+      )}
+
+      {/* ── Cancelación de inscripción ── */}
+      {tipoMutacion === "cancelacion" && (
+        <div className="card p-5 space-y-4">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Cancelación de inscripción</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Referencia catastral donde ya está inscrito(a)" required>
+              <input className={clsx(inp, "font-mono text-xs")} value={data.numero_predial_nuevo ?? ""} onChange={e => set("numero_predial_nuevo", e.target.value)} placeholder="Código catastral" />
+            </Field>
+            <Field label="Fecha de efectos de la cancelación" required>
+              <input className={inp} value={data.fecha_efectos ?? ""} onChange={e => set("fecha_efectos", e.target.value)} placeholder="01/07/2025" />
+            </Field>
+          </div>
         </div>
       )}
 
