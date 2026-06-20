@@ -434,6 +434,75 @@ def _demo_cancelacion(data: SolicitudUnificada) -> str:
         return _demo_cancelacion_propietario(data)
 
 
+# ── Cuarta Clase (informe técnico del componente) ────────────────────────────
+# A diferencia de las demás categorías, el cuerpo de esta motivada no sale de
+# un párrafo legal fijo: lo aporta el informe técnico que redacta el
+# encargado del componente (físico/jurídico/económico), y el usuario elige
+# qué párrafos de ese informe se incorporan (parrafos_informe_tecnico). Por
+# eso tampoco pasa por el LLM: el texto del informe se inserta tal cual lo
+# eligió el usuario, sin que la IA lo reescriba.
+
+def _apertura_cuarta(data: SolicitudUnificada, mun: str) -> str:
+    docs = ", ".join(data.documentos_aportados)
+    if data.tipo_origen == "autorizado":
+        return (
+            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con CC No. "
+            f"{data.cedula_solicitante}, en condición de contacto y/o autorizado del señor(a) "
+            f"{data.nombre_propietario}, identificado con C.C. {data.cedula_propietario}, "
+            f"propietario del inmueble identificado con número predial {data.numero_predial}, "
+            f"inscrito en la base de datos catastral del municipio de {mun}, presentó ante la "
+            f"Oficina de Catastro adscrita a la Secretaría de Planeación del municipio de {mun} "
+            f"una solicitud de trámite catastral, soportada en los siguientes documentos "
+            f"aportados: {docs}."
+        )
+    elif data.tipo_origen == "poder":
+        tp_txt = f", TP. {data.tp_solicitante}" if data.tp_solicitante else ""
+        return (
+            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
+            f"{data.tipo_doc_solicitante or 'CC'} No. {data.cedula_solicitante}{tp_txt}, en su "
+            f"condición de apoderado del señor(a) {data.nombre_propietario}, identificado con "
+            f"C.C. {data.cedula_propietario}, propietario del inmueble identificado con número "
+            f"predial {data.numero_predial}, inscrito en la base de datos catastral del "
+            f"municipio de {mun}, presentó ante la Oficina de Catastro adscrita a la Secretaría "
+            f"de Planeación del municipio de {mun} una solicitud de trámite catastral, "
+            f"soportada en los siguientes documentos aportados: {docs}."
+        )
+    elif data.tipo_origen == "oficio":
+        return (
+            f"Que la Oficina de Catastro adscrita a la Secretaría de Planeación del municipio "
+            f"de {mun}, se radica de manera oficiosa un trámite catastral sobre el predio "
+            f"identificado con número predial {data.numero_predial}, inscrito en la base de "
+            f"datos catastral del municipio de {mun}, soportado en los siguientes documentos: "
+            f"{docs}."
+        )
+    else:  # propietario
+        return (
+            f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con C.C. No. "
+            f"{data.cedula_propietario}, propietario del inmueble identificado con número "
+            f"predial {data.numero_predial}, inscrito en la base de datos catastral del "
+            f"municipio de {mun}, presentó ante la Oficina de Catastro adscrita a la Secretaría "
+            f"de Planeación del municipio de {mun} una solicitud de trámite catastral, "
+            f"soportada en los siguientes documentos aportados: {docs}."
+        )
+
+def _p_informe_cuarta(data: SolicitudUnificada, mun: str) -> str:
+    informe_txt   = f" No. {data.numero_informe_tecnico}" if data.numero_informe_tecnico else ""
+    fecha_txt     = f" de fecha {data.fecha_informe_tecnico}" if data.fecha_informe_tecnico else ""
+    encargado_txt = f", suscrito por {data.encargado_componente}" if data.encargado_componente else ""
+    componente    = data.componente_catastral or "componente catastral"
+    return (
+        f"Que mediante informe técnico{informe_txt}{fecha_txt}{encargado_txt}, emitido por el "
+        f"encargado del componente {componente}, respecto del predio identificado con número "
+        f"predial {data.numero_predial}, inscrito en la base de datos catastral del municipio "
+        f"de {mun}, se determinaron los siguientes hallazgos y conclusiones:"
+    )
+
+def _demo_cuarta(data: SolicitudUnificada) -> str:
+    mun    = _municipio(data)
+    cuerpo = [p.strip() for p in data.parrafos_informe_tecnico if p.strip()]
+    return "\n\n".join([_apertura_cuarta(data, mun), _p_informe_cuarta(data, mun), *cuerpo])
+
+
 # ── Rectificación ────────────────────────────────────────────────────────────
 
 _P1_RECTIFICACION = (
@@ -626,6 +695,8 @@ def _motivada_demo(data: SolicitudUnificada) -> str:
         return _demo_segunda(data)
     elif data.tipo_mutacion == "cancelacion":
         return _demo_cancelacion(data)
+    elif data.tipo_mutacion == "cuarta_clase":
+        return _demo_cuarta(data)
     elif data.tipo_mutacion == "primera_clase":
         if data.tipo_origen == "autorizado":
             return _demo_primera_autorizado(data)
@@ -681,11 +752,11 @@ def generate_motivada(data: SolicitudUnificada, db) -> dict:
     from services.ai_provider import call_ai, active_provider
     from services import soporte_service
     tokens = 0
-    # Segunda clase y cancelación reutilizan texto legal literal aportado por el
-    # usuario: nunca pasan por el LLM, sin importar el proveedor de IA
-    # configurado, para garantizar que el texto se mantenga idéntico al
-    # documento aprobado.
-    if data.tipo_mutacion in ("segunda_clase", "cancelacion"):
+    # Segunda clase, cancelación y cuarta clase reutilizan texto literal
+    # aportado por el usuario (legal o del informe técnico): nunca pasan por
+    # el LLM, sin importar el proveedor de IA configurado, para garantizar
+    # que el texto se mantenga idéntico al documento aprobado/aportado.
+    if data.tipo_mutacion in ("segunda_clase", "cancelacion", "cuarta_clase"):
         texto = _motivada_demo(data)
     elif active_provider() == "demo":
         texto = _motivada_demo(data)

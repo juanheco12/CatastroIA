@@ -48,6 +48,14 @@ def _extraer_texto(file_bytes: bytes, tipo_archivo: str) -> str:
     return file_bytes.decode("utf-8", errors="ignore")
 
 
+def extraer_texto_archivo(file_bytes: bytes, filename: str) -> str:
+    """Extrae el texto de un PDF/DOCX/TXT sin persistirlo. Lo usan flujos puntuales
+    como el informe técnico de cuarta clase, donde el texto se muestra al usuario
+    para que elija los párrafos que va a incorporar a la motivada."""
+    tipo_archivo = filename.rsplit(".", 1)[-1].lower()
+    return _extraer_texto(file_bytes, tipo_archivo)
+
+
 def _a_response(doc: SoporteDocumento) -> SoporteInfoResponse:
     return SoporteInfoResponse(
         id=doc.id,

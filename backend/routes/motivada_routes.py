@@ -1,16 +1,46 @@
 from datetime import datetime
 from pathlib import Path
 import base64
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
 from database.db import get_db
 from schemas.solicitud import SolicitudUnificada
 from schemas.responses import MotivadaGeneradaResponse
-from services import claude_service, history_service
+from services import claude_service, history_service, soporte_service
 from config import settings
 
 router = APIRouter(prefix="/motivada", tags=["motivada"])
+
+MAX_INFORME_SIZE = 50 * 1024 * 1024  # 50 MB
+EXTENSIONES_INFORME = {"pdf", "docx", "txt"}
+
+
+@router.post("/extraer-informe")
+async def extraer_informe_tecnico(file: UploadFile = File(...)):
+    """Extrae el texto de un informe técnico (PDF/DOCX/TXT) para que el usuario
+    elija los párrafos que se incorporan a la motivada de cuarta clase. No se
+    persiste en la base de datos: es un uso puntual, solo para esta solicitud."""
+    if not file.filename or "." not in file.filename:
+        raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
+
+    extension = file.filename.rsplit(".", 1)[-1].lower()
+    if extension not in EXTENSIONES_INFORME:
+        raise HTTPException(status_code=400, detail="Solo se aceptan archivos .pdf, .docx o .txt")
+
+    file_bytes = await file.read()
+    if len(file_bytes) > MAX_INFORME_SIZE:
+        raise HTTPException(status_code=413, detail="El archivo supera el límite de 50 MB")
+
+    try:
+        texto = soporte_service.extraer_texto_archivo(file_bytes, file.filename)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"No se pudo extraer texto del documento: {exc}")
+
+    if not texto.strip():
+        raise HTTPException(status_code=400, detail="No se pudo extraer texto del documento")
+
+    return {"texto": texto}
 
 
 @router.post("/generar", response_model=MotivadaGeneradaResponse)

@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Literal
 
 
-TipoMutacion  = Literal["primera_clase", "segunda_clase", "tercera_clase", "rectificacion", "complementacion", "cancelacion"]
+TipoMutacion  = Literal["primera_clase", "segunda_clase", "tercera_clase", "cuarta_clase", "rectificacion", "complementacion", "cancelacion"]
 TipoOrigen    = Literal["propietario", "autorizado", "poder", "snr", "oficio"]
 
 
@@ -48,6 +48,13 @@ class SolicitudUnificada(BaseModel):
     # ── Cancelación de inscripción catastral ──────────────────────
     numero_predial_nuevo: Optional[str] = None
     fecha_efectos:        Optional[str] = None
+
+    # ── Cuarta Clase (informe técnico del componente) ──────────────
+    componente_catastral:     Optional[str] = None
+    encargado_componente:     Optional[str] = None
+    numero_informe_tecnico:   Optional[str] = None
+    fecha_informe_tecnico:    Optional[str] = None
+    parrafos_informe_tecnico: list[str] = Field(default_factory=list)
 
     # ── Artículos finales ─────────────────────────────────────────
     tipo_notificacion: Optional[Literal["notificable", "no_notificable"]] = None

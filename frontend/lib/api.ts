@@ -173,6 +173,16 @@ export async function subirSoporte(file: File): Promise<SoporteInfo> {
   return res.data;
 }
 
+export async function extraerInformeTecnico(file: File): Promise<{ texto: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await api.post("/motivada/extraer-informe", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 120000,
+  });
+  return res.data;
+}
+
 export async function listarSoportes(): Promise<SoporteInfo[]> {
   const res = await api.get("/soportes/");
   return asArray<SoporteInfo>(res.data);

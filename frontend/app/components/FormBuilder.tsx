@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Wand2, Plus, Minus, Bell, BellOff, BellMinus } from "lucide-react";
+import { Wand2, Plus, Minus, Bell, BellOff, BellMinus, Upload } from "lucide-react";
 import { TipoMutacion, TipoOrigen } from "./MutationSelector";
+import { extraerInformeTecnico, extractErrorMessage } from "@/lib/api";
 import clsx from "clsx";
 
 export interface SolicitudFormData {
@@ -29,9 +30,33 @@ export interface SolicitudFormData {
   campo_complementado?: string;
   numero_predial_nuevo?:string;
   fecha_efectos?:       string;
+  componente_catastral?:    string;
+  encargado_componente?:    string;
+  numero_informe_tecnico?:  string;
+  fecha_informe_tecnico?:   string;
+  parrafos_informe_tecnico: string[];
   tipo_notificacion?:   "notificable" | "no_notificable" | null;
   documentos_aportados: string[];
   contexto_adicional?:  string;
+}
+
+// Reconstruye párrafos a partir de texto extraído de un PDF/DOCX: el DOCX trae
+// un salto de línea por párrafo real, pero el PDF suele traer un salto por
+// línea de texto justificado, así que se van uniendo líneas hasta encontrar
+// un final de frase (. : ;) para aproximar el párrafo original.
+function splitParrafos(texto: string): string[] {
+  const lineas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
+  const parrafos: string[] = [];
+  let actual = "";
+  for (const linea of lineas) {
+    actual = actual ? `${actual} ${linea}` : linea;
+    if (/[.:;]$/.test(linea)) {
+      parrafos.push(actual);
+      actual = "";
+    }
+  }
+  if (actual) parrafos.push(actual);
+  return parrafos.filter((p) => p.length > 10);
 }
 
 // ── Mock data ────────────────────────────────────────────────────────────────
@@ -144,6 +169,53 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
     municipio: "Montería",
     documentos_aportados: ["Carta de solicitud", "Poder especial", "Extrajuicio No. 4947 del 18/10/2024 de la Notaria segunda de Montería"],
   },
+  cuarta_clase_propietario: {
+    nombre_propietario: "LUIS FERNANDO RAMIREZ TORRES", cedula_propietario: "9.345.678",
+    numero_predial: "23001000090010000000000", folio_matricula: "140-55210",
+    municipio: "Montería",
+    componente_catastral: "físico", encargado_componente: "Ing. Patricia Salazar Mejía",
+    numero_informe_tecnico: "IT-2025-0142", fecha_informe_tecnico: "15/05/2025",
+    parrafos_informe_tecnico: [
+      "Que, como resultado de la visita técnica realizada al predio, se constató una variación en el área construida respecto de lo registrado en la base catastral.",
+      "Que conforme al levantamiento planimétrico efectuado, se recomienda actualizar el componente físico del predio de acuerdo con las condiciones verificadas en terreno.",
+    ],
+    documentos_aportados: ["Informe técnico del componente físico", "Acta de visita técnica"],
+  },
+  cuarta_clase_autorizado: {
+    nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ", cedula_solicitante: "1.234.567",
+    nombre_propietario: "LUIS FERNANDO RAMIREZ TORRES", cedula_propietario: "9.345.678",
+    numero_predial: "23001000090010000000000", folio_matricula: "140-55210",
+    municipio: "Montería",
+    componente_catastral: "jurídico", encargado_componente: "Dr. Mauricio Pineda Salgado",
+    numero_informe_tecnico: "IT-2025-0143", fecha_informe_tecnico: "16/05/2025",
+    parrafos_informe_tecnico: [
+      "Que, revisada la documentación jurídica del predio, se identificó una inconsistencia entre el propietario inscrito en la base catastral y el titular registral vigente.",
+    ],
+    documentos_aportados: ["Informe técnico del componente jurídico", "Certificado de tradición y libertad"],
+  },
+  cuarta_clase_poder: {
+    nombre_solicitante: "JORGE LUIS MARTINEZ RUIZ", tipo_doc_solicitante: "CC",
+    cedula_solicitante: "9.876.543", tp_solicitante: "45678",
+    nombre_propietario: "LUIS FERNANDO RAMIREZ TORRES", cedula_propietario: "9.345.678",
+    numero_predial: "23001000090010000000000", folio_matricula: "140-55210",
+    municipio: "Montería",
+    componente_catastral: "económico", encargado_componente: "Ec. Sandra Milena Vergara",
+    numero_informe_tecnico: "IT-2025-0144", fecha_informe_tecnico: "17/05/2025",
+    parrafos_informe_tecnico: [
+      "Que, de acuerdo con el estudio de zonas homogéneas geoeconómicas vigente, se recomienda ajustar el componente económico del predio acorde con los valores de referencia del sector.",
+    ],
+    documentos_aportados: ["Poder especial", "Informe técnico del componente económico"],
+  },
+  cuarta_clase_oficio: {
+    numero_predial: "23001000090010000000000", folio_matricula: "140-55210",
+    municipio: "Montería",
+    componente_catastral: "físico", encargado_componente: "Ing. Patricia Salazar Mejía",
+    numero_informe_tecnico: "IT-2025-0145", fecha_informe_tecnico: "18/05/2025",
+    parrafos_informe_tecnico: [
+      "Que la oficina de catastro, de manera oficiosa, ordenó la verificación técnica del predio con ocasión de las inconsistencias detectadas en el proceso de actualización catastral del municipio.",
+    ],
+    documentos_aportados: ["Informe técnico del componente físico"],
+  },
   cancelacion_oficio: {
     nombre_propietario: "MARIA TERESA OQUENDO PEREZ", cedula_propietario: "23.456.789",
     numero_predial: "01-05-00-00-0034-0013-5-00-00-0001", folio_matricula: "140-96493",
@@ -157,6 +229,7 @@ const DOCS_RAPIDOS: Record<string, string[]> = {
   primera_clase:   ["Escritura pública", "Certificado de libertad y tradición", "Sentencia judicial", "Poder especial", "Resolución de adjudicación"],
   segunda_clase:   ["Carta de solicitud", "Certificado de tradición y libertad", "Escritura pública", "Plano", "Poder especial"],
   tercera_clase:   ["Licencia de construcción", "Plano de construcción aprobado", "Declaración de construcción", "Certificado de libertad y tradición"],
+  cuarta_clase:    ["Informe técnico del componente físico", "Informe técnico del componente jurídico", "Informe técnico del componente económico", "Acta de visita técnica"],
   rectificacion:   ["Certificado de tradición y libertad", "Copia cédula de ciudadanía", "Escritura pública", "Plano topográfico"],
   complementacion: ["Certificado de tradición y libertad", "Escritura pública", "Copia cédula de ciudadanía", "Resolución judicial"],
   cancelacion:     ["Carta de solicitud", "Extrajuicio notarial", "Cédula de ciudadanía", "Certificado de tradición y libertad"],
@@ -188,10 +261,15 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
     tipo_mutacion: tipoMutacion, tipo_origen: tipoOrigen,
     numero_predial: "", folio_matricula: "", documentos_aportados: [],
     folios_resultantes: [],
+    parrafos_informe_tecnico: [],
     contexto_adicional: contextoInicial ?? "",
   });
   const [newDoc, setNewDoc] = useState("");
   const [newFolio, setNewFolio] = useState("");
+  const [newParrafo, setNewParrafo] = useState("");
+  const [informeCandidatos, setInformeCandidatos] = useState<string[]>([]);
+  const [uploadingInforme, setUploadingInforme] = useState(false);
+  const [informeError, setInformeError] = useState("");
 
   const set = (k: keyof SolicitudFormData, v: unknown) => setData(p => ({ ...p, [k]: v }));
   const loadMock = () => setData(p => ({ ...p, ...MOCKS[mockKey] }));
@@ -214,6 +292,28 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
   const removeFolio = (i: number) =>
     setData(p => ({ ...p, folios_resultantes: p.folios_resultantes.filter((_, idx) => idx !== i) }));
 
+  const addParrafo = (texto?: string) => {
+    const p = (texto ?? newParrafo).trim();
+    if (!p) return;
+    setData(prev => ({ ...prev, parrafos_informe_tecnico: [...prev.parrafos_informe_tecnico, p] }));
+    if (!texto) setNewParrafo("");
+  };
+  const removeParrafo = (i: number) =>
+    setData(p => ({ ...p, parrafos_informe_tecnico: p.parrafos_informe_tecnico.filter((_, idx) => idx !== i) }));
+
+  const handleUploadInforme = async (file: File) => {
+    setUploadingInforme(true);
+    setInformeError("");
+    try {
+      const { texto } = await extraerInformeTecnico(file);
+      setInformeCandidatos(splitParrafos(texto));
+    } catch (err) {
+      setInformeError(extractErrorMessage(err, "No se pudo extraer el texto del informe técnico"));
+    } finally {
+      setUploadingInforme(false);
+    }
+  };
+
   const inp = "field-input";
   const needsPropietario = tipoMutacion === "cancelacion" ? true : (tipoOrigen !== "snr" && tipoOrigen !== "oficio");
   const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder";
@@ -229,6 +329,13 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
     if (tipoMutacion === "cancelacion") {
       if (!data.nombre_propietario || !data.cedula_propietario) return false;
       if (!data.numero_predial_nuevo || !data.fecha_efectos) return false;
+      if (needsSolicitante && !data.cedula_solicitante) return false;
+      return true;
+    }
+    if (tipoMutacion === "cuarta_clase") {
+      if (data.parrafos_informe_tecnico.length === 0) return false;
+      if (tipoOrigen === "oficio") return true;
+      if (!data.cedula_propietario || !data.nombre_propietario) return false;
       if (needsSolicitante && !data.cedula_solicitante) return false;
       return true;
     }
@@ -403,6 +510,81 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
               <input className={inp} value={data.fecha_efectos ?? ""} onChange={e => set("fecha_efectos", e.target.value)} placeholder="01/07/2025" />
             </Field>
           </div>
+        </div>
+      )}
+
+      {/* ── Informe técnico (Cuarta Clase) ── */}
+      {tipoMutacion === "cuarta_clase" && (
+        <div className="card p-5 space-y-4">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
+            Informe técnico del componente
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Componente catastral">
+              <select className={inp} value={data.componente_catastral ?? ""} onChange={e => set("componente_catastral", e.target.value)}>
+                <option value="">Seleccionar...</option>
+                <option value="físico">Físico</option>
+                <option value="jurídico">Jurídico</option>
+                <option value="económico">Económico</option>
+              </select>
+            </Field>
+            <Field label="Encargado del componente">
+              <input className={inp} value={data.encargado_componente ?? ""} onChange={e => set("encargado_componente", e.target.value)} placeholder="Nombre del funcionario" />
+            </Field>
+            <Field label="Número de informe técnico">
+              <input className={inp} value={data.numero_informe_tecnico ?? ""} onChange={e => set("numero_informe_tecnico", e.target.value)} placeholder="IT-2025-0142" />
+            </Field>
+            <Field label="Fecha del informe">
+              <input className={inp} value={data.fecha_informe_tecnico ?? ""} onChange={e => set("fecha_informe_tecnico", e.target.value)} placeholder="15/05/2025" />
+            </Field>
+          </div>
+
+          <div>
+            <label className="field-label">Subir informe técnico (PDF / Word / TXT)</label>
+            <label className="mt-1 flex items-center gap-2 cursor-pointer text-xs px-3 py-2 rounded-lg border border-slate-600 text-slate-400 hover:border-brand-primary hover:text-brand-primary transition-all w-fit">
+              <Upload size={14} />
+              {uploadingInforme ? "Extrayendo texto..." : "Elegir archivo"}
+              <input
+                type="file" accept=".pdf,.docx,.txt" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadInforme(f); e.target.value = ""; }}
+              />
+            </label>
+            {informeError && <p className="text-xs text-brand-danger mt-1.5">{informeError}</p>}
+          </div>
+
+          {informeCandidatos.length > 0 && (
+            <Field label="Párrafos detectados en el documento — agrega los que correspondan">
+              <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                {informeCandidatos.map((p, i) => (
+                  <div key={i} className="flex items-start gap-2 bg-slate-800/40 border border-slate-700/50 rounded-lg p-2">
+                    <button type="button" onClick={() => addParrafo(p)} className="btn-ghost px-2 py-1 shrink-0 mt-0.5">
+                      <Plus size={14} />
+                    </button>
+                    <p className="text-xs text-slate-400 leading-relaxed">{p}</p>
+                  </div>
+                ))}
+              </div>
+            </Field>
+          )}
+
+          <Field label="Párrafos seleccionados para la motivada" required>
+            <div className="space-y-1.5">
+              {data.parrafos_informe_tecnico.map((p, i) => (
+                <div key={i} className="flex items-start gap-2 group">
+                  <span className="flex-1 text-sm text-slate-300 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50">{p}</span>
+                  <button type="button" onClick={() => removeParrafo(i)} className="opacity-0 group-hover:opacity-100 p-1 text-brand-danger hover:bg-red-500/10 rounded transition-all shrink-0">
+                    <Minus size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-1.5">
+              <textarea className={clsx(inp, "flex-1 min-h-[60px] resize-y text-xs")} value={newParrafo} onChange={e => setNewParrafo(e.target.value)}
+                placeholder="O escribe/pega aquí un párrafo manualmente..." />
+              <button type="button" onClick={() => addParrafo()} className="btn-ghost px-3 self-start"><Plus size={16} /></button>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Se requiere al menos un párrafo.</p>
+          </Field>
         </div>
       )}
 
