@@ -1,10 +1,10 @@
 "use client";
 
-import { Building2, Users, ClipboardEdit, FilePlus2, ChevronRight, Library, SplitSquareHorizontal, FileX, FileSearch } from "lucide-react";
+import { Building2, Users, ClipboardEdit, FilePlus2, ChevronRight, Library, SplitSquareHorizontal, FileX, FileSearch, Home } from "lucide-react";
 import clsx from "clsx";
 import { CATEGORIAS_MOTIVADA } from "@/lib/api";
 
-export type TipoMutacion = "primera_clase" | "segunda_clase" | "tercera_clase" | "cuarta_clase" | "rectificacion" | "complementacion" | "cancelacion";
+export type TipoMutacion = "primera_clase" | "segunda_clase" | "tercera_clase" | "cuarta_clase" | "quinta_clase" | "rectificacion" | "complementacion" | "cancelacion";
 export type TipoOrigen   = "propietario"   | "autorizado" | "poder" | "snr" | "oficio";
 
 const MUTACIONES = [
@@ -12,6 +12,7 @@ const MUTACIONES = [
   { id: "segunda_clase"   as TipoMutacion, titulo: "Segunda Clase",   subtitulo: "Desenglobe / agregación de predios", icon: SplitSquareHorizontal },
   { id: "tercera_clase"   as TipoMutacion, titulo: "Tercera Clase",   subtitulo: "Incorporación de construcción",   icon: Building2    },
   { id: "cuarta_clase"    as TipoMutacion, titulo: "Cuarta Clase",    subtitulo: "Revisión de avalúo catastral",    icon: FileSearch   },
+  { id: "quinta_clase"    as TipoMutacion, titulo: "Quinta Clase",    subtitulo: "Incorporación de predios formales/informales", icon: Home },
   { id: "rectificacion"   as TipoMutacion, titulo: "Rectificación",   subtitulo: "Corrección de datos catastrales", icon: ClipboardEdit },
   { id: "complementacion" as TipoMutacion, titulo: "Complementación", subtitulo: "Adición de datos faltantes",      icon: FilePlus2    },
   { id: "cancelacion"     as TipoMutacion, titulo: "Cancelación",     subtitulo: "Cancelación de inscripción catastral", icon: FileX    },
@@ -23,8 +24,8 @@ const MUTACIONES = [
 // queda reservada para los casos atípicos de cada mutación.
 const CATEGORIAS_CUBIERTAS_POR_IA = new Set([
   "mutacion_primera_clase", "mutacion_segunda_clase", "mutacion_tercera_clase",
-  "mutacion_cuarta_clase", "rectificacion_general_datos", "complementacion",
-  "cancelacion_inscripcion_catastral",
+  "mutacion_cuarta_clase", "mutacion_quinta_clase", "rectificacion_general_datos",
+  "complementacion", "cancelacion_inscripcion_catastral",
 ]);
 const CATEGORIAS_BIBLIOTECA = CATEGORIAS_MOTIVADA.filter((c) => !CATEGORIAS_CUBIERTAS_POR_IA.has(c.value));
 
@@ -54,6 +55,12 @@ const ORIGENES_POR_MUTACION: Record<TipoMutacion, { id: TipoOrigen; titulo: stri
     { id: "poder",       titulo: "De parte con poder",       desc: "Apoderado con poder notarial o TP" },
     { id: "oficio",      titulo: "De oficio",                desc: "La oficina inicia el trámite de oficio" },
   ],
+  quinta_clase: [
+    { id: "propietario", titulo: "De parte del poseedor",   desc: "El poseedor gestiona directamente" },
+    { id: "autorizado",  titulo: "De parte con autorizado", desc: "Contacto o autorizado del poseedor" },
+    { id: "poder",       titulo: "De parte con poder",      desc: "Apoderado con poder notarial o TP" },
+    { id: "oficio",      titulo: "De oficio",               desc: "La oficina inicia la incorporación de oficio" },
+  ],
   rectificacion: [
     { id: "propietario", titulo: "Por propietario", desc: "El propietario solicita la corrección" },
     { id: "autorizado",  titulo: "Por autorizado",  desc: "Contacto o autorizado del propietario" },
@@ -75,6 +82,7 @@ export const LABEL_MUTACION: Record<TipoMutacion, string> = {
   segunda_clase:   "2da Clase",
   tercera_clase:   "3ra Clase",
   cuarta_clase:    "4ta Clase",
+  quinta_clase:    "5ta Clase",
   rectificacion:   "Rectificación",
   complementacion: "Complementación",
   cancelacion:     "Cancelación",

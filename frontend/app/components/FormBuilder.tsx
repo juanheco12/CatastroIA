@@ -32,6 +32,9 @@ export interface SolicitudFormData {
   fecha_efectos?:       string;
   direccion_predio?:        string;
   parrafos_informe_tecnico: string[];
+  fecha_visita_tecnica?: string;
+  fecha_compraventa?:    string;
+  entidad_compraventa?:  string;
   tipo_notificacion?:   "notificable" | "no_notificable" | null;
   documentos_aportados: string[];
   contexto_adicional?:  string;
@@ -219,6 +222,45 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
     municipio: "Montería",
     documentos_aportados: ["Solicitud", "Extraproceso del 03/06/2025 de la Notaria tercera de Montería", "Cédula de ciudadanía"],
   },
+  quinta_clase_propietario: {
+    nombre_propietario: "ROSA MARIA TORRES VELASQUEZ", cedula_propietario: "45.678.912",
+    numero_predial: "23001000090020000000000", folio_matricula: "140-66321",
+    municipio: "Montería",
+    fecha_visita_tecnica: "10/04/2025", fecha_compraventa: "15/01/2024",
+    entidad_compraventa: "Notaría Tercera de Montería",
+    numero_predial_nuevo: "23001000090020500000087",
+    documentos_aportados: ["Carta de solicitud", "Documento de compraventa", "Copia de cédula de ciudadanía", "Plano"],
+  },
+  quinta_clase_autorizado: {
+    nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ", cedula_solicitante: "1.234.567",
+    nombre_propietario: "ROSA MARIA TORRES VELASQUEZ", cedula_propietario: "45.678.912",
+    numero_predial: "23001000090020000000000", folio_matricula: "140-66321",
+    municipio: "Montería",
+    fecha_visita_tecnica: "10/04/2025", fecha_compraventa: "15/01/2024",
+    entidad_compraventa: "Notaría Tercera de Montería",
+    numero_predial_nuevo: "23001000090020500000087",
+    documentos_aportados: ["Documento de autorización", "Documento de compraventa", "Copia de cédula de ciudadanía"],
+  },
+  quinta_clase_poder: {
+    nombre_solicitante: "JORGE LUIS MARTINEZ RUIZ", tipo_doc_solicitante: "CC",
+    cedula_solicitante: "9.876.543", tp_solicitante: "45678",
+    nombre_propietario: "ROSA MARIA TORRES VELASQUEZ", cedula_propietario: "45.678.912",
+    numero_predial: "23001000090020000000000", folio_matricula: "140-66321",
+    municipio: "Montería",
+    fecha_visita_tecnica: "10/04/2025", fecha_compraventa: "15/01/2024",
+    entidad_compraventa: "Notaría Tercera de Montería",
+    numero_predial_nuevo: "23001000090020500000087",
+    documentos_aportados: ["Poder especial", "Documento de compraventa", "Copia de cédula de ciudadanía"],
+  },
+  quinta_clase_oficio: {
+    nombre_propietario: "ROSA MARIA TORRES VELASQUEZ",
+    numero_predial: "23001000090020000000000", folio_matricula: "140-66321",
+    municipio: "Montería",
+    fecha_visita_tecnica: "10/04/2025", fecha_compraventa: "15/01/2024",
+    entidad_compraventa: "Notaría Tercera de Montería",
+    numero_predial_nuevo: "23001000090020500000087",
+    documentos_aportados: ["Documento de compraventa", "Plano"],
+  },
 };
 
 const DOCS_RAPIDOS: Record<string, string[]> = {
@@ -226,6 +268,7 @@ const DOCS_RAPIDOS: Record<string, string[]> = {
   segunda_clase:   ["Carta de solicitud", "Certificado de tradición y libertad", "Escritura pública", "Plano", "Poder especial"],
   tercera_clase:   ["Licencia de construcción", "Plano de construcción aprobado", "Declaración de construcción", "Certificado de libertad y tradición"],
   cuarta_clase:    ["Solicitud", "Certificado de tradición y libertad", "Escritura pública", "Cédula de ciudadanía", "Avalúo comercial", "Poder especial"],
+  quinta_clase:    ["Carta de solicitud", "Documento de compraventa", "Copia de cédula de ciudadanía", "Plano", "Poder especial"],
   rectificacion:   ["Certificado de tradición y libertad", "Copia cédula de ciudadanía", "Escritura pública", "Plano topográfico"],
   complementacion: ["Certificado de tradición y libertad", "Escritura pública", "Copia cédula de ciudadanía", "Resolución judicial"],
   cancelacion:     ["Carta de solicitud", "Extrajuicio notarial", "Cédula de ciudadanía", "Certificado de tradición y libertad"],
@@ -311,7 +354,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
   };
 
   const inp = "field-input";
-  const needsPropietario = tipoMutacion === "cancelacion" ? true : (tipoOrigen !== "snr" && tipoOrigen !== "oficio");
+  const needsPropietario = (tipoMutacion === "cancelacion" || tipoMutacion === "quinta_clase") ? true : (tipoOrigen !== "snr" && tipoOrigen !== "oficio");
   const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder";
   const needsRadicado    = tipoOrigen === "snr" || tipoMutacion === "complementacion";
 
@@ -333,6 +376,13 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
       if (tipoOrigen === "oficio") return true;
       if (!data.cedula_propietario || !data.nombre_propietario) return false;
       if (needsSolicitante && !data.cedula_solicitante) return false;
+      return true;
+    }
+    if (tipoMutacion === "quinta_clase") {
+      if (!data.nombre_propietario) return false;
+      if (tipoOrigen !== "oficio" && !data.cedula_propietario) return false;
+      if (needsSolicitante && !data.cedula_solicitante) return false;
+      if (!data.fecha_visita_tecnica || !data.fecha_compraventa || !data.entidad_compraventa || !data.numero_predial_nuevo) return false;
       return true;
     }
     if (tipoOrigen === "snr")    return !!data.numero_radicado;
@@ -421,7 +471,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
       {needsPropietario && (
         <div className="card p-5 space-y-4">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
-            {tipoMutacion === "cancelacion" ? "Poseedor" : "Propietario"}
+            {tipoMutacion === "cancelacion" || tipoMutacion === "quinta_clase" ? "Poseedor" : "Propietario"}
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
@@ -565,6 +615,29 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
             </div>
             <p className="text-xs text-slate-500 mt-1">Se requiere al menos un párrafo.</p>
           </Field>
+        </div>
+      )}
+
+      {/* ── Incorporación de mejora/informalidad (Quinta Clase) ── */}
+      {tipoMutacion === "quinta_clase" && (
+        <div className="card p-5 space-y-4">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
+            Incorporación de predio formal/informal
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Fecha de visita técnica" required>
+              <input className={inp} value={data.fecha_visita_tecnica ?? ""} onChange={e => set("fecha_visita_tecnica", e.target.value)} placeholder="10/04/2025" />
+            </Field>
+            <Field label="Nueva referencia catastral asignada" required>
+              <input className={clsx(inp, "font-mono text-xs")} value={data.numero_predial_nuevo ?? ""} onChange={e => set("numero_predial_nuevo", e.target.value)} placeholder="Código catastral de la mejora/informalidad" />
+            </Field>
+            <Field label="Fecha de la compraventa" required>
+              <input className={inp} value={data.fecha_compraventa ?? ""} onChange={e => set("fecha_compraventa", e.target.value)} placeholder="15/01/2024" />
+            </Field>
+            <Field label="Notaría o entidad de la compraventa" required>
+              <input className={inp} value={data.entidad_compraventa ?? ""} onChange={e => set("entidad_compraventa", e.target.value)} placeholder="Notaría Tercera de Montería" />
+            </Field>
+          </div>
         </div>
       )}
 

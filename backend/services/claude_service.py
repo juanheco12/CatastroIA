@@ -525,6 +525,106 @@ def _demo_cuarta(data: SolicitudUnificada) -> str:
     return "\n\n".join([_P1_CUARTA, _P1B_CUARTA, _apertura_cuarta(data, mun), *cuerpo, _p_cierre_cuarta(mun)])
 
 
+# ── Quinta Clase (incorporación de predios formales o informales) ───────────
+# Texto literal reutilizado de motivadas reales aprobadas: esta categoría
+# nunca pasa por el LLM (ver generate_motivada), solo sustitución de campos.
+
+_P1_QUINTA = (
+    "Que la Resolución 1040 de 2023 del Instituto Geográfico Agustín Codazzi (IGAC), en su "
+    "artículo 4.5.1 señala que las mutaciones de quinta clase son las que resultan de la "
+    "incorporación de predios formales o bajo la condición de informalidad que no estaban "
+    "incorporados previamente en la base de datos catastral."
+)
+
+def _apertura_quinta(data: SolicitudUnificada, mun: str) -> str:
+    docs = ", ".join(data.documentos_aportados)
+    if data.tipo_origen == "poder":
+        tp_txt = f", TP. {data.tp_solicitante}" if data.tp_solicitante else ""
+        return (
+            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
+            f"{data.tipo_doc_solicitante or 'CC'}. {data.cedula_solicitante}{tp_txt}, quien "
+            f"actúa en calidad de apoderado del señor(a) {data.nombre_propietario} en su "
+            f"condición de poseedor(a) de una mejora ubicada sobre el inmueble con número "
+            f"predial {data.numero_predial}, inscrito en la base de datos catastral del "
+            f"municipio de {mun}, presentó ante la Oficina de Catastro adscrita a la "
+            f"Secretaría de Planeación del municipio de {mun} una solicitud de incorporación "
+            f"o modificación del elemento constructivo, soportada en los siguientes "
+            f"documentos justificativos: {docs}."
+        )
+    elif data.tipo_origen == "autorizado":
+        return (
+            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con C.C. "
+            f"{data.cedula_solicitante}, quien actúa en calidad de autorizado del señor(a) "
+            f"{data.nombre_propietario} en su condición de poseedor(a) de una mejora ubicada "
+            f"sobre el inmueble con número predial {data.numero_predial}, inscrito en la base "
+            f"de datos catastral del municipio de {mun}, presentó ante la Oficina de Catastro "
+            f"adscrita a la Secretaría de Planeación del municipio de {mun} una solicitud de "
+            f"incorporación o modificación del elemento constructivo, soportada en los "
+            f"siguientes documentos justificativos: {docs}."
+        )
+    elif data.tipo_origen == "oficio":
+        return (
+            f"Que la Oficina de Catastro adscrita a la Secretaría de Planeación del municipio "
+            f"de {mun}, se radica de manera oficiosa una solicitud de incorporación o "
+            f"modificación del elemento constructivo sobre el inmueble con número predial "
+            f"{data.numero_predial}, inscrito en la base de datos catastral del municipio de "
+            f"{mun}, soportada en los siguientes documentos justificativos: {docs}."
+        )
+    else:  # propietario / poseedor
+        return (
+            f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con C.C. "
+            f"{data.cedula_propietario}, en su condición de poseedor(a) de una mejora ubicada "
+            f"sobre el inmueble con número predial {data.numero_predial}, inscrito en la base "
+            f"de datos catastral del municipio de {mun}, presentó ante la Oficina de Catastro "
+            f"adscrita a la Secretaría de Planeación del municipio de {mun} una solicitud de "
+            f"incorporación o modificación del elemento constructivo, soportada en los "
+            f"siguientes documentos justificativos: {docs}."
+        )
+
+def _p3_quinta(data: SolicitudUnificada) -> str:
+    return (
+        f"Que en atención a la solicitud presentada se realizó la verificación técnica de la "
+        f"documentación aportada y visita técnica al predio el día {data.fecha_visita_tecnica}, "
+        f"con el fin de realizar la localización geográfica del predio a inscribir, se "
+        f"determinó que es procedente inscribir la informalidad a nombre de "
+        f"{data.nombre_propietario}, conforme a la compraventa del {data.fecha_compraventa} de "
+        f"{data.entidad_compraventa}."
+    )
+
+def _p4_quinta(data: SolicitudUnificada) -> str:
+    return (
+        f"Se concluye que a la posesión o informalidad le corresponderá la referencia "
+        f"catastral No. {data.numero_predial_nuevo}."
+    )
+
+def _p5_quinta(mun: str) -> str:
+    return (
+        f"Que el sistema de gestión catastral, con el cual se administra la base de datos "
+        f"catastral del municipio de {mun}, recalcula las áreas de terreno geográficas y las "
+        f"adopta como las áreas definitivas de los predios resultantes, corrigiendo, si es del "
+        f"caso las disparidades que se encuentren en los mismos."
+    )
+
+def _p6_quinta(mun: str) -> str:
+    return (
+        f"Que revisados los antecedentes catastrales del municipio de {mun}, verificada la "
+        f"documentación aportada por el(la) solicitante, así como la validación "
+        f"correspondiente a través de la aplicación del método DIRECTO, en los términos del "
+        f"artículo 2.2.2.2.6. del Decreto 1170 de 2015, modificado por el Decreto 148 de 2020, "
+        f"que procede la mutación de quinta clase y su correspondiente inscripción en el "
+        f"catastro, conforme lo indican en los artículos 14, 15 literal e, 16, 25, 29, 30 y 31 "
+        f"de la Resolución 1149 de 2021, en concordancia del artículo 2.2.2.2.2 literal C del "
+        f"1170 de 2015, modificado por el Decreto 148 de 2020."
+    )
+
+def _demo_quinta(data: SolicitudUnificada) -> str:
+    mun = _municipio(data)
+    return "\n\n".join([
+        _P1_QUINTA, _apertura_quinta(data, mun), _p3_quinta(data), _p4_quinta(data),
+        _p5_quinta(mun), _p6_quinta(mun),
+    ])
+
+
 # ── Rectificación ────────────────────────────────────────────────────────────
 
 _P1_RECTIFICACION = (
@@ -719,6 +819,8 @@ def _motivada_demo(data: SolicitudUnificada) -> str:
         return _demo_cancelacion(data)
     elif data.tipo_mutacion == "cuarta_clase":
         return _demo_cuarta(data)
+    elif data.tipo_mutacion == "quinta_clase":
+        return _demo_quinta(data)
     elif data.tipo_mutacion == "primera_clase":
         if data.tipo_origen == "autorizado":
             return _demo_primera_autorizado(data)
@@ -774,11 +876,11 @@ def generate_motivada(data: SolicitudUnificada, db) -> dict:
     from services.ai_provider import call_ai, active_provider
     from services import soporte_service
     tokens = 0
-    # Segunda clase, cancelación y cuarta clase reutilizan texto literal
-    # aportado por el usuario (legal o del informe técnico): nunca pasan por
-    # el LLM, sin importar el proveedor de IA configurado, para garantizar
-    # que el texto se mantenga idéntico al documento aprobado/aportado.
-    if data.tipo_mutacion in ("segunda_clase", "cancelacion", "cuarta_clase"):
+    # Segunda clase, cancelación, cuarta clase y quinta clase reutilizan texto
+    # literal aportado por el usuario (legal o del informe técnico): nunca
+    # pasan por el LLM, sin importar el proveedor de IA configurado, para
+    # garantizar que el texto se mantenga idéntico al documento aprobado/aportado.
+    if data.tipo_mutacion in ("segunda_clase", "cancelacion", "cuarta_clase", "quinta_clase"):
         texto = _motivada_demo(data)
     elif active_provider() == "demo":
         texto = _motivada_demo(data)
