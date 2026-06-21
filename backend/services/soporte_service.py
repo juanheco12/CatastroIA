@@ -205,7 +205,11 @@ def _backfill_chunks_faltantes(db: Session) -> None:
         try:
             _indexar_chunks(db, doc)
         except Exception:
-            pass
+            # Una falla aqui (p. ej. la API de embeddings) deja la sesion en
+            # estado "pending rollback" — sin esto, la siguiente consulta en
+            # esta misma sesion (la busqueda RAG, o incluso su fallback por
+            # palabras clave) tambien fallaria.
+            db.rollback()
 
 
 def buscar_contexto_relevante(db: Session, pregunta: str) -> str:

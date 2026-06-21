@@ -112,6 +112,9 @@ def _call_gemini(messages: list[dict], system: str, max_tokens: int) -> tuple[st
     return text, 0  # Gemini free tier doesn't return token counts reliably
 
 
+EMBEDDING_DIM = 768  # debe coincidir con Vector(768) en models/soporte.py y models/biblioteca.py
+
+
 def embed_texts(texts: list[str], task_type: str) -> list[list[float]]:
     """
     Embeddings de Gemini para busqueda semantica (RAG). task_type debe ser
@@ -123,7 +126,13 @@ def embed_texts(texts: list[str], task_type: str) -> list[list[float]]:
     genai.configure(api_key=settings.google_api_key)
 
     def _lote(textos: list[str], model: str) -> list[list[float]]:
-        resultado = genai.embed_content(model=model, content=textos, task_type=task_type)
+        # Modelos nuevos como gemini-embedding-001 devuelven 3072 dimensiones
+        # por defecto; hay que pedir explicitamente 768 para que coincida con
+        # la columna Vector(768) de la base de datos.
+        resultado = genai.embed_content(
+            model=model, content=textos, task_type=task_type,
+            output_dimensionality=EMBEDDING_DIM,
+        )
         return resultado["embedding"]
 
     model = _resolve_gemini_embed_model()
