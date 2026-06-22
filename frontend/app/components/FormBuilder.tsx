@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Wand2, Plus, Minus, Bell, BellOff, BellMinus, Upload, FilePlus2, X } from "lucide-react";
+import { Wand2, Plus, Minus, Bell, BellOff, BellMinus, Upload, ListChecks, X } from "lucide-react";
 import { TipoMutacion, TipoOrigen } from "./MutationSelector";
 import { extraerInformeTecnico, extractErrorMessage } from "@/lib/api";
 import clsx from "clsx";
@@ -839,11 +839,8 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
                 />
               </Field>
             </div>
-            <button
-              type="button" onClick={() => setModalDocsAbierto(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-lg font-semibold text-white bg-violet-600 hover:bg-violet-500 transition-all"
-            >
-              <FilePlus2 size={16} />Doc. Aportados
+            <button type="button" onClick={() => setModalDocsAbierto(true)} className="btn-primary">
+              <ListChecks size={15} />Elegir documentos aportados
             </button>
           </>
         ) : (
@@ -894,59 +891,55 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
       </div>
 
       {modalDocsAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70" onClick={() => setModalDocsAbierto(false)}>
           <div
-            className="w-full max-w-2xl rounded-xl border shadow-2xl p-6 space-y-5"
-            style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
+            className="card w-full sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-b-none sm:rounded-xl p-5 space-y-4"
+            onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>Selecciona los documentos justificativos</h3>
-              <button type="button" onClick={() => setModalDocsAbierto(false)} className="p-1 rounded text-slate-500 hover:text-slate-300">
-                <X size={18} />
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-brand-text">Documentos aportados</h3>
+                <p className="text-xs text-slate-500">Toca para sumarlos a la lista</p>
+              </div>
+              <button type="button" onClick={() => setModalDocsAbierto(false)} className="p-1.5 rounded-lg text-slate-500 hover:text-brand-text hover:bg-slate-700/50">
+                <X size={16} />
               </button>
             </div>
 
-            <div className="grid grid-cols-[1fr_2fr] gap-6">
-              <div className="space-y-2">
-                <label className="field-label">Ingresa el documento</label>
-                <input
-                  className={inp}
-                  value={docModalInput} onChange={e => setDocModalInput(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && (e.preventDefault(), (addDoc(docModalInput), setDocModalInput("")))}
-                  placeholder="Nombre del documento"
-                />
-                <button
-                  type="button"
-                  onClick={() => { addDoc(docModalInput); setDocModalInput(""); }}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition-all"
-                >
-                  Agregar
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {DOCS_JUSTIFICATIVOS_CATALOGO.map(doc => (
-                  <label
-                    key={doc}
-                    className="flex items-center gap-2.5 p-3 rounded-lg border cursor-pointer transition-all"
-                    style={{ borderColor: "var(--border)" }}
+            <div className="flex flex-wrap gap-1.5">
+              {DOCS_JUSTIFICATIVOS_CATALOGO.map(doc => {
+                const activo = data.documentos_aportados.includes(doc);
+                return (
+                  <button
+                    key={doc} type="button" onClick={() => toggleDoc(doc)}
+                    className={clsx(
+                      "text-xs px-2.5 py-1.5 rounded-full border transition-all",
+                      activo
+                        ? "bg-brand-primary border-brand-primary text-white"
+                        : "border-slate-600 text-slate-400 hover:border-brand-primary hover:text-brand-primary",
+                    )}
                   >
-                    <input
-                      type="checkbox" className="w-4 h-4 accent-brand-primary shrink-0"
-                      checked={data.documentos_aportados.includes(doc)}
-                      onChange={() => toggleDoc(doc)}
-                    />
-                    <span className="text-sm" style={{ color: "var(--text)" }}>{doc}</span>
-                  </label>
-                ))}
-              </div>
+                    {activo ? "✓ " : "+ "}{doc}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="flex justify-end pt-2 border-t" style={{ borderColor: "var(--border)" }}>
-              <button type="button" onClick={() => setModalDocsAbierto(false)} className="btn-ghost text-brand-danger px-4 py-2">
-                Cerrar
+            <div className="flex gap-2 pt-2 border-t border-slate-700">
+              <input
+                className={clsx(inp, "flex-1")}
+                value={docModalInput} onChange={e => setDocModalInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && (e.preventDefault(), (addDoc(docModalInput), setDocModalInput("")))}
+                placeholder="Otro documento que no esté en la lista..."
+              />
+              <button type="button" onClick={() => { addDoc(docModalInput); setDocModalInput(""); }} className="btn-ghost px-3">
+                <Plus size={16} />
               </button>
             </div>
+
+            <button type="button" onClick={() => setModalDocsAbierto(false)} className="btn-primary w-full justify-center">
+              Listo
+            </button>
           </div>
         </div>
       )}
