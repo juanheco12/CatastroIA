@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  pendientesRevision, obtenerDetallePlantilla, aprobarPlantilla, marcarPlantillaAtipico, extractErrorMessage,
+  pendientesRevision, obtenerDetallePlantilla, aprobarPlantilla, marcarPlantillaAtipico,
+  eliminarPlantilla, eliminarTodasPlantillas, extractErrorMessage,
   PlantillaInfo, PlantillaDetalle, CampoManualInput,
   CATEGORIAS_MOTIVADA, TIPOS_CAMPO_VARIABLE, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
 import {
   RefreshCw, AlertCircle, FileWarning, CheckCircle2, MousePointerClick,
-  X, ClipboardList, Tag, Info, CheckCheck,
+  X, ClipboardList, Tag, Info, CheckCheck, Trash2,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -72,6 +73,8 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
 
   const [accionEnCurso, setAccionEnCurso] = useState(false);
   const [accionError, setAccionError] = useState<string | null>(null);
+  const [eliminandoId, setEliminandoId] = useState<number | null>(null);
+  const [vaciando, setVaciando] = useState(false);
 
   const cargarPendientes = useCallback(async () => {
     setLoadingLista(true);
@@ -188,6 +191,47 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
     }
   };
 
+  const handleEliminar = async (id: number, nombre: string) => {
+    const confirmado = window.confirm(`¿Eliminar "${nombre}" de la biblioteca? Esta acción no se puede deshacer.`);
+    if (!confirmado) return;
+    setEliminandoId(id);
+    setAccionError(null);
+    try {
+      await eliminarPlantilla(id);
+      setPendientes((prev) => prev.filter((p) => p.id !== id));
+      if (selectedId === id) {
+        setSelectedId(null);
+        setDetalle(null);
+      }
+      onCambio?.();
+    } catch (err: unknown) {
+      setAccionError(extractErrorMessage(err, "Error al eliminar la plantilla."));
+    } finally {
+      setEliminandoId(null);
+    }
+  };
+
+  const handleVaciarTodo = async () => {
+    const confirmado = window.confirm(
+      "Esto borra TODAS las plantillas de la biblioteca de forma permanente — incluidas pendientes, activas " +
+      "y atípicas, no solo las que ves en esta lista. ¿Confirmas que quieres vaciar la biblioteca completa?"
+    );
+    if (!confirmado) return;
+    setVaciando(true);
+    setLoadError(null);
+    try {
+      await eliminarTodasPlantillas();
+      setPendientes([]);
+      setSelectedId(null);
+      setDetalle(null);
+      onCambio?.();
+    } catch (err: unknown) {
+      setLoadError(extractErrorMessage(err, "Error al vaciar la biblioteca."));
+    } finally {
+      setVaciando(false);
+    }
+  };
+
   const renderTexto = () => {
     if (!detalle) return null;
     const texto = detalle.contenido_texto;
@@ -249,9 +293,20 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
             <ClipboardList size={15} />
             Pendientes ({pendientes.length})
           </h3>
-          <button type="button" onClick={cargarPendientes} className="btn-ghost px-2 py-1">
-            <RefreshCw size={13} className={clsx(loadingLista && "animate-spin")} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={cargarPendientes} className="btn-ghost px-2 py-1" title="Actualizar lista">
+              <RefreshCw size={13} className={clsx(loadingLista && "animate-spin")} />
+            </button>
+            <button
+              type="button"
+              onClick={handleVaciarTodo}
+              disabled={vaciando}
+              className="btn-ghost px-2 py-1 text-brand-danger"
+              title="Vaciar toda la biblioteca (pendientes, activas y atípicas)"
+            >
+              <Trash2 size={13} className={clsx(vaciando && "animate-pulse")} />
+            </button>
+          </div>
         </div>
         <p className="text-xs" style={{ color: "var(--text-muted)" }}>
           Plantillas recién subidas o re-versionadas, esperando que confirmes sus datos variables.
@@ -271,27 +326,37 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
 
         <div className="space-y-1.5 max-h-[70vh] overflow-y-auto">
           {pendientes.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => seleccionarPlantilla(p.id)}
-              className={clsx(
-                "w-full text-left p-2.5 rounded-lg border text-xs transition-all",
-                selectedId === p.id ? "border-brand-primary bg-teal-500/5" : "hover:bg-slate-800/30"
-              )}
-              style={{ borderColor: selectedId === p.id ? undefined : "var(--border)" }}
-            >
-              <p className="font-medium truncate" style={{ color: "var(--text)" }}>{p.nombre_original}</p>
-              <div className="flex items-center gap-1.5 mt-1">
-                {p.estado === "caso_atipico" ? (
-                  <span className="flex items-center gap-1 text-amber-400">
-                    <FileWarning size={11} />Caso atípico
-                  </span>
-                ) : (
-                  <span style={{ color: "var(--text-muted)" }}>{labelCategoria(p.categoria)}</span>
+            <div key={p.id} className="relative group">
+              <button
+                type="button"
+                onClick={() => seleccionarPlantilla(p.id)}
+                className={clsx(
+                  "w-full text-left p-2.5 pr-8 rounded-lg border text-xs transition-all",
+                  selectedId === p.id ? "border-brand-primary bg-teal-500/5" : "hover:bg-slate-800/30"
                 )}
-              </div>
-            </button>
+                style={{ borderColor: selectedId === p.id ? undefined : "var(--border)" }}
+              >
+                <p className="font-medium truncate" style={{ color: "var(--text)" }}>{p.nombre_original}</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  {p.estado === "caso_atipico" ? (
+                    <span className="flex items-center gap-1 text-amber-400">
+                      <FileWarning size={11} />Caso atípico
+                    </span>
+                  ) : (
+                    <span style={{ color: "var(--text-muted)" }}>{labelCategoria(p.categoria)}</span>
+                  )}
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleEliminar(p.id, p.nombre_original); }}
+                disabled={eliminandoId === p.id}
+                title="Eliminar esta plantilla"
+                className="absolute top-2 right-2 p-1 rounded text-slate-500 hover:text-brand-danger hover:bg-red-500/10 transition-all"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
           ))}
         </div>
       </div>
@@ -467,6 +532,15 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
               <button type="button" onClick={handleMarcarAtipico} disabled={accionEnCurso} className="btn-ghost">
                 <FileWarning size={14} />
                 Marcar como caso atípico
+              </button>
+              <button
+                type="button"
+                onClick={() => handleEliminar(detalle.id, detalle.nombre_original)}
+                disabled={accionEnCurso || eliminandoId === detalle.id}
+                className="btn-ghost text-brand-danger"
+              >
+                <Trash2 size={14} />
+                Eliminar plantilla
               </button>
             </div>
           </div>

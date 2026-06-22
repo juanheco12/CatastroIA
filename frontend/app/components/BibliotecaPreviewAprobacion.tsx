@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import {
   obtenerDetallePlantilla, previewGeneracionPlantilla, generarFinalPlantilla, downloadBase64Docx, extractErrorMessage,
+  eliminarPlantilla,
   PlantillaDetalle, PreviewGeneracionResponse, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
-import { RefreshCw, AlertCircle, FileText, Download, Eye, ArrowLeft } from "lucide-react";
+import { RefreshCw, AlertCircle, FileText, Download, Eye, ArrowLeft, Trash2 } from "lucide-react";
 
 interface BibliotecaPreviewAprobacionProps {
   plantillaId: number;
@@ -23,6 +24,7 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
   const [generandoFinal, setGenerandoFinal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listo, setListo] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -71,6 +73,24 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
     }
   };
 
+  const handleEliminar = async () => {
+    if (!detalle) return;
+    const confirmado = window.confirm(
+      `¿Eliminar "${detalle.nombre_original}" de la biblioteca? Esta acción no se puede deshacer.`
+    );
+    if (!confirmado) return;
+    setEliminando(true);
+    setError(null);
+    try {
+      await eliminarPlantilla(detalle.id);
+      onVolver();
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err, "Error al eliminar la plantilla."));
+    } finally {
+      setEliminando(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 py-12 justify-center" style={{ color: "var(--text-muted)" }}>
@@ -91,9 +111,19 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
 
   return (
     <div className="space-y-5">
-      <button type="button" onClick={onVolver} className="flex items-center gap-1.5 text-xs btn-ghost px-2 py-1">
-        <ArrowLeft size={13} />Volver a buscar
-      </button>
+      <div className="flex items-center justify-between gap-2">
+        <button type="button" onClick={onVolver} className="flex items-center gap-1.5 text-xs btn-ghost px-2 py-1">
+          <ArrowLeft size={13} />Volver a buscar
+        </button>
+        <button
+          type="button"
+          onClick={handleEliminar}
+          disabled={eliminando}
+          className="flex items-center gap-1.5 text-xs btn-ghost px-2 py-1 text-brand-danger"
+        >
+          <Trash2 size={13} />{eliminando ? "Eliminando..." : "Eliminar plantilla"}
+        </button>
+      </div>
 
       <div>
         <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>{detalle.nombre_original}</h2>
