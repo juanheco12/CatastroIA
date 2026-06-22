@@ -92,16 +92,15 @@ def _a_detalle_response(db: Session, p: PlantillaMotivada) -> PlantillaDetalleRe
     )
 
 
-def _ingestar_un_docx(db: Session, nombre_original: str, file_bytes: bytes) -> ItemIngestaResponse:
+def _clasificar_y_construir(nombre_original: str, file_bytes: bytes) -> tuple[PlantillaMotivada, str] | None:
+    """Fase sin red: extrae texto y clasifica. Devuelve la plantilla (sin
+    embedding todavia) junto con el texto a embeber, o None si no se pudo
+    extraer texto."""
     texto = extraer_texto_plano(file_bytes)
     if not texto.strip():
-        return ItemIngestaResponse(
-            nombre_original=nombre_original, estado="error",
-            error="No se pudo extraer texto del documento",
-        )
+        return None
 
     categorias, motivo = clasificar_por_nombre(nombre_original)
-
     if len(categorias) == 1 and motivo is None:
         categoria = categorias[0].value
         estado = EstadoPlantilla.PENDIENTE_REVISION.value
@@ -118,29 +117,55 @@ def _ingestar_un_docx(db: Session, nombre_original: str, file_bytes: bytes) -> I
         contenido_docx=file_bytes,
         tamano_bytes=len(file_bytes),
         contenido_texto=texto,
-        embedding=_intentar_embeber(texto),
     )
+    return plantilla, texto
+
+
+def _guardar_plantilla(db: Session, plantilla: PlantillaMotivada) -> ItemIngestaResponse:
     db.add(plantilla)
     db.commit()
     db.refresh(plantilla)
-
-    _guardar_campos_detectados(db, plantilla.id, texto)
+    _guardar_campos_detectados(db, plantilla.id, plantilla.contenido_texto)
     db.commit()
-
     return ItemIngestaResponse(
-        nombre_original=nombre_original,
-        estado=estado,
-        categoria=categoria,
-        categorias_candidatas=[c.value for c in categorias],
-        motivo_revision_pendiente=motivo,
+        nombre_original=plantilla.nombre_original,
+        estado=plantilla.estado,
+        categoria=plantilla.categoria,
+        categorias_candidatas=plantilla.categorias_candidatas.split(",") if plantilla.categorias_candidatas else [],
+        motivo_revision_pendiente=plantilla.motivo_revision_pendiente,
         plantilla_id=plantilla.id,
     )
 
 
+def ingestar_docx(db: Session, nombre_original: str, file_bytes: bytes) -> ItemIngestaResponse:
+    """Ingesta un .docx suelto como una nueva plantilla (igual que un .zip de
+    un solo archivo): nunca queda 'activa', cae en pendiente_revision o
+    caso_atipico hasta aprobacion humana explicita."""
+    construido = _clasificar_y_construir(nombre_original, file_bytes)
+    if construido is None:
+        return ItemIngestaResponse(
+            nombre_original=nombre_original, estado="error",
+            error="No se pudo extraer texto del documento",
+        )
+    plantilla, texto = construido
+    plantilla.embedding = _intentar_embeber(texto)
+    return _guardar_plantilla(db, plantilla)
+
+
 def ingestar_zip(db: Session, zip_bytes: bytes) -> IngestaResumenResponse:
     """Nunca crea plantillas en estado 'activa': todo cae en
-    pendiente_revision o caso_atipico hasta aprobacion humana explicita."""
-    items: list[ItemIngestaResponse] = []
+    pendiente_revision o caso_atipico hasta aprobacion humana explicita.
+
+    Los embeddings de todos los documentos del .zip se piden en un solo lote
+    (batch) en vez de uno por archivo: con cientos de documentos reales, una
+    llamada de red por archivo a la API de embeddings de Gemini puede tardar
+    varios minutos en total. ai_provider.embed_texts() ya pagina
+    internamente por encima del limite de la API, asi que un .zip grande
+    termina haciendo unas pocas llamadas en vez de cientos. El costo de este
+    atajo: si el lote completo falla (p.ej. API caida), ninguno de esos
+    documentos queda con embedding — pero la ingestion y revision humana
+    siguen funcionando igual, solo no apareceran en busqueda semantica hasta
+    reintentar."""
     try:
         zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
     except zipfile.BadZipFile:
@@ -151,11 +176,42 @@ def ingestar_zip(db: Session, zip_bytes: bytes) -> IngestaResumenResponse:
         if n.lower().endswith(".docx") and not n.startswith("__MACOSX") and "/." not in n
     ]
 
-    for nombre_en_zip in nombres:
+    plantillas: list[PlantillaMotivada | None] = [None] * len(nombres)
+    errores: dict[int, str] = {}
+    textos_para_embeber: list[str] = []
+    indices_con_texto: list[int] = []
+
+    for idx, nombre_en_zip in enumerate(nombres):
         nombre_original = nombre_en_zip.rsplit("/", 1)[-1]
         try:
             file_bytes = zf.read(nombre_en_zip)
-            items.append(_ingestar_un_docx(db, nombre_original, file_bytes))
+            construido = _clasificar_y_construir(nombre_original, file_bytes)
+            if construido is None:
+                errores[idx] = "No se pudo extraer texto del documento"
+                continue
+            plantilla, texto = construido
+            plantillas[idx] = plantilla
+            indices_con_texto.append(idx)
+            textos_para_embeber.append(_texto_para_embeddings(texto))
+        except Exception as exc:
+            errores[idx] = str(exc)
+
+    if textos_para_embeber:
+        try:
+            embeddings = ai_provider.embed_texts(textos_para_embeber, task_type="retrieval_document")
+            for idx, embedding in zip(indices_con_texto, embeddings):
+                plantillas[idx].embedding = embedding
+        except Exception:
+            pass
+
+    items: list[ItemIngestaResponse] = []
+    for idx, nombre_en_zip in enumerate(nombres):
+        nombre_original = nombre_en_zip.rsplit("/", 1)[-1]
+        if idx in errores:
+            items.append(ItemIngestaResponse(nombre_original=nombre_original, estado="error", error=errores[idx]))
+            continue
+        try:
+            items.append(_guardar_plantilla(db, plantillas[idx]))
         except Exception as exc:
             db.rollback()
             items.append(ItemIngestaResponse(nombre_original=nombre_original, estado="error", error=str(exc)))
