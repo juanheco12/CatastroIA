@@ -25,9 +25,10 @@ const DESCRIPCIONES_ORIGEN: Record<string, string> = {
 interface BibliotecaFlujoCategoriaProps {
   categoria: string;
   onSeleccionarPlantilla: (plantilla: PlantillaInfo) => void;
+  onIrARevisar?: (plantillaId: number) => void;
 }
 
-export default function BibliotecaFlujoCategoria({ categoria, onSeleccionarPlantilla }: BibliotecaFlujoCategoriaProps) {
+export default function BibliotecaFlujoCategoria({ categoria, onSeleccionarPlantilla, onIrARevisar }: BibliotecaFlujoCategoriaProps) {
   const [origen, setOrigen] = useState<string | null>(null);
 
   return (
@@ -87,6 +88,7 @@ export default function BibliotecaFlujoCategoria({ categoria, onSeleccionarPlant
             categoriaPreset={categoria}
             origenPreset={origen}
             bloquearFiltros
+            onIrARevisar={onIrARevisar}
           />
         </div>
       )}

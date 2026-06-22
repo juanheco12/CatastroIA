@@ -8,6 +8,7 @@ import {
 } from "@/lib/api";
 import { Search, Sparkles, AlertCircle, Star, FileSearch, ListFilter, RefreshCw } from "lucide-react";
 import clsx from "clsx";
+import CasosPendientesAviso from "./CasosPendientesAviso";
 
 interface BibliotecaBuscadorProps {
   onSeleccionar: (plantilla: PlantillaInfo) => void;
@@ -16,10 +17,13 @@ interface BibliotecaBuscadorProps {
   categoriaPreset?: string;
   origenPreset?: string;
   bloquearFiltros?: boolean;
+  /** Si se pasa, una búsqueda sin resultados muestra los casos pendientes de
+   * revisión/atípicos de esa categoría con acceso directo a aprobarlos. */
+  onIrARevisar?: (plantillaId: number) => void;
 }
 
 export default function BibliotecaBuscador({
-  onSeleccionar, categoriaPreset, origenPreset, bloquearFiltros = false,
+  onSeleccionar, categoriaPreset, origenPreset, bloquearFiltros = false, onIrARevisar,
 }: BibliotecaBuscadorProps) {
   const [modo, setModo] = useState<"filtros" | "semantica">("filtros");
 
@@ -183,12 +187,21 @@ export default function BibliotecaBuscador({
           )}
 
           {resultadosFiltro && (
-            <div className="space-y-2 pt-2">
+            <div className="space-y-3 pt-2">
               {resultadosFiltro.length === 0 ? (
-                <div className="flex items-center gap-2 py-8 justify-center" style={{ color: "var(--text-muted)" }}>
-                  <FileSearch size={18} />
-                  <span className="text-sm">Sin resultados para estos filtros.</span>
-                </div>
+                <>
+                  <div className="flex items-center gap-2 py-4 justify-center" style={{ color: "var(--text-muted)" }}>
+                    <FileSearch size={18} />
+                    <span className="text-sm">Sin resultados para estos filtros.</span>
+                  </div>
+                  {onIrARevisar && (
+                    <CasosPendientesAviso
+                      categoria={categoriaFiltro || undefined}
+                      tipoTramite={tipoTramite || undefined}
+                      onIrARevisar={onIrARevisar}
+                    />
+                  )}
+                </>
               ) : (
                 resultadosFiltro.map((p) => renderResultado({ plantilla: p, score: 0 }, false, false))
               )}
@@ -226,10 +239,15 @@ export default function BibliotecaBuscador({
           {resultadoSemantico && (
             <div className="space-y-3 pt-2">
               {!resultadoSemantico.encontrado ? (
-                <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-300">
-                  <AlertCircle size={16} />
-                  {resultadoSemantico.mensaje ?? "No se encontró una plantilla suficientemente parecida a este caso."}
-                </div>
+                <>
+                  <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-300">
+                    <AlertCircle size={16} />
+                    {resultadoSemantico.mensaje ?? "No se encontró una plantilla suficientemente parecida a este caso."}
+                  </div>
+                  {onIrARevisar && (
+                    <CasosPendientesAviso categoria={categoriaSemantica || undefined} onIrARevisar={onIrARevisar} />
+                  )}
+                </>
               ) : (
                 <>
                   <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
