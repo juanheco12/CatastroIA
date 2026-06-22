@@ -8,6 +8,7 @@ from schemas.biblioteca import (
     PlantillaInfoResponse,
     PlantillaDetalleResponse,
     IngestaResumenResponse,
+    ItemIngestaResponse,
     AprobarPlantillaRequest,
     MarcarAtipicoRequest,
     NuevaVersionResponse,
@@ -47,6 +48,22 @@ async def ingestar_zip(file: UploadFile = File(...), db: Session = Depends(get_d
         return service.ingestar_zip(db, file_bytes)
     except ValueError as exc:
         _manejar_value_error(exc)
+
+
+@router.post("/ingestar-docx", response_model=ItemIngestaResponse)
+async def ingestar_docx(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Sube un unico .docx ya redactado para crear una nueva plantilla. Igual
+    que un .zip de un solo archivo: nunca queda 'activa' automaticamente,
+    cae en pendiente_revision o caso_atipico hasta aprobacion humana
+    explicita."""
+    if not file.filename or not file.filename.lower().endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Solo se aceptan archivos .docx")
+
+    file_bytes = await file.read()
+    if len(file_bytes) > MAX_DOCX_SIZE:
+        raise HTTPException(status_code=413, detail="El archivo supera el limite de 10 MB")
+
+    return service.ingestar_docx(db, file.filename, file_bytes)
 
 
 @router.post("/{plantilla_id}/nueva-version", response_model=NuevaVersionResponse)

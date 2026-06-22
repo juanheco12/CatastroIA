@@ -382,6 +382,16 @@ export async function ingestarZipBiblioteca(file: File): Promise<IngestaResumen>
   return res.data;
 }
 
+export async function ingestarDocxBiblioteca(file: File): Promise<ItemIngesta> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await api.post("/biblioteca/ingestar-docx", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 300000,
+  });
+  return res.data;
+}
+
 export async function nuevaVersionPlantilla(
   plantillaId: number,
   file: File,

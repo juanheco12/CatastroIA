@@ -1,12 +1,29 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ingestarZipBiblioteca, extractErrorMessage, IngestaResumen, labelCategoria } from "@/lib/api";
+import {
+  ingestarZipBiblioteca, ingestarDocxBiblioteca, extractErrorMessage,
+  IngestaResumen, ItemIngesta, labelCategoria,
+} from "@/lib/api";
 import { Upload, RefreshCw, AlertCircle, CheckCircle2, FileWarning } from "lucide-react";
 import clsx from "clsx";
 
 interface BibliotecaUploaderProps {
   onIngestaCompleta?: (resumen: IngestaResumen) => void;
+}
+
+/** Un .docx suelto se ingesta con su propio endpoint (devuelve un solo
+ * ItemIngesta, no un IngestaResumen) — se envuelve en la misma forma que el
+ * resumen de un .zip para reutilizar el bloque de resultados de abajo. */
+function resumenDeUnItem(item: ItemIngesta): IngestaResumen {
+  return {
+    total_archivos: 1,
+    total_ingestados: item.estado === "error" ? 0 : 1,
+    total_errores: item.estado === "error" ? 1 : 0,
+    distribucion_categorias: item.categoria ? { [item.categoria]: 1 } : {},
+    total_casos_atipicos: item.estado === "caso_atipico" ? 1 : 0,
+    items: [item],
+  };
 }
 
 export default function BibliotecaUploader({ onIngestaCompleta }: BibliotecaUploaderProps) {
@@ -16,18 +33,21 @@ export default function BibliotecaUploader({ onIngestaCompleta }: BibliotecaUplo
   const [resumen, setResumen] = useState<IngestaResumen | null>(null);
 
   const handleFile = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".zip")) {
-      setError("Solo se aceptan archivos .zip");
+    const nombre = file.name.toLowerCase();
+    const esZip = nombre.endsWith(".zip");
+    const esDocx = nombre.endsWith(".docx");
+    if (!esZip && !esDocx) {
+      setError("Solo se aceptan archivos .zip o .docx");
       return;
     }
     setError(null);
     setUploading(true);
     try {
-      const data = await ingestarZipBiblioteca(file);
+      const data = esZip ? await ingestarZipBiblioteca(file) : resumenDeUnItem(await ingestarDocxBiblioteca(file));
       setResumen(data);
       onIngestaCompleta?.(data);
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, "Error al subir el archivo .zip"));
+      setError(extractErrorMessage(err, `Error al subir el archivo ${esZip ? ".zip" : ".docx"}`));
     } finally {
       setUploading(false);
     }
@@ -49,7 +69,7 @@ export default function BibliotecaUploader({ onIngestaCompleta }: BibliotecaUplo
       <div>
         <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Subir motivadas existentes</h2>
         <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-          Sube un .zip con tus motivadas .docx ya redactadas. Ninguna queda activa automáticamente:
+          Sube un .zip con varias motivadas .docx, o un .docx suelto. Ninguna queda activa automáticamente:
           cada una pasa por revisión humana antes de poder reutilizarse en un caso nuevo.
         </p>
       </div>
@@ -67,7 +87,7 @@ export default function BibliotecaUploader({ onIngestaCompleta }: BibliotecaUplo
       >
         <input
           type="file"
-          accept=".zip"
+          accept=".zip,.docx"
           className="hidden"
           onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
           disabled={uploading}
@@ -79,7 +99,7 @@ export default function BibliotecaUploader({ onIngestaCompleta }: BibliotecaUplo
         )}
         <div className="text-center">
           <p className="text-sm font-medium" style={{ color: "var(--text)" }}>
-            {uploading ? "Procesando documentos..." : "Arrastra tu .zip de motivadas aquí"}
+            {uploading ? "Procesando documentos..." : "Arrastra tu .zip o .docx de motivadas aquí"}
           </p>
           <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>o haz clic para seleccionar</p>
         </div>
