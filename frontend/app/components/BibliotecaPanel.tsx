@@ -83,7 +83,9 @@ export default function BibliotecaPanel({ aperturaRevisionId, onAperturaRevision
         ))}
       </div>
 
-      {subTab === "subir" && <BibliotecaUploader onIngestaCompleta={actualizarConteo} />}
+      {subTab === "subir" && (
+        <BibliotecaUploader onIngestaCompleta={actualizarConteo} onBibliotecaVaciada={actualizarConteo} />
+      )}
       {subTab === "revision" && (
         <BibliotecaRevisionPanel onCambio={actualizarConteo} plantillaIdInicial={idParaRevisar} />
       )}

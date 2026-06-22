@@ -82,6 +82,10 @@ class MarcarAtipicoRequest(BaseModel):
     revisado_por: Optional[str] = None
 
 
+class EliminarTodasResponse(BaseModel):
+    eliminadas: int
+
+
 class NuevaVersionResponse(BaseModel):
     plantilla_id: int
     numero_version_anterior: int

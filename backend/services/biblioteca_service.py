@@ -10,7 +10,7 @@ import zipfile
 from collections import Counter
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, delete, func
 from sqlalchemy.orm import Session
 
 from models.biblioteca import (
@@ -92,6 +92,13 @@ def _a_detalle_response(db: Session, p: PlantillaMotivada) -> PlantillaDetalleRe
     )
 
 
+DUPLICADO_MSG = "Ya existe una plantilla con este nombre en la biblioteca — se omitió para evitar duplicados"
+
+
+def _nombres_existentes(db: Session) -> set[str]:
+    return {n.lower() for n in db.scalars(select(PlantillaMotivada.nombre_original)).all()}
+
+
 def _clasificar_y_construir(nombre_original: str, file_bytes: bytes) -> tuple[PlantillaMotivada, str] | None:
     """Fase sin red: extrae texto y clasifica. Devuelve la plantilla (sin
     embedding todavia) junto con el texto a embeber, o None si no se pudo
@@ -141,6 +148,9 @@ def ingestar_docx(db: Session, nombre_original: str, file_bytes: bytes) -> ItemI
     """Ingesta un .docx suelto como una nueva plantilla (igual que un .zip de
     un solo archivo): nunca queda 'activa', cae en pendiente_revision o
     caso_atipico hasta aprobacion humana explicita."""
+    if nombre_original.lower() in _nombres_existentes(db):
+        return ItemIngestaResponse(nombre_original=nombre_original, estado="error", error=DUPLICADO_MSG)
+
     construido = _clasificar_y_construir(nombre_original, file_bytes)
     if construido is None:
         return ItemIngestaResponse(
@@ -180,9 +190,13 @@ def ingestar_zip(db: Session, zip_bytes: bytes) -> IngestaResumenResponse:
     errores: dict[int, str] = {}
     textos_para_embeber: list[str] = []
     indices_con_texto: list[int] = []
+    nombres_vistos = _nombres_existentes(db)
 
     for idx, nombre_en_zip in enumerate(nombres):
         nombre_original = nombre_en_zip.rsplit("/", 1)[-1]
+        if nombre_original.lower() in nombres_vistos:
+            errores[idx] = DUPLICADO_MSG
+            continue
         try:
             file_bytes = zf.read(nombre_en_zip)
             construido = _clasificar_y_construir(nombre_original, file_bytes)
@@ -193,6 +207,7 @@ def ingestar_zip(db: Session, zip_bytes: bytes) -> IngestaResumenResponse:
             plantillas[idx] = plantilla
             indices_con_texto.append(idx)
             textos_para_embeber.append(_texto_para_embeddings(texto))
+            nombres_vistos.add(nombre_original.lower())
         except Exception as exc:
             errores[idx] = str(exc)
 
@@ -277,6 +292,19 @@ def eliminar_plantilla(db: Session, plantilla_id: int) -> bool:
     db.delete(p)
     db.commit()
     return True
+
+
+def eliminar_todas(db: Session) -> int:
+    """Vacia la biblioteca completa: borra campos y versiones primero en vez
+    de depender del ON DELETE CASCADE de la FK, para no fallar si esa
+    constraint no esta activa en la base en uso. Pensado para recuperarse de
+    una ingestion duplicada o erronea y volver a subir desde cero."""
+    cantidad = db.scalar(select(func.count()).select_from(PlantillaMotivada)) or 0
+    db.execute(delete(CampoVariablePlantilla))
+    db.execute(delete(VersionPlantillaMotivada))
+    db.execute(delete(PlantillaMotivada))
+    db.commit()
+    return cantidad
 
 
 def reemplazar_version(

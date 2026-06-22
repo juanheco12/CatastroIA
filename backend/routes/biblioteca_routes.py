@@ -9,6 +9,7 @@ from schemas.biblioteca import (
     PlantillaDetalleResponse,
     IngestaResumenResponse,
     ItemIngestaResponse,
+    EliminarTodasResponse,
     AprobarPlantillaRequest,
     MarcarAtipicoRequest,
     NuevaVersionResponse,
@@ -144,6 +145,15 @@ def descargar_original(plantilla_id: int, db: Session = Depends(get_db)):
         content_base64=base64.b64encode(p.contenido_docx).decode("ascii"),
         size_bytes=p.tamano_bytes,
     )
+
+
+@router.delete("/todas", response_model=EliminarTodasResponse)
+def eliminar_todas(db: Session = Depends(get_db)):
+    """Vacia la biblioteca completa de forma irreversible: borra TODAS las
+    plantillas (pendientes, activas, atipicas y archivadas). Pensado para
+    recuperarse de una ingestion duplicada o erronea y volver a subir desde
+    cero."""
+    return EliminarTodasResponse(eliminadas=service.eliminar_todas(db))
 
 
 @router.delete("/{plantilla_id}")

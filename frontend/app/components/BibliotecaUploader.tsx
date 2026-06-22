@@ -2,14 +2,17 @@
 
 import { useState, useCallback } from "react";
 import {
-  ingestarZipBiblioteca, ingestarDocxBiblioteca, extractErrorMessage,
+  ingestarZipBiblioteca, ingestarDocxBiblioteca, eliminarTodasPlantillas, extractErrorMessage,
   IngestaResumen, ItemIngesta, labelCategoria,
 } from "@/lib/api";
-import { Upload, RefreshCw, AlertCircle, CheckCircle2, FileWarning } from "lucide-react";
+import { Upload, RefreshCw, AlertCircle, CheckCircle2, FileWarning, Trash2 } from "lucide-react";
 import clsx from "clsx";
 
 interface BibliotecaUploaderProps {
   onIngestaCompleta?: (resumen: IngestaResumen) => void;
+  /** Se dispara despues de vaciar la biblioteca completa, para que el panel
+   * contenedor refresque contadores (p. ej. el badge de "Revisión"). */
+  onBibliotecaVaciada?: () => void;
 }
 
 /** Un .docx suelto se ingesta con su propio endpoint (devuelve un solo
@@ -26,11 +29,13 @@ function resumenDeUnItem(item: ItemIngesta): IngestaResumen {
   };
 }
 
-export default function BibliotecaUploader({ onIngestaCompleta }: BibliotecaUploaderProps) {
+export default function BibliotecaUploader({ onIngestaCompleta, onBibliotecaVaciada }: BibliotecaUploaderProps) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [vaciando, setVaciando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resumen, setResumen] = useState<IngestaResumen | null>(null);
+  const [vaciado, setVaciado] = useState<number | null>(null);
 
   const handleFile = async (file: File) => {
     const nombre = file.name.toLowerCase();
@@ -41,6 +46,7 @@ export default function BibliotecaUploader({ onIngestaCompleta }: BibliotecaUplo
       return;
     }
     setError(null);
+    setVaciado(null);
     setUploading(true);
     try {
       const data = esZip ? await ingestarZipBiblioteca(file) : resumenDeUnItem(await ingestarDocxBiblioteca(file));
@@ -64,14 +70,45 @@ export default function BibliotecaUploader({ onIngestaCompleta }: BibliotecaUplo
     []
   );
 
+  const handleVaciarTodo = async () => {
+    const confirmado = confirm(
+      "Esto borra TODAS las plantillas de la biblioteca de forma permanente — incluidas las ya aprobadas/activas, " +
+      "no solo las pendientes. Úsalo para empezar de cero si una carga subió documentos duplicados. ¿Confirmas que " +
+      "quieres vaciar la biblioteca completa?"
+    );
+    if (!confirmado) return;
+    setError(null);
+    setResumen(null);
+    setVaciando(true);
+    try {
+      const { eliminadas } = await eliminarTodasPlantillas();
+      setVaciado(eliminadas);
+      onBibliotecaVaciada?.();
+    } catch (err: unknown) {
+      setError(extractErrorMessage(err, "Error al vaciar la biblioteca"));
+    } finally {
+      setVaciando(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Subir motivadas existentes</h2>
-        <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-          Sube un .zip con varias motivadas .docx, o un .docx suelto. Ninguna queda activa automáticamente:
-          cada una pasa por revisión humana antes de poder reutilizarse en un caso nuevo.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Subir motivadas existentes</h2>
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+            Sube un .zip con varias motivadas .docx, o un .docx suelto. Ninguna queda activa automáticamente:
+            cada una pasa por revisión humana antes de poder reutilizarse en un caso nuevo.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleVaciarTodo}
+          disabled={vaciando || uploading}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-red-500/30 text-brand-danger hover:bg-red-500/10 transition-all shrink-0"
+        >
+          <Trash2 size={13} />{vaciando ? "Vaciando..." : "Vaciar todo"}
+        </button>
       </div>
 
       <label
@@ -109,6 +146,13 @@ export default function BibliotecaUploader({ onIngestaCompleta }: BibliotecaUplo
         <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-brand-danger">
           <AlertCircle size={16} />
           {error}
+        </div>
+      )}
+
+      {vaciado != null && (
+        <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-sm text-brand-success">
+          <CheckCircle2 size={16} />
+          Se eliminaron {vaciado} plantilla{vaciado !== 1 ? "s" : ""}. La biblioteca quedó vacía — ya puedes volver a subir tus documentos.
         </div>
       )}
 
