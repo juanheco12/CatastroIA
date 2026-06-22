@@ -197,7 +197,6 @@ export default function BibliotecaBuscador({
                   {onIrARevisar && (
                     <CasosPendientesAviso
                       categoria={categoriaFiltro || undefined}
-                      tipoTramite={tipoTramite || undefined}
                       onIrARevisar={onIrARevisar}
                     />
                   )}

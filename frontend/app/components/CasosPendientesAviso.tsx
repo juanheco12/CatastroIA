@@ -6,26 +6,36 @@ import { ClipboardList, FileWarning, ChevronRight } from "lucide-react";
 
 interface CasosPendientesAvisoProps {
   categoria?: string;
-  tipoTramite?: string;
   onIrARevisar: (plantillaId: number) => void;
 }
 
 /** Cuando una búsqueda no encuentra plantillas activas, esto explica por qué:
  * casi siempre es porque las plantillas relevantes existen pero siguen sin
- * aprobar (pendiente_revision/caso_atipico) — y da acceso directo a revisarlas. */
-export default function CasosPendientesAviso({ categoria, tipoTramite, onIrARevisar }: CasosPendientesAvisoProps) {
+ * aprobar (pendiente_revision/caso_atipico) — y da acceso directo a revisarlas.
+ *
+ * No filtra por categoría en el backend: un caso atípico (clasificación
+ * ambigua al subirlo) tiene categoria=NULL y solo guarda las candidatas en
+ * categorias_candidatas, así que un filtro exacto de categoria lo excluiría
+ * aunque sí sea relevante para la categoría que se está buscando. Tampoco
+ * filtra por tipo_tramite: ese campo recién se asigna al aprobar, así que
+ * casi ningún pendiente lo tiene todavía. */
+export default function CasosPendientesAviso({ categoria, onIrARevisar }: CasosPendientesAvisoProps) {
   const [items, setItems] = useState<PlantillaInfo[] | null>(null);
 
   useEffect(() => {
     let activo = true;
-    listarPlantillas({ categoria: categoria || undefined, tipo_tramite: tipoTramite || undefined })
+    listarPlantillas()
       .then((todas) => {
         if (!activo) return;
-        setItems(todas.filter((p) => p.estado === "pendiente_revision" || p.estado === "caso_atipico"));
+        const pendientes = todas.filter((p) => p.estado === "pendiente_revision" || p.estado === "caso_atipico");
+        const filtrados = categoria
+          ? pendientes.filter((p) => p.categoria === categoria || p.categorias_candidatas.split(",").includes(categoria))
+          : pendientes;
+        setItems(filtrados);
       })
       .catch(() => { if (activo) setItems([]); });
     return () => { activo = false; };
-  }, [categoria, tipoTramite]);
+  }, [categoria]);
 
   if (!items || items.length === 0) return null;
 
