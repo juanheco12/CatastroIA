@@ -372,6 +372,11 @@ export interface GenerarFinalResponse {
   size_bytes: number;
 }
 
+export async function eliminarTodasPlantillas(): Promise<{ eliminadas: number }> {
+  const res = await api.delete("/biblioteca/todas");
+  return res.data;
+}
+
 export async function ingestarZipBiblioteca(file: File): Promise<IngestaResumen> {
   const formData = new FormData();
   formData.append("file", file);
