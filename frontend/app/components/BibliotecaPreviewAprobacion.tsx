@@ -6,8 +6,9 @@ import {
   eliminarPlantilla,
   PlantillaDetalle, CampoVariable, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
-import { RefreshCw, AlertCircle, Wand2, Download, ArrowLeft, Trash2, CheckCircle, FileText, Tag } from "lucide-react";
+import { RefreshCw, AlertCircle, Wand2, Download, ArrowLeft, Trash2, CheckCircle, FileText, Tag, Eye } from "lucide-react";
 import CopyButton from "./CopyButton";
+import clsx from "clsx";
 
 interface BibliotecaPreviewAprobacionProps {
   plantillaId: number;
@@ -64,6 +65,7 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
   const [generando, setGenerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  const [grupoEnfocado, setGrupoEnfocado] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -148,6 +150,38 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
   for (const g of grupos) totalPorTipo.set(g.tipoCampo, (totalPorTipo.get(g.tipoCampo) ?? 0) + 1);
   const indicePorTipo: Record<string, number> = {};
 
+  const grupoPorCampoId = new Map<number, string>();
+  for (const g of grupos) for (const id of g.campoIds) grupoPorCampoId.set(id, g.key);
+
+  const renderVistaPrevia = () => {
+    const texto = detalle.contenido_texto;
+    const ordenados = [...camposConfirmados].sort((a, b) => a.offset_inicio - b.offset_inicio);
+    const nodos: React.ReactNode[] = [];
+    let cursor = 0;
+    for (const c of ordenados) {
+      if (c.offset_inicio < cursor) continue; // overlap defensivo
+      if (c.offset_inicio > cursor) nodos.push(texto.slice(cursor, c.offset_inicio));
+      const valor = valores[c.id] ?? c.texto_original;
+      const enfocado = grupoPorCampoId.get(c.id) === grupoEnfocado;
+      nodos.push(
+        <span
+          key={c.id}
+          className={clsx(
+            "rounded px-0.5 transition-colors",
+            enfocado ? "bg-amber-400 text-slate-900 font-semibold ring-2 ring-amber-300" : "bg-teal-500/25 text-teal-200"
+          )}
+        >
+          {valor}
+        </span>
+      );
+      cursor = c.offset_fin;
+    }
+    if (cursor < texto.length) nodos.push(texto.slice(cursor));
+    return nodos;
+  };
+
+  const mostrarVistaPrevia = camposConfirmados.length > 0 && !resultado;
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-2">
@@ -171,61 +205,82 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
         </p>
       </div>
 
-      <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-          Datos del caso nuevo
-        </p>
-        {camposConfirmados.length === 0 && (
-          <div className="flex items-start gap-2 p-3 rounded-lg border bg-amber-500/5" style={{ borderColor: "var(--border)" }}>
-            <Tag size={15} className="shrink-0 mt-0.5 text-amber-400" />
-            <div>
-              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                Esta plantilla todavía no tiene campos variables marcados — no hay datos que puedas personalizar
-                para este caso; se generaría el documento original sin cambios.
-              </p>
-              {onEditarCampos && (
-                <button
-                  type="button"
-                  onClick={() => onEditarCampos(plantillaId)}
-                  className="text-xs font-medium text-brand-primary hover:underline mt-1.5"
-                >
-                  Marcar campos variables en Revisión
-                </button>
-              )}
+      <div className={clsx("grid gap-5", mostrarVistaPrevia && "lg:grid-cols-2")}>
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+            Datos del caso nuevo
+          </p>
+          {camposConfirmados.length === 0 && (
+            <div className="flex items-start gap-2 p-3 rounded-lg border bg-amber-500/5" style={{ borderColor: "var(--border)" }}>
+              <Tag size={15} className="shrink-0 mt-0.5 text-amber-400" />
+              <div>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  Esta plantilla todavía no tiene campos variables marcados — no hay datos que puedas personalizar
+                  para este caso; se generaría el documento original sin cambios.
+                </p>
+                {onEditarCampos && (
+                  <button
+                    type="button"
+                    onClick={() => onEditarCampos(plantillaId)}
+                    className="text-xs font-medium text-brand-primary hover:underline mt-1.5"
+                  >
+                    Marcar campos variables en Revisión
+                  </button>
+                )}
+              </div>
             </div>
+          )}
+          <div className="grid sm:grid-cols-2 gap-3">
+            {grupos.map((g) => {
+              const total = totalPorTipo.get(g.tipoCampo) ?? 1;
+              indicePorTipo[g.tipoCampo] = (indicePorTipo[g.tipoCampo] ?? 0) + 1;
+              const sufijo = total > 1 ? ` (${indicePorTipo[g.tipoCampo]}/${total})` : "";
+              return (
+                <div key={g.key}>
+                  <label className="field-label">{labelTipoCampo(g.tipoCampo)}{sufijo}</label>
+                  <input
+                    className="field-input"
+                    value={valores[g.campoIds[0]] ?? ""}
+                    onChange={(e) => handleCambioValor(g.campoIds, e.target.value)}
+                    onFocus={() => setGrupoEnfocado(g.key)}
+                    onBlur={() => setGrupoEnfocado((prev) => (prev === g.key ? null : prev))}
+                    placeholder={g.textoOriginal}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <div>
+            <label className="field-label">Origen de la solicitud (opcional)</label>
+            <select
+              className="field-input"
+              value={tipoTramiteManual}
+              onChange={(e) => { setTipoTramiteManual(e.target.value); setResultado(null); }}
+            >
+              <option value="">Sin especificar</option>
+              {ORIGENES_TRAMITE.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {mostrarVistaPrevia && (
+          <div className="space-y-2 lg:sticky lg:top-4 self-start">
+            <p className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
+              <Eye size={13} />Vista previa en vivo
+            </p>
+            <div
+              className="text-sm leading-relaxed rounded-lg border p-4 max-h-[65vh] overflow-y-auto"
+              style={{ borderColor: "var(--border)", whiteSpace: "pre-wrap", color: "var(--text)" }}
+            >
+              {renderVistaPrevia()}
+            </div>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              El campo en el que estás escribiendo se resalta en ámbar — así ves exactamente dónde cae cada dato en el texto.
+            </p>
           </div>
         )}
-        <div className="grid sm:grid-cols-2 gap-3">
-          {grupos.map((g) => {
-            const total = totalPorTipo.get(g.tipoCampo) ?? 1;
-            indicePorTipo[g.tipoCampo] = (indicePorTipo[g.tipoCampo] ?? 0) + 1;
-            const sufijo = total > 1 ? ` (${indicePorTipo[g.tipoCampo]}/${total})` : "";
-            return (
-              <div key={g.key}>
-                <label className="field-label">{labelTipoCampo(g.tipoCampo)}{sufijo}</label>
-                <input
-                  className="field-input"
-                  value={valores[g.campoIds[0]] ?? ""}
-                  onChange={(e) => handleCambioValor(g.campoIds, e.target.value)}
-                  placeholder={g.textoOriginal}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div>
-          <label className="field-label">Origen de la solicitud (opcional)</label>
-          <select
-            className="field-input"
-            value={tipoTramiteManual}
-            onChange={(e) => { setTipoTramiteManual(e.target.value); setResultado(null); }}
-          >
-            <option value="">Sin especificar</option>
-            {ORIGENES_TRAMITE.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
       </div>
 
       <button type="button" onClick={handleGenerar} disabled={generando} className="btn-primary w-full justify-center py-3.5 text-base">
