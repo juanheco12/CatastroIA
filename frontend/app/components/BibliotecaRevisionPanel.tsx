@@ -31,6 +31,47 @@ interface CampoVisual {
   manualIndex?: number;
 }
 
+/** Palabras clave que suelen anteceder cada tipo de campo en estos documentos
+ * ("Referencia catastral: XXX", "Documentos aportados: ..."). Al marcar un
+ * campo a mano se mira el texto que queda justo antes de la selección: si
+ * coincide con alguna de estas anclas, se usa ESE tipo en vez de confiar a
+ * ciegas en lo que haya quedado seleccionado en el desplegable — la misma
+ * selección repetida sin cambiar el desplegable es la causa real de campos
+ * mal etiquetados (p. ej. una referencia catastral marcada como "nombre del
+ * propietario" solo porque el desplegable se quedó en ese valor). Se prioriza
+ * la ancla más cercana a la selección cuando hay varias en la ventana. */
+const ANCLAS_CONTEXTO_CAMPO: { pat: RegExp; tipo: string }[] = [
+  { pat: /referencia\s+catastral|n[uú]mero\s+predial|c[eé]dula\s+catastral/gi, tipo: "numero_predial" },
+  { pat: /documentos?\s*\(?s?\)?\s*aportados?\s*\(?s?\)?/gi, tipo: "documentos_aportados" },
+  { pat: /matr[ií]cula(?:\s+inmobiliaria)?/gi, tipo: "matricula_inmobiliaria" },
+  { pat: /c[eé]dula(?:\s+de\s+ciudadan[ií]a)?|\bNIT\b/gi, tipo: "identificacion" },
+  { pat: /radicado/gi, tipo: "radicado" },
+  { pat: /escritura\s+p[uú]blica/gi, tipo: "escritura" },
+  { pat: /resoluci[oó]n/gi, tipo: "numero_resolucion" },
+  { pat: /oficina\s+de\s+registro/gi, tipo: "oficina_registro" },
+  { pat: /direcci[oó]n|ubicado\s+en|predio\s+ubicado/gi, tipo: "direccion" },
+  { pat: /[aá]rea/gi, tipo: "area" },
+  { pat: /fecha/gi, tipo: "fecha" },
+  { pat: /propietario|se[ñn]or(?:a)?|titular|solicitante/gi, tipo: "nombre_propietario" },
+];
+
+const VENTANA_CONTEXTO_CAMPO_MANUAL = 60;
+
+/** Devuelve el tipo de campo sugerido por la ancla de contexto más cercana
+ * (justo antes de la selección), o null si ninguna ancla aparece cerca. */
+function detectarTipoCampoPorContexto(contextoAntes: string): string | null {
+  let mejor: { tipo: string; idx: number } | null = null;
+  for (const { pat, tipo } of ANCLAS_CONTEXTO_CAMPO) {
+    const coincidencias = Array.from(contextoAntes.matchAll(pat));
+    if (coincidencias.length === 0) continue;
+    const ultima = coincidencias[coincidencias.length - 1];
+    const idx = ultima.index ?? -1;
+    if (idx === -1) continue;
+    if (!mejor || idx > mejor.idx) mejor = { tipo, idx };
+  }
+  return mejor?.tipo ?? null;
+}
+
 function calcularOffsetsSeleccion(container: HTMLElement): { inicio: number; fin: number; texto: string } | null {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
@@ -70,6 +111,7 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
   const [modoSeleccion, setModoSeleccion] = useState(false);
   const [tipoCampoManualDraft, setTipoCampoManualDraft] = useState("nombre_propietario");
   const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [deteccionAutomatica, setDeteccionAutomatica] = useState<string | null>(null);
 
   const [accionEnCurso, setAccionEnCurso] = useState(false);
   const [accionError, setAccionError] = useState<string | null>(null);
@@ -98,6 +140,7 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
     setAccionError(null);
     setAccionExito(null);
     setSelectionError(null);
+    setDeteccionAutomatica(null);
     setCamposManuales([]);
     setModoSeleccion(false);
     try {
@@ -139,13 +182,23 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
     const { inicio, fin, texto } = resultado;
     if (detalle.contenido_texto.slice(inicio, fin).includes("\n")) {
       setSelectionError("La selección cruza un salto de párrafo — no se puede usar como campo.");
+      setDeteccionAutomatica(null);
       return;
     }
     setSelectionError(null);
+    const contextoAntes = detalle.contenido_texto.slice(Math.max(0, inicio - VENTANA_CONTEXTO_CAMPO_MANUAL), inicio);
+    const tipoDetectado = detectarTipoCampoPorContexto(contextoAntes);
+    const tipoAplicado = tipoDetectado ?? tipoCampoManualDraft;
     setCamposManuales((prev) => [
       ...prev,
-      { tipo_campo: tipoCampoManualDraft, texto_original: texto, offset_inicio: inicio, offset_fin: fin },
+      { tipo_campo: tipoAplicado, texto_original: texto, offset_inicio: inicio, offset_fin: fin },
     ]);
+    if (tipoDetectado) {
+      setTipoCampoManualDraft(tipoDetectado);
+      setDeteccionAutomatica(`Detectado automáticamente como "${labelTipoCampo(tipoDetectado)}" por el texto que lo antecede.`);
+    } else {
+      setDeteccionAutomatica(null);
+    }
   };
 
   const handleAprobar = async () => {
@@ -475,6 +528,12 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
             {selectionError && (
               <div className="text-xs text-brand-danger flex items-center gap-1.5">
                 <AlertCircle size={13} />{selectionError}
+              </div>
+            )}
+
+            {!selectionError && deteccionAutomatica && (
+              <div className="text-xs text-brand-primary flex items-center gap-1.5">
+                <Info size={13} />{deteccionAutomatica}
               </div>
             )}
 

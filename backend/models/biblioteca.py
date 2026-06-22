@@ -41,6 +41,7 @@ class TipoCampoVariable(str, enum.Enum):
     OFICINA_REGISTRO = "oficina_registro"
     AREA = "area"
     FECHA = "fecha"
+    DOCUMENTOS_APORTADOS = "documentos_aportados"
     OTRO = "otro"
 
 
