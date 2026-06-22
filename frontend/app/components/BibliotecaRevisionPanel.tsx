@@ -8,12 +8,15 @@ import {
 } from "@/lib/api";
 import {
   RefreshCw, AlertCircle, FileWarning, CheckCircle2, MousePointerClick,
-  X, ClipboardList, Tag, Info,
+  X, ClipboardList, Tag, Info, CheckCheck,
 } from "lucide-react";
 import clsx from "clsx";
 
 interface BibliotecaRevisionPanelProps {
   onCambio?: () => void;
+  /** Id a abrir automáticamente — usado cuando se llega aquí desde un aviso
+   * de "casos pendientes" en la búsqueda, en vez de elegir de la lista. */
+  plantillaIdInicial?: number | null;
 }
 
 interface CampoVisual {
@@ -50,7 +53,7 @@ function calcularOffsetsSeleccion(container: HTMLElement): { inicio: number; fin
   return { inicio, fin, texto: selection.toString() };
 }
 
-export default function BibliotecaRevisionPanel({ onCambio }: BibliotecaRevisionPanelProps) {
+export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }: BibliotecaRevisionPanelProps) {
   const [pendientes, setPendientes] = useState<PlantillaInfo[]>([]);
   const [loadingLista, setLoadingLista] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -104,6 +107,11 @@ export default function BibliotecaRevisionPanel({ onCambio }: BibliotecaRevision
       setLoadingDetalle(false);
     }
   };
+
+  useEffect(() => {
+    if (plantillaIdInicial != null) seleccionarPlantilla(plantillaIdInicial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plantillaIdInicial]);
 
   const toggleConfirmado = (campoId: number) => {
     setConfirmadosIds((prev) => {
@@ -395,9 +403,20 @@ export default function BibliotecaRevisionPanel({ onCambio }: BibliotecaRevision
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                  Campos detectados ({detalle.campos.length})
-                </p>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                    Campos detectados ({detalle.campos.length})
+                  </p>
+                  {detalle.campos.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmadosIds(new Set(detalle.campos.map((c) => c.id)))}
+                      className="flex items-center gap-1 text-xs text-brand-primary hover:underline shrink-0"
+                    >
+                      <CheckCheck size={12} />Confirmar todos
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-1 max-h-40 overflow-y-auto">
                   {detalle.campos.map((c) => (
                     <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer">

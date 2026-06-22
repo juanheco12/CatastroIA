@@ -39,6 +39,7 @@ export default function Dashboard() {
   const [origen,   setOrigen]   = useState<TipoOrigen   | null>(null);
   const [bibliotecaCategoria, setBibliotecaCategoria] = useState<string | null>(null);
   const [bibliotecaPlantillaId, setBibliotecaPlantillaId] = useState<number | null>(null);
+  const [aperturaRevisionId, setAperturaRevisionId] = useState<number | null>(null);
   const [motivada, setMotivada] = useState<MotivadaGeneradaResponse | null>(null);
   const [formData, setFormData] = useState<SolicitudFormData | null>(null);
   const [loading,  setLoading]  = useState(false);
@@ -73,6 +74,14 @@ export default function Dashboard() {
     setBibliotecaCategoria(null);
     setBibliotecaPlantillaId(null);
     setStep("select");
+  };
+
+  const handleIrARevisarDesdeFormulario = (plantillaId: number) => {
+    setAperturaRevisionId(plantillaId);
+    setBibliotecaCategoria(null);
+    setBibliotecaPlantillaId(null);
+    setStep("select");
+    setTab("biblioteca");
   };
 
   const handleGenerate = async (data: SolicitudFormData) => {
@@ -257,6 +266,7 @@ export default function Dashboard() {
                       <BibliotecaFlujoCategoria
                         categoria={bibliotecaCategoria}
                         onSeleccionarPlantilla={(p: PlantillaInfo) => setBibliotecaPlantillaId(p.id)}
+                        onIrARevisar={handleIrARevisarDesdeFormulario}
                       />
                     )}
                   </div>
@@ -277,7 +287,12 @@ export default function Dashboard() {
             ) : null}
 
             {tab === "historial"  && <HistoryPanel onReopen={handleReopen} />}
-            {tab === "biblioteca" && <BibliotecaPanel />}
+            {tab === "biblioteca" && (
+              <BibliotecaPanel
+                aperturaRevisionId={aperturaRevisionId}
+                onAperturaRevisionConsumida={() => setAperturaRevisionId(null)}
+              />
+            )}
             {tab === "chat"       && <ChatBot onSugerirMotivada={handleSugerirMotivada} />}
             {tab === "settings"  && (
               <SettingsPanel

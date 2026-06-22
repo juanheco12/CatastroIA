@@ -17,10 +17,18 @@ const SUBTABS: { id: SubTab; label: string; icon: typeof Upload }[] = [
   { id: "subir", label: "Subir", icon: Upload },
 ];
 
-export default function BibliotecaPanel() {
+interface BibliotecaPanelProps {
+  /** Id de plantilla a abrir directamente en la pestaña Revisión — usado al
+   * llegar aquí desde el aviso de "casos pendientes" del flujo del Formulario. */
+  aperturaRevisionId?: number | null;
+  onAperturaRevisionConsumida?: () => void;
+}
+
+export default function BibliotecaPanel({ aperturaRevisionId, onAperturaRevisionConsumida }: BibliotecaPanelProps) {
   const [subTab, setSubTab] = useState<SubTab>("buscar");
   const [pendientesCount, setPendientesCount] = useState(0);
   const [plantillaSeleccionadaId, setPlantillaSeleccionadaId] = useState<number | null>(null);
+  const [idParaRevisar, setIdParaRevisar] = useState<number | null>(null);
 
   const actualizarConteo = useCallback(() => {
     pendientesRevision().then((p) => setPendientesCount(p.length)).catch(() => {});
@@ -28,8 +36,22 @@ export default function BibliotecaPanel() {
 
   useEffect(() => { actualizarConteo(); }, [actualizarConteo]);
 
+  useEffect(() => {
+    if (aperturaRevisionId != null) {
+      setIdParaRevisar(aperturaRevisionId);
+      setSubTab("revision");
+      onAperturaRevisionConsumida?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aperturaRevisionId]);
+
   const handleSeleccionarPlantilla = (plantilla: PlantillaInfo) => {
     setPlantillaSeleccionadaId(plantilla.id);
+  };
+
+  const handleIrARevisar = (plantillaId: number) => {
+    setIdParaRevisar(plantillaId);
+    setSubTab("revision");
   };
 
   const cambiarSubTab = (id: SubTab) => {
@@ -62,7 +84,9 @@ export default function BibliotecaPanel() {
       </div>
 
       {subTab === "subir" && <BibliotecaUploader onIngestaCompleta={actualizarConteo} />}
-      {subTab === "revision" && <BibliotecaRevisionPanel onCambio={actualizarConteo} />}
+      {subTab === "revision" && (
+        <BibliotecaRevisionPanel onCambio={actualizarConteo} plantillaIdInicial={idParaRevisar} />
+      )}
       {subTab === "buscar" && (
         plantillaSeleccionadaId ? (
           <BibliotecaPreviewAprobacion
@@ -70,7 +94,7 @@ export default function BibliotecaPanel() {
             onVolver={() => setPlantillaSeleccionadaId(null)}
           />
         ) : (
-          <BibliotecaBuscador onSeleccionar={handleSeleccionarPlantilla} />
+          <BibliotecaBuscador onSeleccionar={handleSeleccionarPlantilla} onIrARevisar={handleIrARevisar} />
         )
       )}
     </div>
