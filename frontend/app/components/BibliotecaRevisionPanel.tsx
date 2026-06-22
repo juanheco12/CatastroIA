@@ -73,6 +73,7 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
 
   const [accionEnCurso, setAccionEnCurso] = useState(false);
   const [accionError, setAccionError] = useState<string | null>(null);
+  const [accionExito, setAccionExito] = useState<string | null>(null);
   const [eliminandoId, setEliminandoId] = useState<number | null>(null);
   const [vaciando, setVaciando] = useState(false);
 
@@ -95,6 +96,7 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
     setDetalle(null);
     setLoadingDetalle(true);
     setAccionError(null);
+    setAccionExito(null);
     setSelectionError(null);
     setCamposManuales([]);
     setModoSeleccion(false);
@@ -152,19 +154,30 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
       setAccionError("Selecciona una categoría antes de aprobar.");
       return;
     }
+    const eraActiva = detalle.estado === "activa";
     setAccionEnCurso(true);
     setAccionError(null);
+    setAccionExito(null);
     try {
-      await aprobarPlantilla(detalle.id, {
+      const actualizado = await aprobarPlantilla(detalle.id, {
         categoria,
         tipo_tramite_manual: tipoTramiteManual || undefined,
         campos_confirmados_ids: Array.from(confirmadosIds),
         campos_manuales: camposManuales,
       });
-      setPendientes((prev) => prev.filter((p) => p.id !== detalle.id));
-      setSelectedId(null);
-      setDetalle(null);
       onCambio?.();
+      if (eraActiva) {
+        // Ya estaba activa (se llegó aquí para ajustar campos desde "Buscar y
+        // generar") — mantenemos la selección para no perder el contexto.
+        setDetalle(actualizado);
+        setCamposManuales([]);
+        setConfirmadosIds(new Set(actualizado.campos.filter((c) => c.confirmado).map((c) => c.id)));
+        setAccionExito("Cambios guardados — vuelve a \"Buscar y generar\" para continuar con esta plantilla.");
+      } else {
+        setPendientes((prev) => prev.filter((p) => p.id !== detalle.id));
+        setSelectedId(null);
+        setDetalle(null);
+      }
     } catch (err: unknown) {
       setAccionError(extractErrorMessage(err, "Error al aprobar la plantilla."));
     } finally {
@@ -376,16 +389,23 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
           </div>
         )}
 
-        {selectedId && detalle && !loadingDetalle && (
+        {selectedId && detalle && !loadingDetalle && (() => {
+          const esActiva = detalle.estado === "activa";
+          return (
           <div className="space-y-4">
             <div className="flex items-start gap-2 p-3 rounded-lg border bg-teal-500/5" style={{ borderColor: "var(--border)" }}>
               <Info size={15} className="shrink-0 mt-0.5 text-brand-primary" />
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                Esta plantilla no se puede usar en un caso nuevo hasta que la apruebes. Resalta en el texto
-                qué partes son datos variables (predial, cédula, fechas...): confirma o descarta lo que el
-                sistema detectó solo, y marca a mano el nombre del propietario y la dirección (eso nunca se
-                detecta automáticamente). Elige categoría y origen — se usan después para que la plantilla
-                aparezca al buscar por coincidencia — y aprueba para activarla.
+                {esActiva
+                  ? "Esta plantilla ya está activa y aparece al buscar por coincidencia. Aquí puedes marcar o ajustar " +
+                    "sus datos variables (predial, cédula, fechas, propietario, dirección...) para que el flujo de " +
+                    "\"Buscar y generar\" tenga campos que llenar — los cambios se guardan al instante y no afectan " +
+                    "los documentos que ya generaste con ella."
+                  : "Esta plantilla no se puede usar en un caso nuevo hasta que la apruebes. Resalta en el texto " +
+                    "qué partes son datos variables (predial, cédula, fechas...): confirma o descarta lo que el " +
+                    "sistema detectó solo, y marca a mano el nombre del propietario y la dirección (eso nunca se " +
+                    "detecta automáticamente). Elige categoría y origen — se usan después para que la plantilla " +
+                    "aparezca al buscar por coincidencia — y aprueba para activarla."}
               </p>
             </div>
 
@@ -524,15 +544,23 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
               </div>
             )}
 
+            {accionExito && (
+              <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-sm text-brand-success">
+                <CheckCircle2 size={16} />{accionExito}
+              </div>
+            )}
+
             <div className="flex items-center gap-3 pt-2">
               <button type="button" onClick={handleAprobar} disabled={accionEnCurso} className="btn-primary">
                 <CheckCircle2 size={15} />
-                {accionEnCurso ? "Procesando..." : "Aprobar y activar plantilla"}
+                {accionEnCurso ? "Procesando..." : esActiva ? "Guardar cambios" : "Aprobar y activar plantilla"}
               </button>
-              <button type="button" onClick={handleMarcarAtipico} disabled={accionEnCurso} className="btn-ghost">
-                <FileWarning size={14} />
-                Marcar como caso atípico
-              </button>
+              {!esActiva && (
+                <button type="button" onClick={handleMarcarAtipico} disabled={accionEnCurso} className="btn-ghost">
+                  <FileWarning size={14} />
+                  Marcar como caso atípico
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => handleEliminar(detalle.id, detalle.nombre_original)}
@@ -544,7 +572,8 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
               </button>
             </div>
           </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

@@ -6,12 +6,15 @@ import {
   eliminarPlantilla,
   PlantillaDetalle, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
-import { RefreshCw, AlertCircle, Wand2, Download, ArrowLeft, Trash2, CheckCircle, FileText } from "lucide-react";
+import { RefreshCw, AlertCircle, Wand2, Download, ArrowLeft, Trash2, CheckCircle, FileText, Tag } from "lucide-react";
 import CopyButton from "./CopyButton";
 
 interface BibliotecaPreviewAprobacionProps {
   plantillaId: number;
   onVolver: () => void;
+  /** Lleva al usuario a la pestaña Revisión con esta plantilla ya seleccionada,
+   * para marcar/ajustar sus campos variables (la plantilla sigue activa mientras tanto). */
+  onEditarCampos?: (plantillaId: number) => void;
 }
 
 interface ResultadoGeneracion {
@@ -20,7 +23,7 @@ interface ResultadoGeneracion {
   docx: { filename: string; content_base64: string };
 }
 
-export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: BibliotecaPreviewAprobacionProps) {
+export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onEditarCampos }: BibliotecaPreviewAprobacionProps) {
   const [detalle, setDetalle] = useState<PlantillaDetalle | null>(null);
   const [loading, setLoading] = useState(true);
   const [valores, setValores] = useState<Record<number, string>>({});
@@ -134,9 +137,24 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
           Datos del caso nuevo
         </p>
         {camposConfirmados.length === 0 && (
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            Esta plantilla no tiene campos variables confirmados — se generará el documento original sin cambios.
-          </p>
+          <div className="flex items-start gap-2 p-3 rounded-lg border bg-amber-500/5" style={{ borderColor: "var(--border)" }}>
+            <Tag size={15} className="shrink-0 mt-0.5 text-amber-400" />
+            <div>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                Esta plantilla todavía no tiene campos variables marcados — no hay datos que puedas personalizar
+                para este caso; se generaría el documento original sin cambios.
+              </p>
+              {onEditarCampos && (
+                <button
+                  type="button"
+                  onClick={() => onEditarCampos(plantillaId)}
+                  className="text-xs font-medium text-brand-primary hover:underline mt-1.5"
+                >
+                  Marcar campos variables en Revisión
+                </button>
+              )}
+            </div>
+          </div>
         )}
         <div className="grid sm:grid-cols-2 gap-3">
           {camposConfirmados.map((c) => (

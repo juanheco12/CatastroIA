@@ -261,6 +261,7 @@ export default function Dashboard() {
                       <BibliotecaPreviewAprobacion
                         plantillaId={bibliotecaPlantillaId}
                         onVolver={() => setBibliotecaPlantillaId(null)}
+                        onEditarCampos={handleIrARevisarDesdeFormulario}
                       />
                     ) : (
                       <BibliotecaFlujoCategoria
