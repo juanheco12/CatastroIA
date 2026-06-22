@@ -246,6 +246,20 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
             <FileText size={12} />
             El texto ya tiene los datos de este caso sustituidos — el formato jurídico nunca se reescribe.
           </p>
+
+          <div className="pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+            <p className="text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>
+              ¿Esta plantilla quedó mal configurada (campos incorrectos, texto erróneo)?
+            </p>
+            <button
+              type="button"
+              onClick={handleEliminar}
+              disabled={eliminando}
+              className="flex items-center gap-1.5 text-xs btn-ghost px-2 py-1 text-brand-danger"
+            >
+              <Trash2 size={13} />{eliminando ? "Eliminando..." : "Eliminar esta plantilla de la biblioteca"}
+            </button>
+          </div>
         </div>
       )}
     </div>
