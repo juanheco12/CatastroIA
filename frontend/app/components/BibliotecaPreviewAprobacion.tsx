@@ -4,13 +4,20 @@ import { useEffect, useState } from "react";
 import {
   obtenerDetallePlantilla, previewGeneracionPlantilla, generarFinalPlantilla, downloadBase64Docx, extractErrorMessage,
   eliminarPlantilla,
-  PlantillaDetalle, PreviewGeneracionResponse, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
+  PlantillaDetalle, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
-import { RefreshCw, AlertCircle, FileText, Download, Eye, ArrowLeft, Trash2 } from "lucide-react";
+import { RefreshCw, AlertCircle, Wand2, Download, ArrowLeft, Trash2, CheckCircle, FileText } from "lucide-react";
+import CopyButton from "./CopyButton";
 
 interface BibliotecaPreviewAprobacionProps {
   plantillaId: number;
   onVolver: () => void;
+}
+
+interface ResultadoGeneracion {
+  texto: string;
+  campos_reemplazados: { campo_id: number; tipo_campo: string; valor_anterior: string; valor_nuevo: string }[];
+  docx: { filename: string; content_base64: string };
 }
 
 export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: BibliotecaPreviewAprobacionProps) {
@@ -19,11 +26,9 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
   const [valores, setValores] = useState<Record<number, string>>({});
   const [tipoTramiteManual, setTipoTramiteManual] = useState("");
 
-  const [preview, setPreview] = useState<PreviewGeneracionResponse | null>(null);
-  const [generandoPreview, setGenerandoPreview] = useState(false);
-  const [generandoFinal, setGenerandoFinal] = useState(false);
+  const [resultado, setResultado] = useState<ResultadoGeneracion | null>(null);
+  const [generando, setGenerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [listo, setListo] = useState(false);
   const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
@@ -42,34 +47,26 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
 
   const handleCambioValor = (campoId: number, valor: string) => {
     setValores((prev) => ({ ...prev, [campoId]: valor }));
-    setPreview(null);
-    setListo(false);
+    setResultado(null);
   };
 
-  const handlePreview = async () => {
-    setGenerandoPreview(true);
+  const handleGenerar = async () => {
+    setGenerando(true);
     setError(null);
     try {
-      const res = await previewGeneracionPlantilla(plantillaId, valores, tipoTramiteManual || undefined);
-      setPreview(res);
-      setListo(true);
+      const [preview, final] = await Promise.all([
+        previewGeneracionPlantilla(plantillaId, valores, tipoTramiteManual || undefined),
+        generarFinalPlantilla(plantillaId, valores, tipoTramiteManual || undefined),
+      ]);
+      setResultado({
+        texto: preview.texto_previsto,
+        campos_reemplazados: preview.campos_reemplazados,
+        docx: final,
+      });
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, "Error al generar la vista previa."));
+      setError(extractErrorMessage(err, "Error al generar la motivada."));
     } finally {
-      setGenerandoPreview(false);
-    }
-  };
-
-  const handleGenerarFinal = async () => {
-    setGenerandoFinal(true);
-    setError(null);
-    try {
-      const res = await generarFinalPlantilla(plantillaId, valores, tipoTramiteManual || undefined);
-      downloadBase64Docx(res.content_base64, res.filename);
-    } catch (err: unknown) {
-      setError(extractErrorMessage(err, "Error al generar el documento final."));
-    } finally {
-      setGenerandoFinal(false);
+      setGenerando(false);
     }
   };
 
@@ -159,7 +156,7 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
           <select
             className="field-input"
             value={tipoTramiteManual}
-            onChange={(e) => { setTipoTramiteManual(e.target.value); setPreview(null); setListo(false); }}
+            onChange={(e) => { setTipoTramiteManual(e.target.value); setResultado(null); }}
           >
             <option value="">Sin especificar</option>
             {ORIGENES_TRAMITE.map((o) => (
@@ -169,8 +166,10 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
         </div>
       </div>
 
-      <button type="button" onClick={handlePreview} disabled={generandoPreview} className="btn-ghost">
-        <Eye size={15} />{generandoPreview ? "Generando vista previa..." : "Ver vista previa"}
+      <button type="button" onClick={handleGenerar} disabled={generando} className="btn-primary w-full justify-center py-3.5 text-base">
+        {generando
+          ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />Generando motivada...</>
+          : <><Wand2 size={18} />Generar Motivada</>}
       </button>
 
       {error && (
@@ -179,49 +178,56 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
         </div>
       )}
 
-      {preview && (
+      {resultado && (
         <div className="space-y-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-              Cambios aplicados
-            </p>
-            <div className="space-y-1">
-              {preview.campos_reemplazados.length === 0 && (
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Sin cambios respecto al texto original.</p>
-              )}
-              {preview.campos_reemplazados.map((c) => (
-                <div key={c.campo_id} className="text-xs flex items-center gap-2 flex-wrap">
-                  <span style={{ color: "var(--text-muted)" }}>{labelTipoCampo(c.tipo_campo)}:</span>
-                  <span className="font-mono line-through text-slate-500">{c.valor_anterior}</span>
-                  <span>→</span>
-                  <span className="font-mono" style={{ color: "var(--text)" }}>{c.valor_nuevo}</span>
-                </div>
-              ))}
-            </div>
+          <div className="flex items-center gap-2" style={{ color: "var(--text)" }}>
+            <CheckCircle size={16} className="text-brand-success" />
+            <p className="text-sm font-semibold">Motivada generada</p>
           </div>
+
+          {resultado.campos_reemplazados.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
+                Cambios aplicados
+              </p>
+              <div className="space-y-1">
+                {resultado.campos_reemplazados.map((c) => (
+                  <div key={c.campo_id} className="text-xs flex items-center gap-2 flex-wrap">
+                    <span style={{ color: "var(--text-muted)" }}>{labelTipoCampo(c.tipo_campo)}:</span>
+                    <span className="font-mono line-through text-slate-500">{c.valor_anterior}</span>
+                    <span>→</span>
+                    <span className="font-mono" style={{ color: "var(--text)" }}>{c.valor_nuevo}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-              Texto completo previsto
+              Motivada
             </p>
             <div
               className="text-sm leading-relaxed rounded-lg border p-4 max-h-[40vh] overflow-y-auto"
               style={{ borderColor: "var(--border)", whiteSpace: "pre-wrap", color: "var(--text)" }}
             >
-              {preview.texto_previsto}
+              {resultado.texto}
             </div>
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
-            <button type="button" onClick={handleGenerarFinal} disabled={!listo || generandoFinal} className="btn-primary">
-              <Download size={15} />
-              {generandoFinal ? "Generando documento..." : "Aprobar y generar documento final"}
-            </button>
-            <span className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
-              <FileText size={12} />
-              Revisa el texto antes de aprobar — la descarga genera el .docx final con el mismo formato del original.
-            </span>
-          </div>
+          <CopyButton getText={() => resultado.texto} label="Copiar motivada" />
+
+          <button
+            type="button"
+            onClick={() => downloadBase64Docx(resultado.docx.content_base64, resultado.docx.filename)}
+            className="flex items-center gap-1.5 text-xs btn-ghost px-2 py-1"
+          >
+            <Download size={13} />Descargar también el .docx (opcional)
+          </button>
+          <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
+            <FileText size={12} />
+            El texto ya tiene los datos de este caso sustituidos — el formato jurídico nunca se reescribe.
+          </p>
         </div>
       )}
     </div>
