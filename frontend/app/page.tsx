@@ -137,7 +137,7 @@ export default function Dashboard() {
         className="border-b sticky top-0 z-10 backdrop-blur-sm transition-colors duration-200"
         style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
       >
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
           {/* Logo */}
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-brand-primary flex items-center justify-center shrink-0 shadow-lg shadow-teal-500/30">
@@ -196,10 +196,10 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto w-full px-4 py-6 flex-1">
-        <div className="flex gap-6">
+      <div className="max-w-[1440px] mx-auto w-full px-4 sm:px-6 py-6 flex-1">
+        <div className="flex gap-6 lg:gap-8">
           {/* Sidebar */}
-          <nav className="hidden lg:flex flex-col gap-1 w-44 shrink-0">
+          <nav className="hidden md:flex flex-col gap-1 w-48 shrink-0">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button key={id} type="button" onClick={() => setTab(id)}
                 className={clsx(
@@ -215,7 +215,7 @@ export default function Dashboard() {
           </nav>
 
           {/* Main */}
-          <main className="flex-1 min-w-0 pb-20 lg:pb-0">
+          <main className="flex-1 min-w-0 pb-20 md:pb-0">
             {error && (
               <div className="flex items-start gap-3 p-4 mb-5 bg-red-500/10 border border-red-500/30 rounded-xl text-sm text-brand-danger">
                 <AlertCircle size={18} className="mt-0.5 shrink-0" />
@@ -307,7 +307,7 @@ export default function Dashboard() {
 
       {/* Mobile tab bar */}
       <div
-        className="mobile-tabbar lg:hidden fixed bottom-0 left-0 right-0 border-t z-10 flex shadow-[0_-4px_12px_rgba(0,0,0,0.15)]"
+        className="mobile-tabbar md:hidden fixed bottom-0 left-0 right-0 border-t z-10 flex shadow-[0_-4px_12px_rgba(0,0,0,0.15)]"
         style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
       >
         {TABS.map(({ id, label, icon: Icon }) => (

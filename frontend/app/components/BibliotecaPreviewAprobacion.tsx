@@ -205,8 +205,8 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
         </p>
       </div>
 
-      <div className={clsx("grid gap-5", mostrarVistaPrevia && "lg:grid-cols-2")}>
-        <div className="space-y-3">
+      <div className={clsx("grid gap-6", mostrarVistaPrevia && "md:grid-cols-2")}>
+        <div className="space-y-4">
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
             Datos del caso nuevo
           </p>
@@ -230,22 +230,38 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
               </div>
             </div>
           )}
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className={clsx("grid gap-3", mostrarVistaPrevia ? "sm:grid-cols-2" : "sm:grid-cols-2 xl:grid-cols-3")}>
             {grupos.map((g) => {
               const total = totalPorTipo.get(g.tipoCampo) ?? 1;
               indicePorTipo[g.tipoCampo] = (indicePorTipo[g.tipoCampo] ?? 0) + 1;
               const sufijo = total > 1 ? ` (${indicePorTipo[g.tipoCampo]}/${total})` : "";
+              const esLargo = g.tipoCampo === "documentos_aportados" || g.textoOriginal.length > 60;
               return (
-                <div key={g.key}>
+                <div
+                  key={g.key}
+                  className={clsx("p-3 rounded-lg border", esLargo && "sm:col-span-2")}
+                  style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
+                >
                   <label className="field-label">{labelTipoCampo(g.tipoCampo)}{sufijo}</label>
-                  <input
-                    className="field-input"
-                    value={valores[g.campoIds[0]] ?? ""}
-                    onChange={(e) => handleCambioValor(g.campoIds, e.target.value)}
-                    onFocus={() => setGrupoEnfocado(g.key)}
-                    onBlur={() => setGrupoEnfocado((prev) => (prev === g.key ? null : prev))}
-                    placeholder={g.textoOriginal}
-                  />
+                  {esLargo ? (
+                    <textarea
+                      className="field-input min-h-[70px] resize-y"
+                      value={valores[g.campoIds[0]] ?? ""}
+                      onChange={(e) => handleCambioValor(g.campoIds, e.target.value)}
+                      onFocus={() => setGrupoEnfocado(g.key)}
+                      onBlur={() => setGrupoEnfocado((prev) => (prev === g.key ? null : prev))}
+                      placeholder={g.textoOriginal}
+                    />
+                  ) : (
+                    <input
+                      className="field-input"
+                      value={valores[g.campoIds[0]] ?? ""}
+                      onChange={(e) => handleCambioValor(g.campoIds, e.target.value)}
+                      onFocus={() => setGrupoEnfocado(g.key)}
+                      onBlur={() => setGrupoEnfocado((prev) => (prev === g.key ? null : prev))}
+                      placeholder={g.textoOriginal}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -266,7 +282,7 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
         </div>
 
         {mostrarVistaPrevia && (
-          <div className="space-y-2 lg:sticky lg:top-4 self-start">
+          <div className="space-y-2 md:sticky md:top-4 self-start">
             <p className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
               <Eye size={13} />Vista previa en vivo
             </p>

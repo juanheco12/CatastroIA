@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Wand2, Plus, Minus, Bell, BellOff, BellMinus, Upload } from "lucide-react";
 import { TipoMutacion, TipoOrigen } from "./MutationSelector";
 import { extraerInformeTecnico, extractErrorMessage } from "@/lib/api";
@@ -57,6 +57,28 @@ function splitParrafos(texto: string): string[] {
   }
   if (actual) parrafos.push(actual);
   return parrafos.filter((p) => p.length > 10);
+}
+
+/** Documentos cuya redacción es siempre la misma combinación de datos que el
+ * usuario ya llenó en otra parte del formulario (escritura/notaría/fecha en
+ * Desenglobe, compraventa/entidad en Quinta clase) — se componen solos para
+ * no pedirle que los vuelva a escribir a mano. Solo aplican mientras todos
+ * sus datos de origen estén llenos; si el usuario borra uno a mano, no se
+ * reinserta hasta que vuelva a cambiar alguno de esos datos de origen. */
+function documentosAutomaticos(data: SolicitudFormData): string[] {
+  const docs: string[] = [];
+  if (data.tipo_mutacion === "segunda_clase") {
+    if (data.folio_matriz) {
+      docs.push(`Certificado de tradición y libertad de la matrícula inmobiliaria No. ${data.folio_matriz}`);
+    }
+    if (data.numero_escritura && data.fecha_escritura && data.notaria) {
+      docs.push(`Escritura pública No. ${data.numero_escritura} del ${data.fecha_escritura} de la ${data.notaria}`);
+    }
+  }
+  if (data.tipo_mutacion === "quinta_clase" && data.fecha_compraventa && data.entidad_compraventa) {
+    docs.push(`Documento de compraventa del ${data.fecha_compraventa} de la ${data.entidad_compraventa}`);
+  }
+  return docs;
 }
 
 // ── Mock data ────────────────────────────────────────────────────────────────
@@ -313,6 +335,23 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
   const set = (k: keyof SolicitudFormData, v: unknown) => setData(p => ({ ...p, [k]: v }));
   const loadMock = () => setData(p => ({ ...p, ...MOCKS[mockKey] }));
 
+  const autoDocsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const nuevos = documentosAutomaticos(data);
+    const nuevosSet = new Set(nuevos);
+    const anteriores = autoDocsRef.current;
+    const sinCambios = anteriores.size === nuevosSet.size && Array.from(anteriores).every((d) => nuevosSet.has(d));
+    if (sinCambios) return;
+    autoDocsRef.current = nuevosSet;
+    setData((p) => {
+      const conservados = p.documentos_aportados.filter((d) => !anteriores.has(d));
+      const combinados = [...conservados];
+      for (const d of nuevos) if (!combinados.includes(d)) combinados.push(d);
+      return { ...p, documentos_aportados: combinados };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.tipo_mutacion, data.folio_matriz, data.numero_escritura, data.fecha_escritura, data.notaria, data.fecha_compraventa, data.entidad_compraventa]);
+
   const addDoc = (doc?: string) => {
     const d = (doc ?? newDoc).trim();
     if (!d || data.documentos_aportados.includes(d)) return;
@@ -421,6 +460,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
         />
       </div>
 
+      <div className="grid gap-5 xl:grid-cols-2 items-start">
       {/* ── SNR ── */}
       {tipoOrigen === "snr" && (
         <div className="card p-5 space-y-4">
@@ -691,6 +731,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
           </Field>
         </div>
       )}
+      </div>
 
       {/* ── Documentos ── */}
       <div className="card p-5 space-y-3">
@@ -704,20 +745,36 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
           ))}
         </div>
         <div className="space-y-1.5">
-          {data.documentos_aportados.map((doc, i) => (
-            <div key={i} className="flex items-center gap-2 group">
-              <span className="flex-1 text-sm text-slate-300 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50">{doc}</span>
-              <button type="button" onClick={() => removeDoc(i)} className="opacity-0 group-hover:opacity-100 p-1 text-brand-danger hover:bg-red-500/10 rounded transition-all">
-                <Minus size={14} />
-              </button>
-            </div>
-          ))}
+          {data.documentos_aportados.map((doc, i) => {
+            const esAuto = autoDocsRef.current.has(doc);
+            return (
+              <div key={i} className="flex items-center gap-2 group">
+                <span className="flex-1 text-sm text-slate-300 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50 flex items-center gap-2">
+                  {esAuto && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-primary border border-brand-primary/40 rounded px-1.5 py-0.5 shrink-0">
+                      Auto
+                    </span>
+                  )}
+                  {doc}
+                </span>
+                <button type="button" onClick={() => removeDoc(i)} className="opacity-0 group-hover:opacity-100 p-1 text-brand-danger hover:bg-red-500/10 rounded transition-all">
+                  <Minus size={14} />
+                </button>
+              </div>
+            );
+          })}
         </div>
         <div className="flex gap-2">
           <input className={clsx(inp, "flex-1")} value={newDoc} onChange={e => setNewDoc(e.target.value)}
             onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addDoc())} placeholder="Otro documento..." />
           <button type="button" onClick={() => addDoc()} className="btn-ghost px-3"><Plus size={16} /></button>
         </div>
+        {(tipoMutacion === "segunda_clase" || tipoMutacion === "quinta_clase") && (
+          <p className="text-xs text-slate-500">
+            Los marcados <span className="text-brand-primary font-medium">Auto</span> se redactan solos con la
+            escritura/notaría o la compraventa que ya llenaste arriba — si no aplican para este caso, quítalos a mano.
+          </p>
+        )}
       </div>
 
       {/* ── Artículos finales ── */}
