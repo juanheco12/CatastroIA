@@ -306,12 +306,16 @@ export default function Dashboard() {
       </div>
 
       {/* Mobile tab bar */}
-      <div className="mobile-tabbar lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-10 flex">
-        {TABS.map(({ id, icon: Icon }) => (
+      <div
+        className="mobile-tabbar lg:hidden fixed bottom-0 left-0 right-0 border-t z-10 flex shadow-[0_-4px_12px_rgba(0,0,0,0.15)]"
+        style={{ backgroundColor: "var(--surface)", borderColor: "var(--border)" }}
+      >
+        {TABS.map(({ id, label, icon: Icon }) => (
           <button key={id} type="button" onClick={() => setTab(id)}
-            className={clsx("flex-1 flex flex-col items-center py-2.5 transition-colors",
-              tab === id ? "text-brand-primary" : "text-slate-500")}>
+            className="flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors"
+            style={{ color: tab === id ? "#2dd4bf" : "var(--text-muted)" }}>
             <Icon size={18} />
+            <span className="text-[9px] font-medium leading-none truncate max-w-full px-0.5">{label}</span>
           </button>
         ))}
       </div>

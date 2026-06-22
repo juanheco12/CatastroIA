@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {
   obtenerDetallePlantilla, previewGeneracionPlantilla, generarFinalPlantilla, downloadBase64Docx, extractErrorMessage,
   eliminarPlantilla,
-  PlantillaDetalle, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
+  PlantillaDetalle, CampoVariable, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
 import { RefreshCw, AlertCircle, Wand2, Download, ArrowLeft, Trash2, CheckCircle, FileText, Tag } from "lucide-react";
 import CopyButton from "./CopyButton";
@@ -21,6 +21,37 @@ interface ResultadoGeneracion {
   texto: string;
   campos_reemplazados: { campo_id: number; tipo_campo: string; valor_anterior: string; valor_nuevo: string }[];
   docx: { filename: string; content_base64: string };
+}
+
+interface GrupoCampo {
+  key: string;
+  tipoCampo: string;
+  textoOriginal: string;
+  campoIds: number[];
+  offsetMin: number;
+}
+
+/** Varios campos confirmados pueden compartir el mismo tipo y el mismo valor
+ * original (la misma cédula/predial repetida varias veces en el documento) —
+ * se agrupan en un solo input para que el usuario lo escriba una vez y se
+ * aplique a todas las ocurrencias, en vez de pedirle lo mismo N veces. El
+ * orden de los grupos sigue su primera aparición en el texto. */
+function agruparCampos(campos: CampoVariable[]): GrupoCampo[] {
+  const mapa = new Map<string, GrupoCampo>();
+  for (const c of campos) {
+    const key = `${c.tipo_campo}::${c.texto_original}`;
+    const existente = mapa.get(key);
+    if (existente) {
+      existente.campoIds.push(c.id);
+      existente.offsetMin = Math.min(existente.offsetMin, c.offset_inicio);
+    } else {
+      mapa.set(key, {
+        key, tipoCampo: c.tipo_campo, textoOriginal: c.texto_original,
+        campoIds: [c.id], offsetMin: c.offset_inicio,
+      });
+    }
+  }
+  return Array.from(mapa.values()).sort((a, b) => a.offsetMin - b.offsetMin);
 }
 
 export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onEditarCampos }: BibliotecaPreviewAprobacionProps) {
@@ -48,8 +79,12 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
       .finally(() => setLoading(false));
   }, [plantillaId]);
 
-  const handleCambioValor = (campoId: number, valor: string) => {
-    setValores((prev) => ({ ...prev, [campoId]: valor }));
+  const handleCambioValor = (campoIds: number[], valor: string) => {
+    setValores((prev) => {
+      const next = { ...prev };
+      for (const id of campoIds) next[id] = valor;
+      return next;
+    });
     setResultado(null);
   };
 
@@ -108,6 +143,10 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
   }
 
   const camposConfirmados = detalle.campos.filter((c) => c.confirmado);
+  const grupos = agruparCampos(camposConfirmados);
+  const totalPorTipo = new Map<string, number>();
+  for (const g of grupos) totalPorTipo.set(g.tipoCampo, (totalPorTipo.get(g.tipoCampo) ?? 0) + 1);
+  const indicePorTipo: Record<string, number> = {};
 
   return (
     <div className="space-y-5">
@@ -157,17 +196,22 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
           </div>
         )}
         <div className="grid sm:grid-cols-2 gap-3">
-          {camposConfirmados.map((c) => (
-            <div key={c.id}>
-              <label className="field-label">{labelTipoCampo(c.tipo_campo)}</label>
-              <input
-                className="field-input"
-                value={valores[c.id] ?? ""}
-                onChange={(e) => handleCambioValor(c.id, e.target.value)}
-                placeholder={c.texto_original}
-              />
-            </div>
-          ))}
+          {grupos.map((g) => {
+            const total = totalPorTipo.get(g.tipoCampo) ?? 1;
+            indicePorTipo[g.tipoCampo] = (indicePorTipo[g.tipoCampo] ?? 0) + 1;
+            const sufijo = total > 1 ? ` (${indicePorTipo[g.tipoCampo]}/${total})` : "";
+            return (
+              <div key={g.key}>
+                <label className="field-label">{labelTipoCampo(g.tipoCampo)}{sufijo}</label>
+                <input
+                  className="field-input"
+                  value={valores[g.campoIds[0]] ?? ""}
+                  onChange={(e) => handleCambioValor(g.campoIds, e.target.value)}
+                  placeholder={g.textoOriginal}
+                />
+              </div>
+            );
+          })}
         </div>
         <div>
           <label className="field-label">Origen de la solicitud (opcional)</label>
