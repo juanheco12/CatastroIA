@@ -848,62 +848,15 @@ def _motivada_demo(data: SolicitudUnificada) -> str:
         return _demo_tercera(data)
 
 
-# ── Sistema prompt para Claude ───────────────────────────────────────────────
-SYSTEM_PROMPT = """
-Eres experto en catastro colombiano. Redactas motivadas siguiendo la Resolución 1040 de 2023
-del IGAC, el Decreto 1170 de 2015 y el Decreto 148 de 2020.
-
-Para mutaciones de PRIMERA CLASE genera exactamente 4 párrafos "Que...":
-1. Base legal: artículo 4.5.1 numeral 1 de la Resolución 1040 de 2023 (cambio de propietario).
-2. Identificación del solicitante/propietario según el origen (propietario, autorizado, apoderado o SNR), con número predial y municipio, y documentos aportados.
-3. Consecuencia: procede mutación de primera conforme artículos 4.5.1 y 4.6.1 de la Resolución 1040 de 2023.
-4. Conclusión: revisados antecedentes del municipio, procede la mutación de primera.
-
-Para mutaciones de TERCERA CLASE genera 3 párrafos "Que...":
-1. Identificación del solicitante con folio de matrícula, número predial, municipio y documentos aportados.
-2. Verificación documental y visita técnica: área construida y área de terreno.
-3. Validación conforme Decreto 1170 de 2015 y Resolución 1040 de 2023 artículo 4.5.1 numeral 3.
-
-Si el mensaje incluye un "Análisis previo del asistente", incorpóralo como fundamento de la motivada (sin contradecirlo ni copiarlo palabra por palabra) y ajusta los párrafos para que sean coherentes con esa conclusión.
-
-No inventes artículos, numerales, resoluciones o decretos que no conozcas con certeza. Solo transcribe el texto literal de un artículo entre comillas cuando ese texto exacto aparezca en los "Documentos de soporte" que se te indiquen; en caso contrario, menciona el artículo por su número sin pretender que es una cita textual.
-
-Sin títulos, sin markdown, párrafos separados por doble salto de línea.
-Lenguaje formal administrativo colombiano. Máximo 500 palabras.
-"""
-
-def generate_motivada(data: SolicitudUnificada, db) -> dict:
-    from services.ai_provider import call_ai, active_provider
-    from services import soporte_service
-    tokens = 0
-    # Segunda clase, cancelación, cuarta clase y quinta clase reutilizan texto
-    # literal aportado por el usuario (legal o del informe técnico): nunca
-    # pasan por el LLM, sin importar el proveedor de IA configurado, para
-    # garantizar que el texto se mantenga idéntico al documento aprobado/aportado.
-    if data.tipo_mutacion in ("segunda_clase", "cancelacion", "cuarta_clase", "quinta_clase"):
-        texto = _motivada_demo(data)
-    elif active_provider() == "demo":
-        texto = _motivada_demo(data)
-    else:
-        try:
-            query = " ".join(filter(None, [
-                data.tipo_mutacion, data.tipo_origen,
-                data.campo_rectificado, data.campo_complementado,
-            ]))
-            contexto = soporte_service.buscar_contexto_relevante(db, query)
-            system_prompt = SYSTEM_PROMPT + soporte_service.construir_bloque_contexto(contexto)
-
-            contenido = str(data.model_dump(exclude={"contexto_adicional"}))
-            if data.contexto_adicional:
-                contenido += f"\n\nAnálisis previo del asistente:\n{data.contexto_adicional}"
-
-            messages = [{"role": "user", "content": contenido}]
-            texto, tokens = call_ai(messages, system_prompt, max_tokens=1200)
-        except Exception:
-            texto = _motivada_demo(data)
+def generate_motivada(data: SolicitudUnificada) -> dict:
+    # Todas las categorías reutilizan texto literal de formatos ya aprobados:
+    # nunca pasan por un LLM ni por búsqueda de contexto (RAG), para
+    # garantizar que el texto se mantenga idéntico al documento aprobado y
+    # que la respuesta sea instantánea.
+    texto = _motivada_demo(data)
 
     articulos = None
     if data.tipo_notificacion:
         articulos = _articulos_finales(data.tipo_notificacion, _municipio(data))
 
-    return {"texto_motivada": texto, "tokens_usados": tokens, "articulos_finales": articulos}
+    return {"texto_motivada": texto, "tokens_usados": 0, "articulos_finales": articulos}

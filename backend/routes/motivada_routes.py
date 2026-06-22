@@ -46,7 +46,7 @@ async def extraer_informe_tecnico(file: UploadFile = File(...)):
 @router.post("/generar", response_model=MotivadaGeneradaResponse)
 def generar_motivada(data: SolicitudUnificada, db: Session = Depends(get_db)):
     try:
-        resultado = claude_service.generate_motivada(data, db)
+        resultado = claude_service.generate_motivada(data)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
 
