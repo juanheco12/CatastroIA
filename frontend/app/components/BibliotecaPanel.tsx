@@ -94,6 +94,7 @@ export default function BibliotecaPanel({ aperturaRevisionId, onAperturaRevision
           <BibliotecaPreviewAprobacion
             plantillaId={plantillaSeleccionadaId}
             onVolver={() => setPlantillaSeleccionadaId(null)}
+            onEditarCampos={handleIrARevisar}
           />
         ) : (
           <BibliotecaBuscador onSeleccionar={handleSeleccionarPlantilla} onIrARevisar={handleIrARevisar} />

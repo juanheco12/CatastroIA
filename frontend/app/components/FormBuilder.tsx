@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Wand2, Plus, Minus, Bell, BellOff, BellMinus, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Wand2, Plus, Minus, Bell, BellOff, BellMinus, Upload, ListChecks, X, ChevronDown } from "lucide-react";
 import { TipoMutacion, TipoOrigen } from "./MutationSelector";
 import { extraerInformeTecnico, extractErrorMessage } from "@/lib/api";
 import clsx from "clsx";
@@ -37,8 +37,33 @@ export interface SolicitudFormData {
   entidad_compraventa?:  string;
   tipo_notificacion?:   "notificable" | "no_notificable" | null;
   documentos_aportados: string[];
+  fuente_administrativa_tipo?:        string;
+  fuente_administrativa_numero?:      string;
+  fuente_administrativa_fecha?:       string;
+  fuente_administrativa_ente_emisor?: string;
   contexto_adicional?:  string;
 }
+
+/** Catálogo de fuentes administrativas para Primera Clase, Complementación y
+ * Rectificación — reemplaza el listado libre de "documentos justificativos"
+ * en esos tipos: ahí el dato relevante no es elegir entre muchas opciones
+ * sueltas, sino identificar UNA fuente administrativa concreta (con su
+ * número, fecha y ente emisor) que sustenta el trámite. */
+const FUENTES_ADMINISTRATIVAS: { value: string; label: string }[] = [
+  { value: "acto_administrativo", label: "Acto administrativo" },
+  { value: "documento_privado",   label: "Documento privado" },
+  { value: "documento_publico",   label: "Documento público" },
+  { value: "escritura_publica",   label: "Escritura pública" },
+  { value: "resolucion",          label: "Resolución" },
+  { value: "sentencia_judicial",  label: "Sentencia judicial" },
+  { value: "sin_documento",       label: "Sin documento" },
+];
+
+/** Catálogo fijo del modal "Doc. Aportados" de Primera Clase / Complementación / Rectificación. */
+const DOCS_JUSTIFICATIVOS_CATALOGO = [
+  "Acta de defunción", "Carta de solicitud", "Cédula de ciudadanía",
+  "Certificado de tradición y libertad", "Planos", "Registro civil",
+];
 
 // Reconstruye párrafos a partir de texto extraído de un PDF/DOCX: el DOCX trae
 // un salto de línea por párrafo real, pero el PDF suele traer un salto por
@@ -59,30 +84,68 @@ function splitParrafos(texto: string): string[] {
   return parrafos.filter((p) => p.length > 10);
 }
 
+/** Documentos cuya redacción es siempre la misma combinación de datos que el
+ * usuario ya llenó en otra parte del formulario (escritura/notaría/fecha en
+ * Desenglobe, compraventa/entidad en Quinta clase) — se componen solos para
+ * no pedirle que los vuelva a escribir a mano. Solo aplican mientras todos
+ * sus datos de origen estén llenos; si el usuario borra uno a mano, no se
+ * reinserta hasta que vuelva a cambiar alguno de esos datos de origen. */
+function documentosAutomaticos(data: SolicitudFormData): string[] {
+  const docs: string[] = [];
+  if (data.tipo_mutacion === "segunda_clase") {
+    if (data.folio_matriz) {
+      docs.push(`Certificado de tradición y libertad de la matrícula inmobiliaria No. ${data.folio_matriz}`);
+    }
+    if (data.numero_escritura && data.fecha_escritura && data.notaria) {
+      docs.push(`Escritura pública No. ${data.numero_escritura} del ${data.fecha_escritura} de la ${data.notaria}`);
+    }
+  }
+  if (data.tipo_mutacion === "quinta_clase" && data.fecha_compraventa && data.entidad_compraventa) {
+    docs.push(`Documento de compraventa del ${data.fecha_compraventa} de la ${data.entidad_compraventa}`);
+  }
+  if (
+    (data.tipo_mutacion === "primera_clase" || data.tipo_mutacion === "complementacion" || data.tipo_mutacion === "rectificacion") &&
+    data.fuente_administrativa_tipo && data.fuente_administrativa_tipo !== "sin_documento" &&
+    data.fuente_administrativa_numero && data.fuente_administrativa_fecha && data.fuente_administrativa_ente_emisor
+  ) {
+    const label = FUENTES_ADMINISTRATIVAS.find(f => f.value === data.fuente_administrativa_tipo)?.label ?? "Documento";
+    docs.push(`${label} No. ${data.fuente_administrativa_numero} del ${data.fuente_administrativa_fecha} de ${data.fuente_administrativa_ente_emisor}`);
+  }
+  return docs;
+}
+
 // ── Mock data ────────────────────────────────────────────────────────────────
 const MOCKS: Record<string, Partial<SolicitudFormData>> = {
   primera_clase_propietario: {
     nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
     numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
-    documentos_aportados: ["Sentencia SN del 2018-11-27 Juzgado Tercero Civil Municipal de Montería, debidamente registrada en el folio de matrícula inmobiliaria 140-38712"],
+    fuente_administrativa_tipo: "sentencia_judicial", fuente_administrativa_numero: "SN",
+    fuente_administrativa_fecha: "27/11/2018", fuente_administrativa_ente_emisor: "Juzgado Tercero Civil Municipal de Montería",
+    documentos_aportados: [],
   },
   primera_clase_autorizado: {
     nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ", cedula_solicitante: "1.234.567",
     nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
     numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
-    documentos_aportados: ["Sentencia SN del 2018-11-27 Juzgado Tercero Civil Municipal de Montería, debidamente registrada en el folio de matrícula inmobiliaria 140-38712"],
+    fuente_administrativa_tipo: "sentencia_judicial", fuente_administrativa_numero: "SN",
+    fuente_administrativa_fecha: "27/11/2018", fuente_administrativa_ente_emisor: "Juzgado Tercero Civil Municipal de Montería",
+    documentos_aportados: [],
   },
   primera_clase_poder: {
     nombre_solicitante: "JORGE LUIS MARTINEZ RUIZ", tipo_doc_solicitante: "CC",
     cedula_solicitante: "9.876.543", tp_solicitante: "45678",
     nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
     numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
-    documentos_aportados: ["Poder especial No. 0826 del 31/12/2015 de la GOBERNACION DE CORDOBA, debidamente registrada en el folio de matrícula inmobiliaria 140-38712"],
+    fuente_administrativa_tipo: "documento_privado", fuente_administrativa_numero: "0826",
+    fuente_administrativa_fecha: "31/12/2015", fuente_administrativa_ente_emisor: "Gobernación de Córdoba",
+    documentos_aportados: [],
   },
   primera_clase_snr: {
     numero_radicado: "2024-3312", numero_predial: "23001000100039002700000",
     folio_matricula: "140-133775", municipio: "Montería",
-    documentos_aportados: ["Escritura pública No. 1053 del 23/11/2023 de la Notaría Cuarta de Montería, debidamente registrada en el folio de matrícula inmobiliaria 140-133775"],
+    fuente_administrativa_tipo: "escritura_publica", fuente_administrativa_numero: "1053",
+    fuente_administrativa_fecha: "23/11/2023", fuente_administrativa_ente_emisor: "Notaría Cuarta de Montería",
+    documentos_aportados: [],
   },
   segunda_clase_propietario: {
     nombre_propietario: "JUAN CARLOS HERRERA OQUENDO", cedula_propietario: "78.027.389",
@@ -119,7 +182,7 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
   },
   tercera_clase_propietario: {
     nombre_propietario: "María Fernanda Gómez Restrepo", cedula_propietario: "43512876",
-    numero_predial: "05001000200000010001000", folio_matricula: "001-123456",
+    numero_predial: "05001000200000010001000", folio_matricula: "140-123456",
     area_construida_m2: 95.5, area_terreno_m2: 120,
     documentos_aportados: ["Formulario de solicitud", "Copia cédula de ciudadanía", "Licencia de construcción"],
   },
@@ -127,31 +190,39 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
     nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
     numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
     campo_rectificado: "el área construida",
-    documentos_aportados: ["Certificado de tradición y libertad 140-38712", "Copia cédula de ciudadanía"],
+    fuente_administrativa_tipo: "escritura_publica", fuente_administrativa_numero: "1053",
+    fuente_administrativa_fecha: "23/11/2023", fuente_administrativa_ente_emisor: "Notaría Cuarta de Montería",
+    documentos_aportados: [],
   },
   rectificacion_autorizado: {
     nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ", cedula_solicitante: "1.234.567",
     nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
     numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
     campo_rectificado: "la dirección",
-    documentos_aportados: ["Certificado de tradición y libertad 140-38712", "Documento de autorización"],
+    fuente_administrativa_tipo: "documento_publico", fuente_administrativa_numero: "045",
+    fuente_administrativa_fecha: "10/02/2022", fuente_administrativa_ente_emisor: "Curaduría Urbana Primera de Montería",
+    documentos_aportados: [],
   },
   rectificacion_oficio: {
     numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
     campo_rectificado: "el propietario",
-    documentos_aportados: ["Certificado de tradición y libertad 140-38712"],
+    fuente_administrativa_tipo: "sentencia_judicial", fuente_administrativa_numero: "SN",
+    fuente_administrativa_fecha: "15/05/2021", fuente_administrativa_ente_emisor: "Juzgado Segundo de Familia de Montería",
+    documentos_aportados: [],
   },
   complementacion_propietario: {
     nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
     numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
     numero_radicado: "2024-1528",
     campo_complementado: "propietario",
-    documentos_aportados: ["Certificado de tradición y libertad 140-38712", "Copia cédula de ciudadanía"],
+    documentos_aportados: ["Certificado de tradición y libertad", "Cédula de ciudadanía"],
   },
   complementacion_snr: {
     numero_radicado: "2024-3312", numero_predial: "23001000100039002700000",
     folio_matricula: "140-133775", municipio: "Montería",
-    documentos_aportados: ["Escritura pública No. 1053 del 23/11/2023 de la Notaría Cuarta de Montería"],
+    fuente_administrativa_tipo: "escritura_publica", fuente_administrativa_numero: "1053",
+    fuente_administrativa_fecha: "23/11/2023", fuente_administrativa_ente_emisor: "Notaría Cuarta de Montería",
+    documentos_aportados: [],
   },
   cancelacion_propietario: {
     nombre_propietario: "DAYAN FERNANDO BAENA ESCORCIA", cedula_propietario: "1.067.946.214",
@@ -294,6 +365,29 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
+/** Círculo registral de Montería: se antepone solo, el usuario solo digita el número de folio. */
+const CIRCULO_REGISTRAL = "140-";
+
+function FolioInput({ value, onChange, onKeyDown }: { value: string; onChange: (v: string) => void; onKeyDown?: React.KeyboardEventHandler<HTMLInputElement> }) {
+  const sufijo = value.startsWith(CIRCULO_REGISTRAL) ? value.slice(CIRCULO_REGISTRAL.length) : value;
+  return (
+    <div className="w-full flex items-center bg-brand-muted border border-slate-600 rounded-lg pl-3 pr-1 focus-within:ring-2 focus-within:ring-brand-primary focus-within:border-transparent transition-all">
+      <span className="text-sm text-slate-500 font-medium select-none shrink-0">{CIRCULO_REGISTRAL}</span>
+      <input
+        className="flex-1 min-w-0 bg-transparent border-0 outline-none py-2 pl-0.5 pr-2 text-sm text-brand-text placeholder-slate-500"
+        value={sufijo}
+        onChange={e => {
+          let v = e.target.value;
+          if (v.startsWith(CIRCULO_REGISTRAL)) v = v.slice(CIRCULO_REGISTRAL.length);
+          onChange(CIRCULO_REGISTRAL + v);
+        }}
+        onKeyDown={onKeyDown}
+        placeholder="XXXXX"
+      />
+    </div>
+  );
+}
+
 export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLoading, contextoInicial }: Props) {
   const mockKey = `${tipoMutacion}_${tipoOrigen}`;
   const [data, setData] = useState<SolicitudFormData>({
@@ -303,6 +397,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
     parrafos_informe_tecnico: [],
     contexto_adicional: contextoInicial ?? "",
   });
+  const [asistenteAbierto, setAsistenteAbierto] = useState(!!contextoInicial);
   const [newDoc, setNewDoc] = useState("");
   const [newFolio, setNewFolio] = useState("");
   const [newParrafo, setNewParrafo] = useState("");
@@ -313,6 +408,28 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
   const set = (k: keyof SolicitudFormData, v: unknown) => setData(p => ({ ...p, [k]: v }));
   const loadMock = () => setData(p => ({ ...p, ...MOCKS[mockKey] }));
 
+  const autoDocsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const nuevos = documentosAutomaticos(data);
+    const nuevosSet = new Set(nuevos);
+    const anteriores = autoDocsRef.current;
+    const sinCambios = anteriores.size === nuevosSet.size && Array.from(anteriores).every((d) => nuevosSet.has(d));
+    if (sinCambios) return;
+    autoDocsRef.current = nuevosSet;
+    setData((p) => {
+      const conservados = p.documentos_aportados.filter((d) => !anteriores.has(d));
+      const combinados = [...conservados];
+      for (const d of nuevos) if (!combinados.includes(d)) combinados.push(d);
+      return { ...p, documentos_aportados: combinados };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    data.tipo_mutacion, data.folio_matriz, data.numero_escritura, data.fecha_escritura, data.notaria,
+    data.fecha_compraventa, data.entidad_compraventa,
+    data.fuente_administrativa_tipo, data.fuente_administrativa_numero,
+    data.fuente_administrativa_fecha, data.fuente_administrativa_ente_emisor,
+  ]);
+
   const addDoc = (doc?: string) => {
     const d = (doc ?? newDoc).trim();
     if (!d || data.documentos_aportados.includes(d)) return;
@@ -321,6 +438,12 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
   };
   const removeDoc = (i: number) =>
     setData(p => ({ ...p, documentos_aportados: p.documentos_aportados.filter((_, idx) => idx !== i) }));
+  const toggleDoc = (doc: string) => {
+    const i = data.documentos_aportados.indexOf(doc);
+    if (i === -1) addDoc(doc); else removeDoc(i);
+  };
+  const [modalDocsAbierto, setModalDocsAbierto] = useState(false);
+  const [docModalInput, setDocModalInput] = useState("");
 
   const addFolio = () => {
     const f = newFolio.trim();
@@ -357,6 +480,20 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
   const needsPropietario = (tipoMutacion === "cancelacion" || tipoMutacion === "quinta_clase") ? true : (tipoOrigen !== "snr" && tipoOrigen !== "oficio");
   const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder";
   const needsRadicado    = tipoOrigen === "snr" || tipoMutacion === "complementacion";
+  const usaFuenteAdministrativa = tipoMutacion === "primera_clase" || tipoMutacion === "complementacion" || tipoMutacion === "rectificacion";
+  const fuenteVacia = !data.fuente_administrativa_tipo;
+  const fuenteSinDocumento = data.fuente_administrativa_tipo === "sin_documento";
+  const detalleFuenteDeshabilitado = fuenteVacia || fuenteSinDocumento;
+
+  const setFuenteTipo = (tipo: string) => {
+    setData(p => ({
+      ...p,
+      fuente_administrativa_tipo: tipo,
+      ...(tipo === "" || tipo === "sin_documento"
+        ? { fuente_administrativa_numero: "", fuente_administrativa_fecha: "", fuente_administrativa_ente_emisor: "" }
+        : {}),
+    }));
+  };
 
   // ── Validation ────────────────────────────────────────────────
   const canSubmit = (() => {
@@ -404,23 +541,33 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
         </button>
       </div>
 
-      {/* ── Análisis del asistente IA ── */}
-      <div className="card p-5 space-y-3">
-        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
-          Análisis del asistente (opcional)
-        </h3>
-        <p className="text-xs text-slate-500">
-          Si vienes del chat, aquí está la conclusión que te dio el Asistente Catastral. Puedes editarla —
-          se usará como fundamento al redactar la motivada.
-        </p>
-        <textarea
-          className="field-input min-h-[100px] resize-y text-sm"
-          value={data.contexto_adicional ?? ""}
-          onChange={e => set("contexto_adicional", e.target.value)}
-          placeholder="Pega o edita aquí el razonamiento que quieres usar como base de la motivada..."
-        />
+      {/* ── Análisis del asistente IA (desplegable) ── */}
+      <div className="card p-5">
+        <button
+          type="button"
+          onClick={() => setAsistenteAbierto(o => !o)}
+          className="w-full flex items-center justify-between gap-3 text-left"
+        >
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Análisis del asistente (opcional)</h3>
+          <ChevronDown size={16} className={clsx("text-slate-500 shrink-0 transition-transform", asistenteAbierto && "rotate-180")} />
+        </button>
+        {asistenteAbierto && (
+          <div className="space-y-3 mt-3 pt-3 border-t border-slate-700">
+            <p className="text-xs text-slate-500">
+              Si vienes del chat, aquí está la conclusión que te dio el Asistente Catastral. Puedes editarla —
+              se usará como fundamento al redactar la motivada.
+            </p>
+            <textarea
+              className="field-input min-h-[100px] resize-y text-sm"
+              value={data.contexto_adicional ?? ""}
+              onChange={e => set("contexto_adicional", e.target.value)}
+              placeholder="Pega o edita aquí el razonamiento que quieres usar como base de la motivada..."
+            />
+          </div>
+        )}
       </div>
 
+      <div className="grid gap-5 xl:grid-cols-2 items-start">
       {/* ── SNR ── */}
       {tipoOrigen === "snr" && (
         <div className="card p-5 space-y-4">
@@ -494,7 +641,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
             <input className={clsx(inp, "font-mono text-xs")} value={data.numero_predial} onChange={e => set("numero_predial", e.target.value)} placeholder="Código catastral" />
           </Field>
           <Field label="Folio de matrícula inmobiliaria" required>
-            <input className={inp} value={data.folio_matricula} onChange={e => set("folio_matricula", e.target.value)} placeholder="140-XXXXX" />
+            <FolioInput value={data.folio_matricula} onChange={v => set("folio_matricula", v)} />
           </Field>
           {/* Radicado para complementación propietario */}
           {needsRadicado && tipoOrigen !== "snr" && (
@@ -511,7 +658,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Desenglobe</h3>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Folio matriz" required>
-              <input className={inp} value={data.folio_matriz ?? ""} onChange={e => set("folio_matriz", e.target.value)} placeholder="140-XXXXX" />
+              <FolioInput value={data.folio_matriz ?? ""} onChange={v => set("folio_matriz", v)} />
             </Field>
             <Field label="Número de escritura" required>
               <input className={inp} value={data.numero_escritura ?? ""} onChange={e => set("numero_escritura", e.target.value)} placeholder="1308" />
@@ -535,8 +682,9 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
               ))}
             </div>
             <div className="flex gap-2 mt-1.5">
-              <input className={clsx(inp, "flex-1")} value={newFolio} onChange={e => setNewFolio(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addFolio())} placeholder="140-XXXXX" />
+              <div className="flex-1">
+                <FolioInput value={newFolio} onChange={setNewFolio} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addFolio())} />
+              </div>
               <button type="button" onClick={addFolio} className="btn-ghost px-3"><Plus size={16} /></button>
             </div>
           </Field>
@@ -691,34 +839,150 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
           </Field>
         </div>
       )}
+      </div>
 
       {/* ── Documentos ── */}
       <div className="card p-5 space-y-3">
         <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Documentos justificativos</h3>
-        <div className="flex flex-wrap gap-1.5">
-          {(DOCS_RAPIDOS[tipoMutacion] ?? []).filter(d => !data.documentos_aportados.includes(d)).map(doc => (
-            <button key={doc} type="button" onClick={() => addDoc(doc)}
-              className="text-xs px-2.5 py-1 rounded-full border border-slate-600 text-slate-400 hover:border-brand-primary hover:text-brand-primary transition-all">
-              + {doc}
+
+        {usaFuenteAdministrativa ? (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Fuente administrativa">
+                <select className={inp} value={data.fuente_administrativa_tipo ?? ""} onChange={e => setFuenteTipo(e.target.value)}>
+                  <option value="">Fuente administrativa</option>
+                  {FUENTES_ADMINISTRATIVAS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </select>
+              </Field>
+              <Field label="N°">
+                <input
+                  className={clsx(inp, detalleFuenteDeshabilitado && "opacity-50 cursor-not-allowed")} disabled={detalleFuenteDeshabilitado}
+                  value={data.fuente_administrativa_numero ?? ""}
+                  onChange={e => set("fuente_administrativa_numero", e.target.value)}
+                  placeholder="N°"
+                />
+              </Field>
+              <Field label="Fecha">
+                <input
+                  className={clsx(inp, detalleFuenteDeshabilitado && "opacity-50 cursor-not-allowed")} disabled={detalleFuenteDeshabilitado}
+                  value={data.fuente_administrativa_fecha ?? ""}
+                  onChange={e => set("fuente_administrativa_fecha", e.target.value)}
+                  placeholder="DD/MM/AAAA"
+                />
+              </Field>
+              <Field label="Ente emisor">
+                <input
+                  className={clsx(inp, detalleFuenteDeshabilitado && "opacity-50 cursor-not-allowed")} disabled={detalleFuenteDeshabilitado}
+                  value={data.fuente_administrativa_ente_emisor ?? ""}
+                  onChange={e => set("fuente_administrativa_ente_emisor", e.target.value)}
+                  placeholder="Ente emisor"
+                />
+              </Field>
+            </div>
+            <button type="button" onClick={() => setModalDocsAbierto(true)} className="btn-primary">
+              <ListChecks size={15} />Elegir documentos aportados
             </button>
-          ))}
-        </div>
+          </>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {(DOCS_RAPIDOS[tipoMutacion] ?? []).filter(d => !data.documentos_aportados.includes(d)).map(doc => (
+              <button key={doc} type="button" onClick={() => addDoc(doc)}
+                className="text-xs px-2.5 py-1 rounded-full border border-slate-600 text-slate-400 hover:border-brand-primary hover:text-brand-primary transition-all">
+                + {doc}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="space-y-1.5">
-          {data.documentos_aportados.map((doc, i) => (
-            <div key={i} className="flex items-center gap-2 group">
-              <span className="flex-1 text-sm text-slate-300 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50">{doc}</span>
-              <button type="button" onClick={() => removeDoc(i)} className="opacity-0 group-hover:opacity-100 p-1 text-brand-danger hover:bg-red-500/10 rounded transition-all">
-                <Minus size={14} />
+          {data.documentos_aportados.map((doc, i) => {
+            const esAuto = autoDocsRef.current.has(doc);
+            return (
+              <div key={i} className="flex items-center gap-2 group">
+                <span className="flex-1 text-sm text-slate-300 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/50 flex items-center gap-2">
+                  {esAuto && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-primary border border-brand-primary/40 rounded px-1.5 py-0.5 shrink-0">
+                      Auto
+                    </span>
+                  )}
+                  {doc}
+                </span>
+                <button type="button" onClick={() => removeDoc(i)} className="opacity-0 group-hover:opacity-100 p-1 text-brand-danger hover:bg-red-500/10 rounded transition-all">
+                  <Minus size={14} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {!usaFuenteAdministrativa && (
+          <div className="flex gap-2">
+            <input className={clsx(inp, "flex-1")} value={newDoc} onChange={e => setNewDoc(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addDoc())} placeholder="Otro documento..." />
+            <button type="button" onClick={() => addDoc()} className="btn-ghost px-3"><Plus size={16} /></button>
+          </div>
+        )}
+        {(tipoMutacion === "segunda_clase" || tipoMutacion === "quinta_clase" || usaFuenteAdministrativa) && (
+          <p className="text-xs text-slate-500">
+            Los marcados <span className="text-brand-primary font-medium">Auto</span> se redactan solos con los datos
+            que ya llenaste arriba — si no aplican para este caso, quítalos a mano.
+          </p>
+        )}
+      </div>
+
+      {modalDocsAbierto && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70" onClick={() => setModalDocsAbierto(false)}>
+          <div
+            className="card w-full sm:max-w-lg max-h-[85vh] overflow-y-auto rounded-b-none sm:rounded-xl p-5 space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-brand-text">Documentos aportados</h3>
+                <p className="text-xs text-slate-500">Toca para sumarlos a la lista</p>
+              </div>
+              <button type="button" onClick={() => setModalDocsAbierto(false)} className="p-1.5 rounded-lg text-slate-500 hover:text-brand-text hover:bg-slate-700/50">
+                <X size={16} />
               </button>
             </div>
-          ))}
+
+            <div className="flex flex-wrap gap-1.5">
+              {DOCS_JUSTIFICATIVOS_CATALOGO.map(doc => {
+                const activo = data.documentos_aportados.includes(doc);
+                return (
+                  <button
+                    key={doc} type="button" onClick={() => toggleDoc(doc)}
+                    className={clsx(
+                      "text-xs px-2.5 py-1.5 rounded-full border transition-all",
+                      activo
+                        ? "bg-brand-primary border-brand-primary text-white"
+                        : "border-slate-600 text-slate-400 hover:border-brand-primary hover:text-brand-primary",
+                    )}
+                  >
+                    {activo ? "✓ " : "+ "}{doc}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-slate-700">
+              <input
+                className={clsx(inp, "flex-1")}
+                value={docModalInput} onChange={e => setDocModalInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && (e.preventDefault(), (addDoc(docModalInput), setDocModalInput("")))}
+                placeholder="Otro documento que no esté en la lista..."
+              />
+              <button type="button" onClick={() => { addDoc(docModalInput); setDocModalInput(""); }} className="btn-ghost px-3">
+                <Plus size={16} />
+              </button>
+            </div>
+
+            <button type="button" onClick={() => setModalDocsAbierto(false)} className="btn-primary w-full justify-center">
+              Listo
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <input className={clsx(inp, "flex-1")} value={newDoc} onChange={e => setNewDoc(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addDoc())} placeholder="Otro documento..." />
-          <button type="button" onClick={() => addDoc()} className="btn-ghost px-3"><Plus size={16} /></button>
-        </div>
-      </div>
+      )}
 
       {/* ── Artículos finales ── */}
       <div className="card p-5 space-y-3">
@@ -743,7 +1007,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
         </div>
         {data.tipo_notificacion && (
           <p className="text-xs text-slate-500">
-            Se agregarán los artículos segundo al sexto + COMUNÍQUESE Y CÚMPLASE al final de la motivada.
+            Se agregarán los artículos segundo al quinto + COMUNÍQUESE Y CÚMPLASE al final de la motivada.
           </p>
         )}
       </div>

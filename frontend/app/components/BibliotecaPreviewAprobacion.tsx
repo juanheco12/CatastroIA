@@ -3,26 +3,69 @@
 import { useEffect, useState } from "react";
 import {
   obtenerDetallePlantilla, previewGeneracionPlantilla, generarFinalPlantilla, downloadBase64Docx, extractErrorMessage,
-  PlantillaDetalle, PreviewGeneracionResponse, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
+  eliminarPlantilla,
+  PlantillaDetalle, CampoVariable, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
-import { RefreshCw, AlertCircle, FileText, Download, Eye, ArrowLeft } from "lucide-react";
+import { RefreshCw, AlertCircle, Wand2, Download, ArrowLeft, Trash2, CheckCircle, FileText, Tag, Eye } from "lucide-react";
+import CopyButton from "./CopyButton";
+import clsx from "clsx";
 
 interface BibliotecaPreviewAprobacionProps {
   plantillaId: number;
   onVolver: () => void;
+  /** Lleva al usuario a la pestaña Revisión con esta plantilla ya seleccionada,
+   * para marcar/ajustar sus campos variables (la plantilla sigue activa mientras tanto). */
+  onEditarCampos?: (plantillaId: number) => void;
 }
 
-export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: BibliotecaPreviewAprobacionProps) {
+interface ResultadoGeneracion {
+  texto: string;
+  campos_reemplazados: { campo_id: number; tipo_campo: string; valor_anterior: string; valor_nuevo: string }[];
+  docx: { filename: string; content_base64: string };
+}
+
+interface GrupoCampo {
+  key: string;
+  tipoCampo: string;
+  textoOriginal: string;
+  campoIds: number[];
+  offsetMin: number;
+}
+
+/** Varios campos confirmados pueden compartir el mismo tipo y el mismo valor
+ * original (la misma cédula/predial repetida varias veces en el documento) —
+ * se agrupan en un solo input para que el usuario lo escriba una vez y se
+ * aplique a todas las ocurrencias, en vez de pedirle lo mismo N veces. El
+ * orden de los grupos sigue su primera aparición en el texto. */
+function agruparCampos(campos: CampoVariable[]): GrupoCampo[] {
+  const mapa = new Map<string, GrupoCampo>();
+  for (const c of campos) {
+    const key = `${c.tipo_campo}::${c.texto_original}`;
+    const existente = mapa.get(key);
+    if (existente) {
+      existente.campoIds.push(c.id);
+      existente.offsetMin = Math.min(existente.offsetMin, c.offset_inicio);
+    } else {
+      mapa.set(key, {
+        key, tipoCampo: c.tipo_campo, textoOriginal: c.texto_original,
+        campoIds: [c.id], offsetMin: c.offset_inicio,
+      });
+    }
+  }
+  return Array.from(mapa.values()).sort((a, b) => a.offsetMin - b.offsetMin);
+}
+
+export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onEditarCampos }: BibliotecaPreviewAprobacionProps) {
   const [detalle, setDetalle] = useState<PlantillaDetalle | null>(null);
   const [loading, setLoading] = useState(true);
   const [valores, setValores] = useState<Record<number, string>>({});
   const [tipoTramiteManual, setTipoTramiteManual] = useState("");
 
-  const [preview, setPreview] = useState<PreviewGeneracionResponse | null>(null);
-  const [generandoPreview, setGenerandoPreview] = useState(false);
-  const [generandoFinal, setGenerandoFinal] = useState(false);
+  const [resultado, setResultado] = useState<ResultadoGeneracion | null>(null);
+  const [generando, setGenerando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [listo, setListo] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
+  const [grupoEnfocado, setGrupoEnfocado] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -38,36 +81,50 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
       .finally(() => setLoading(false));
   }, [plantillaId]);
 
-  const handleCambioValor = (campoId: number, valor: string) => {
-    setValores((prev) => ({ ...prev, [campoId]: valor }));
-    setPreview(null);
-    setListo(false);
+  const handleCambioValor = (campoIds: number[], valor: string) => {
+    setValores((prev) => {
+      const next = { ...prev };
+      for (const id of campoIds) next[id] = valor;
+      return next;
+    });
+    setResultado(null);
   };
 
-  const handlePreview = async () => {
-    setGenerandoPreview(true);
+  const handleGenerar = async () => {
+    setGenerando(true);
     setError(null);
     try {
-      const res = await previewGeneracionPlantilla(plantillaId, valores, tipoTramiteManual || undefined);
-      setPreview(res);
-      setListo(true);
+      const [preview, final] = await Promise.all([
+        previewGeneracionPlantilla(plantillaId, valores, tipoTramiteManual || undefined),
+        generarFinalPlantilla(plantillaId, valores, tipoTramiteManual || undefined),
+      ]);
+      setResultado({
+        texto: preview.texto_previsto,
+        campos_reemplazados: preview.campos_reemplazados,
+        docx: final,
+      });
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, "Error al generar la vista previa."));
+      setError(extractErrorMessage(err, "Error al generar la motivada."));
     } finally {
-      setGenerandoPreview(false);
+      setGenerando(false);
     }
   };
 
-  const handleGenerarFinal = async () => {
-    setGenerandoFinal(true);
+  const handleEliminar = async () => {
+    if (!detalle) return;
+    const confirmado = window.confirm(
+      `¿Eliminar "${detalle.nombre_original}" de la biblioteca? Esta acción no se puede deshacer.`
+    );
+    if (!confirmado) return;
+    setEliminando(true);
     setError(null);
     try {
-      const res = await generarFinalPlantilla(plantillaId, valores, tipoTramiteManual || undefined);
-      downloadBase64Docx(res.content_base64, res.filename);
+      await eliminarPlantilla(detalle.id);
+      onVolver();
     } catch (err: unknown) {
-      setError(extractErrorMessage(err, "Error al generar el documento final."));
+      setError(extractErrorMessage(err, "Error al eliminar la plantilla."));
     } finally {
-      setGenerandoFinal(false);
+      setEliminando(false);
     }
   };
 
@@ -88,12 +145,58 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
   }
 
   const camposConfirmados = detalle.campos.filter((c) => c.confirmado);
+  const grupos = agruparCampos(camposConfirmados);
+  const totalPorTipo = new Map<string, number>();
+  for (const g of grupos) totalPorTipo.set(g.tipoCampo, (totalPorTipo.get(g.tipoCampo) ?? 0) + 1);
+  const indicePorTipo: Record<string, number> = {};
+
+  const grupoPorCampoId = new Map<number, string>();
+  for (const g of grupos) for (const id of g.campoIds) grupoPorCampoId.set(id, g.key);
+
+  const renderVistaPrevia = () => {
+    const texto = detalle.contenido_texto;
+    const ordenados = [...camposConfirmados].sort((a, b) => a.offset_inicio - b.offset_inicio);
+    const nodos: React.ReactNode[] = [];
+    let cursor = 0;
+    for (const c of ordenados) {
+      if (c.offset_inicio < cursor) continue; // overlap defensivo
+      if (c.offset_inicio > cursor) nodos.push(texto.slice(cursor, c.offset_inicio));
+      const valor = valores[c.id] ?? c.texto_original;
+      const enfocado = grupoPorCampoId.get(c.id) === grupoEnfocado;
+      nodos.push(
+        <span
+          key={c.id}
+          className={clsx(
+            "rounded px-0.5 transition-colors",
+            enfocado ? "bg-amber-400 text-slate-900 font-semibold ring-2 ring-amber-300" : "bg-teal-500/25 text-teal-200"
+          )}
+        >
+          {valor}
+        </span>
+      );
+      cursor = c.offset_fin;
+    }
+    if (cursor < texto.length) nodos.push(texto.slice(cursor));
+    return nodos;
+  };
+
+  const mostrarVistaPrevia = camposConfirmados.length > 0 && !resultado;
 
   return (
     <div className="space-y-5">
-      <button type="button" onClick={onVolver} className="flex items-center gap-1.5 text-xs btn-ghost px-2 py-1">
-        <ArrowLeft size={13} />Volver a buscar
-      </button>
+      <div className="flex items-center justify-between gap-2">
+        <button type="button" onClick={onVolver} className="flex items-center gap-1.5 text-xs btn-ghost px-2 py-1">
+          <ArrowLeft size={13} />Volver a buscar
+        </button>
+        <button
+          type="button"
+          onClick={handleEliminar}
+          disabled={eliminando}
+          className="flex items-center gap-1.5 text-xs btn-ghost px-2 py-1 text-brand-danger"
+        >
+          <Trash2 size={13} />{eliminando ? "Eliminando..." : "Eliminar plantilla"}
+        </button>
+      </div>
 
       <div>
         <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>{detalle.nombre_original}</h2>
@@ -102,45 +205,104 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
         </p>
       </div>
 
-      <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-          Datos del caso nuevo
-        </p>
-        {camposConfirmados.length === 0 && (
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            Esta plantilla no tiene campos variables confirmados — se generará el documento original sin cambios.
+      <div className={clsx("grid gap-6", mostrarVistaPrevia && "md:grid-cols-2")}>
+        <div className="space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+            Datos del caso nuevo
           </p>
-        )}
-        <div className="grid sm:grid-cols-2 gap-3">
-          {camposConfirmados.map((c) => (
-            <div key={c.id}>
-              <label className="field-label">{labelTipoCampo(c.tipo_campo)}</label>
-              <input
-                className="field-input"
-                value={valores[c.id] ?? ""}
-                onChange={(e) => handleCambioValor(c.id, e.target.value)}
-                placeholder={c.texto_original}
-              />
+          {camposConfirmados.length === 0 && (
+            <div className="flex items-start gap-2 p-3 rounded-lg border bg-amber-500/5" style={{ borderColor: "var(--border)" }}>
+              <Tag size={15} className="shrink-0 mt-0.5 text-amber-400" />
+              <div>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  Esta plantilla todavía no tiene campos variables marcados — no hay datos que puedas personalizar
+                  para este caso; se generaría el documento original sin cambios.
+                </p>
+                {onEditarCampos && (
+                  <button
+                    type="button"
+                    onClick={() => onEditarCampos(plantillaId)}
+                    className="text-xs font-medium text-brand-primary hover:underline mt-1.5"
+                  >
+                    Marcar campos variables en Revisión
+                  </button>
+                )}
+              </div>
             </div>
-          ))}
+          )}
+          <div className={clsx("grid gap-3", mostrarVistaPrevia ? "sm:grid-cols-2" : "sm:grid-cols-2 xl:grid-cols-3")}>
+            {grupos.map((g) => {
+              const total = totalPorTipo.get(g.tipoCampo) ?? 1;
+              indicePorTipo[g.tipoCampo] = (indicePorTipo[g.tipoCampo] ?? 0) + 1;
+              const sufijo = total > 1 ? ` (${indicePorTipo[g.tipoCampo]}/${total})` : "";
+              const esLargo = g.tipoCampo === "documentos_aportados" || g.textoOriginal.length > 60;
+              return (
+                <div
+                  key={g.key}
+                  className={clsx("p-3 rounded-lg border", esLargo && "sm:col-span-2")}
+                  style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}
+                >
+                  <label className="field-label">{labelTipoCampo(g.tipoCampo)}{sufijo}</label>
+                  {esLargo ? (
+                    <textarea
+                      className="field-input min-h-[70px] resize-y"
+                      value={valores[g.campoIds[0]] ?? ""}
+                      onChange={(e) => handleCambioValor(g.campoIds, e.target.value)}
+                      onFocus={() => setGrupoEnfocado(g.key)}
+                      onBlur={() => setGrupoEnfocado((prev) => (prev === g.key ? null : prev))}
+                      placeholder={g.textoOriginal}
+                    />
+                  ) : (
+                    <input
+                      className="field-input"
+                      value={valores[g.campoIds[0]] ?? ""}
+                      onChange={(e) => handleCambioValor(g.campoIds, e.target.value)}
+                      onFocus={() => setGrupoEnfocado(g.key)}
+                      onBlur={() => setGrupoEnfocado((prev) => (prev === g.key ? null : prev))}
+                      placeholder={g.textoOriginal}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div>
+            <label className="field-label">Origen de la solicitud (opcional)</label>
+            <select
+              className="field-input"
+              value={tipoTramiteManual}
+              onChange={(e) => { setTipoTramiteManual(e.target.value); setResultado(null); }}
+            >
+              <option value="">Sin especificar</option>
+              {ORIGENES_TRAMITE.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div>
-          <label className="field-label">Origen de la solicitud (opcional)</label>
-          <select
-            className="field-input"
-            value={tipoTramiteManual}
-            onChange={(e) => { setTipoTramiteManual(e.target.value); setPreview(null); setListo(false); }}
-          >
-            <option value="">Sin especificar</option>
-            {ORIGENES_TRAMITE.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
+
+        {mostrarVistaPrevia && (
+          <div className="space-y-2 md:sticky md:top-4 self-start">
+            <p className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
+              <Eye size={13} />Vista previa en vivo
+            </p>
+            <div
+              className="text-sm leading-relaxed rounded-lg border p-4 max-h-[65vh] overflow-y-auto"
+              style={{ borderColor: "var(--border)", whiteSpace: "pre-wrap", color: "var(--text)" }}
+            >
+              {renderVistaPrevia()}
+            </div>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              El campo en el que estás escribiendo se resalta en ámbar — así ves exactamente dónde cae cada dato en el texto.
+            </p>
+          </div>
+        )}
       </div>
 
-      <button type="button" onClick={handlePreview} disabled={generandoPreview} className="btn-ghost">
-        <Eye size={15} />{generandoPreview ? "Generando vista previa..." : "Ver vista previa"}
+      <button type="button" onClick={handleGenerar} disabled={generando} className="btn-primary w-full justify-center py-3.5 text-base">
+        {generando
+          ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />Generando motivada...</>
+          : <><Wand2 size={18} />Generar Motivada</>}
       </button>
 
       {error && (
@@ -149,48 +311,69 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver }: B
         </div>
       )}
 
-      {preview && (
+      {resultado && (
         <div className="space-y-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-              Cambios aplicados
-            </p>
-            <div className="space-y-1">
-              {preview.campos_reemplazados.length === 0 && (
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Sin cambios respecto al texto original.</p>
-              )}
-              {preview.campos_reemplazados.map((c) => (
-                <div key={c.campo_id} className="text-xs flex items-center gap-2 flex-wrap">
-                  <span style={{ color: "var(--text-muted)" }}>{labelTipoCampo(c.tipo_campo)}:</span>
-                  <span className="font-mono line-through text-slate-500">{c.valor_anterior}</span>
-                  <span>→</span>
-                  <span className="font-mono" style={{ color: "var(--text)" }}>{c.valor_nuevo}</span>
-                </div>
-              ))}
-            </div>
+          <div className="flex items-center gap-2" style={{ color: "var(--text)" }}>
+            <CheckCircle size={16} className="text-brand-success" />
+            <p className="text-sm font-semibold">Motivada generada</p>
           </div>
+
+          {resultado.campos_reemplazados.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
+                Cambios aplicados
+              </p>
+              <div className="space-y-1">
+                {resultado.campos_reemplazados.map((c) => (
+                  <div key={c.campo_id} className="text-xs flex items-center gap-2 flex-wrap">
+                    <span style={{ color: "var(--text-muted)" }}>{labelTipoCampo(c.tipo_campo)}:</span>
+                    <span className="font-mono line-through text-slate-500">{c.valor_anterior}</span>
+                    <span>→</span>
+                    <span className="font-mono" style={{ color: "var(--text)" }}>{c.valor_nuevo}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-              Texto completo previsto
+              Motivada
             </p>
             <div
               className="text-sm leading-relaxed rounded-lg border p-4 max-h-[40vh] overflow-y-auto"
               style={{ borderColor: "var(--border)", whiteSpace: "pre-wrap", color: "var(--text)" }}
             >
-              {preview.texto_previsto}
+              {resultado.texto}
             </div>
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
-            <button type="button" onClick={handleGenerarFinal} disabled={!listo || generandoFinal} className="btn-primary">
-              <Download size={15} />
-              {generandoFinal ? "Generando documento..." : "Aprobar y generar documento final"}
+          <CopyButton getText={() => resultado.texto} label="Copiar motivada" />
+
+          <button
+            type="button"
+            onClick={() => downloadBase64Docx(resultado.docx.content_base64, resultado.docx.filename)}
+            className="flex items-center gap-1.5 text-xs btn-ghost px-2 py-1"
+          >
+            <Download size={13} />Descargar también el .docx (opcional)
+          </button>
+          <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
+            <FileText size={12} />
+            El texto ya tiene los datos de este caso sustituidos — el formato jurídico nunca se reescribe.
+          </p>
+
+          <div className="pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+            <p className="text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>
+              ¿Esta plantilla quedó mal configurada (campos incorrectos, texto erróneo)?
+            </p>
+            <button
+              type="button"
+              onClick={handleEliminar}
+              disabled={eliminando}
+              className="flex items-center gap-1.5 text-xs btn-ghost px-2 py-1 text-brand-danger"
+            >
+              <Trash2 size={13} />{eliminando ? "Eliminando..." : "Eliminar esta plantilla de la biblioteca"}
             </button>
-            <span className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
-              <FileText size={12} />
-              Revisa el texto antes de aprobar — la descarga genera el .docx final con el mismo formato del original.
-            </span>
           </div>
         </div>
       )}

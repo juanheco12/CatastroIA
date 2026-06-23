@@ -252,6 +252,7 @@ export const TIPOS_CAMPO_VARIABLE: { value: string; label: string }[] = [
   { value: "oficina_registro", label: "Oficina de registro" },
   { value: "area", label: "Área" },
   { value: "fecha", label: "Fecha" },
+  { value: "documentos_aportados", label: "Documentos aportados" },
   { value: "otro", label: "Otro" },
 ];
 

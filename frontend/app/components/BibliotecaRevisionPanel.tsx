@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  pendientesRevision, obtenerDetallePlantilla, aprobarPlantilla, marcarPlantillaAtipico, extractErrorMessage,
+  pendientesRevision, obtenerDetallePlantilla, aprobarPlantilla, marcarPlantillaAtipico,
+  eliminarPlantilla, eliminarTodasPlantillas, extractErrorMessage,
   PlantillaInfo, PlantillaDetalle, CampoManualInput,
   CATEGORIAS_MOTIVADA, TIPOS_CAMPO_VARIABLE, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
 import {
   RefreshCw, AlertCircle, FileWarning, CheckCircle2, MousePointerClick,
-  X, ClipboardList, Tag, Info, CheckCheck,
+  X, ClipboardList, Tag, Info, CheckCheck, Trash2,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -28,6 +29,47 @@ interface CampoVisual {
   confirmado: boolean;
   campoId?: number;
   manualIndex?: number;
+}
+
+/** Palabras clave que suelen anteceder cada tipo de campo en estos documentos
+ * ("Referencia catastral: XXX", "Documentos aportados: ..."). Al marcar un
+ * campo a mano se mira el texto que queda justo antes de la selección: si
+ * coincide con alguna de estas anclas, se usa ESE tipo en vez de confiar a
+ * ciegas en lo que haya quedado seleccionado en el desplegable — la misma
+ * selección repetida sin cambiar el desplegable es la causa real de campos
+ * mal etiquetados (p. ej. una referencia catastral marcada como "nombre del
+ * propietario" solo porque el desplegable se quedó en ese valor). Se prioriza
+ * la ancla más cercana a la selección cuando hay varias en la ventana. */
+const ANCLAS_CONTEXTO_CAMPO: { pat: RegExp; tipo: string }[] = [
+  { pat: /referencia\s+catastral|n[uú]mero\s+predial|c[eé]dula\s+catastral/gi, tipo: "numero_predial" },
+  { pat: /documentos?\s*\(?s?\)?\s*aportados?\s*\(?s?\)?/gi, tipo: "documentos_aportados" },
+  { pat: /matr[ií]cula(?:\s+inmobiliaria)?/gi, tipo: "matricula_inmobiliaria" },
+  { pat: /c[eé]dula(?:\s+de\s+ciudadan[ií]a)?|\bNIT\b/gi, tipo: "identificacion" },
+  { pat: /radicado/gi, tipo: "radicado" },
+  { pat: /escritura\s+p[uú]blica/gi, tipo: "escritura" },
+  { pat: /resoluci[oó]n/gi, tipo: "numero_resolucion" },
+  { pat: /oficina\s+de\s+registro/gi, tipo: "oficina_registro" },
+  { pat: /direcci[oó]n|ubicado\s+en|predio\s+ubicado/gi, tipo: "direccion" },
+  { pat: /[aá]rea/gi, tipo: "area" },
+  { pat: /fecha/gi, tipo: "fecha" },
+  { pat: /propietario|se[ñn]or(?:a)?|titular|solicitante/gi, tipo: "nombre_propietario" },
+];
+
+const VENTANA_CONTEXTO_CAMPO_MANUAL = 60;
+
+/** Devuelve el tipo de campo sugerido por la ancla de contexto más cercana
+ * (justo antes de la selección), o null si ninguna ancla aparece cerca. */
+function detectarTipoCampoPorContexto(contextoAntes: string): string | null {
+  let mejor: { tipo: string; idx: number } | null = null;
+  for (const { pat, tipo } of ANCLAS_CONTEXTO_CAMPO) {
+    const coincidencias = Array.from(contextoAntes.matchAll(pat));
+    if (coincidencias.length === 0) continue;
+    const ultima = coincidencias[coincidencias.length - 1];
+    const idx = ultima.index ?? -1;
+    if (idx === -1) continue;
+    if (!mejor || idx > mejor.idx) mejor = { tipo, idx };
+  }
+  return mejor?.tipo ?? null;
 }
 
 function calcularOffsetsSeleccion(container: HTMLElement): { inicio: number; fin: number; texto: string } | null {
@@ -69,9 +111,13 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
   const [modoSeleccion, setModoSeleccion] = useState(false);
   const [tipoCampoManualDraft, setTipoCampoManualDraft] = useState("nombre_propietario");
   const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [deteccionAutomatica, setDeteccionAutomatica] = useState<string | null>(null);
 
   const [accionEnCurso, setAccionEnCurso] = useState(false);
   const [accionError, setAccionError] = useState<string | null>(null);
+  const [accionExito, setAccionExito] = useState<string | null>(null);
+  const [eliminandoId, setEliminandoId] = useState<number | null>(null);
+  const [vaciando, setVaciando] = useState(false);
 
   const cargarPendientes = useCallback(async () => {
     setLoadingLista(true);
@@ -92,7 +138,9 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
     setDetalle(null);
     setLoadingDetalle(true);
     setAccionError(null);
+    setAccionExito(null);
     setSelectionError(null);
+    setDeteccionAutomatica(null);
     setCamposManuales([]);
     setModoSeleccion(false);
     try {
@@ -134,13 +182,23 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
     const { inicio, fin, texto } = resultado;
     if (detalle.contenido_texto.slice(inicio, fin).includes("\n")) {
       setSelectionError("La selección cruza un salto de párrafo — no se puede usar como campo.");
+      setDeteccionAutomatica(null);
       return;
     }
     setSelectionError(null);
+    const contextoAntes = detalle.contenido_texto.slice(Math.max(0, inicio - VENTANA_CONTEXTO_CAMPO_MANUAL), inicio);
+    const tipoDetectado = detectarTipoCampoPorContexto(contextoAntes);
+    const tipoAplicado = tipoDetectado ?? tipoCampoManualDraft;
     setCamposManuales((prev) => [
       ...prev,
-      { tipo_campo: tipoCampoManualDraft, texto_original: texto, offset_inicio: inicio, offset_fin: fin },
+      { tipo_campo: tipoAplicado, texto_original: texto, offset_inicio: inicio, offset_fin: fin },
     ]);
+    if (tipoDetectado) {
+      setTipoCampoManualDraft(tipoDetectado);
+      setDeteccionAutomatica(`Detectado automáticamente como "${labelTipoCampo(tipoDetectado)}" por el texto que lo antecede.`);
+    } else {
+      setDeteccionAutomatica(null);
+    }
   };
 
   const handleAprobar = async () => {
@@ -149,19 +207,30 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
       setAccionError("Selecciona una categoría antes de aprobar.");
       return;
     }
+    const eraActiva = detalle.estado === "activa";
     setAccionEnCurso(true);
     setAccionError(null);
+    setAccionExito(null);
     try {
-      await aprobarPlantilla(detalle.id, {
+      const actualizado = await aprobarPlantilla(detalle.id, {
         categoria,
         tipo_tramite_manual: tipoTramiteManual || undefined,
         campos_confirmados_ids: Array.from(confirmadosIds),
         campos_manuales: camposManuales,
       });
-      setPendientes((prev) => prev.filter((p) => p.id !== detalle.id));
-      setSelectedId(null);
-      setDetalle(null);
       onCambio?.();
+      if (eraActiva) {
+        // Ya estaba activa (se llegó aquí para ajustar campos desde "Buscar y
+        // generar") — mantenemos la selección para no perder el contexto.
+        setDetalle(actualizado);
+        setCamposManuales([]);
+        setConfirmadosIds(new Set(actualizado.campos.filter((c) => c.confirmado).map((c) => c.id)));
+        setAccionExito("Cambios guardados — vuelve a \"Buscar y generar\" para continuar con esta plantilla.");
+      } else {
+        setPendientes((prev) => prev.filter((p) => p.id !== detalle.id));
+        setSelectedId(null);
+        setDetalle(null);
+      }
     } catch (err: unknown) {
       setAccionError(extractErrorMessage(err, "Error al aprobar la plantilla."));
     } finally {
@@ -185,6 +254,47 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
       setAccionError(extractErrorMessage(err, "Error al marcar el caso como atípico."));
     } finally {
       setAccionEnCurso(false);
+    }
+  };
+
+  const handleEliminar = async (id: number, nombre: string) => {
+    const confirmado = window.confirm(`¿Eliminar "${nombre}" de la biblioteca? Esta acción no se puede deshacer.`);
+    if (!confirmado) return;
+    setEliminandoId(id);
+    setAccionError(null);
+    try {
+      await eliminarPlantilla(id);
+      setPendientes((prev) => prev.filter((p) => p.id !== id));
+      if (selectedId === id) {
+        setSelectedId(null);
+        setDetalle(null);
+      }
+      onCambio?.();
+    } catch (err: unknown) {
+      setAccionError(extractErrorMessage(err, "Error al eliminar la plantilla."));
+    } finally {
+      setEliminandoId(null);
+    }
+  };
+
+  const handleVaciarTodo = async () => {
+    const confirmado = window.confirm(
+      "Esto borra TODAS las plantillas de la biblioteca de forma permanente — incluidas pendientes, activas " +
+      "y atípicas, no solo las que ves en esta lista. ¿Confirmas que quieres vaciar la biblioteca completa?"
+    );
+    if (!confirmado) return;
+    setVaciando(true);
+    setLoadError(null);
+    try {
+      await eliminarTodasPlantillas();
+      setPendientes([]);
+      setSelectedId(null);
+      setDetalle(null);
+      onCambio?.();
+    } catch (err: unknown) {
+      setLoadError(extractErrorMessage(err, "Error al vaciar la biblioteca."));
+    } finally {
+      setVaciando(false);
     }
   };
 
@@ -249,9 +359,20 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
             <ClipboardList size={15} />
             Pendientes ({pendientes.length})
           </h3>
-          <button type="button" onClick={cargarPendientes} className="btn-ghost px-2 py-1">
-            <RefreshCw size={13} className={clsx(loadingLista && "animate-spin")} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={cargarPendientes} className="btn-ghost px-2 py-1" title="Actualizar lista">
+              <RefreshCw size={13} className={clsx(loadingLista && "animate-spin")} />
+            </button>
+            <button
+              type="button"
+              onClick={handleVaciarTodo}
+              disabled={vaciando}
+              className="btn-ghost px-2 py-1 text-brand-danger"
+              title="Vaciar toda la biblioteca (pendientes, activas y atípicas)"
+            >
+              <Trash2 size={13} className={clsx(vaciando && "animate-pulse")} />
+            </button>
+          </div>
         </div>
         <p className="text-xs" style={{ color: "var(--text-muted)" }}>
           Plantillas recién subidas o re-versionadas, esperando que confirmes sus datos variables.
@@ -271,27 +392,37 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
 
         <div className="space-y-1.5 max-h-[70vh] overflow-y-auto">
           {pendientes.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => seleccionarPlantilla(p.id)}
-              className={clsx(
-                "w-full text-left p-2.5 rounded-lg border text-xs transition-all",
-                selectedId === p.id ? "border-brand-primary bg-teal-500/5" : "hover:bg-slate-800/30"
-              )}
-              style={{ borderColor: selectedId === p.id ? undefined : "var(--border)" }}
-            >
-              <p className="font-medium truncate" style={{ color: "var(--text)" }}>{p.nombre_original}</p>
-              <div className="flex items-center gap-1.5 mt-1">
-                {p.estado === "caso_atipico" ? (
-                  <span className="flex items-center gap-1 text-amber-400">
-                    <FileWarning size={11} />Caso atípico
-                  </span>
-                ) : (
-                  <span style={{ color: "var(--text-muted)" }}>{labelCategoria(p.categoria)}</span>
+            <div key={p.id} className="relative group">
+              <button
+                type="button"
+                onClick={() => seleccionarPlantilla(p.id)}
+                className={clsx(
+                  "w-full text-left p-2.5 pr-8 rounded-lg border text-xs transition-all",
+                  selectedId === p.id ? "border-brand-primary bg-teal-500/5" : "hover:bg-slate-800/30"
                 )}
-              </div>
-            </button>
+                style={{ borderColor: selectedId === p.id ? undefined : "var(--border)" }}
+              >
+                <p className="font-medium truncate" style={{ color: "var(--text)" }}>{p.nombre_original}</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  {p.estado === "caso_atipico" ? (
+                    <span className="flex items-center gap-1 text-amber-400">
+                      <FileWarning size={11} />Caso atípico
+                    </span>
+                  ) : (
+                    <span style={{ color: "var(--text-muted)" }}>{labelCategoria(p.categoria)}</span>
+                  )}
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleEliminar(p.id, p.nombre_original); }}
+                disabled={eliminandoId === p.id}
+                title="Eliminar esta plantilla"
+                className="absolute top-2 right-2 p-1 rounded text-slate-500 hover:text-brand-danger hover:bg-red-500/10 transition-all"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
           ))}
         </div>
       </div>
@@ -311,16 +442,23 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
           </div>
         )}
 
-        {selectedId && detalle && !loadingDetalle && (
+        {selectedId && detalle && !loadingDetalle && (() => {
+          const esActiva = detalle.estado === "activa";
+          return (
           <div className="space-y-4">
             <div className="flex items-start gap-2 p-3 rounded-lg border bg-teal-500/5" style={{ borderColor: "var(--border)" }}>
               <Info size={15} className="shrink-0 mt-0.5 text-brand-primary" />
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                Esta plantilla no se puede usar en un caso nuevo hasta que la apruebes. Resalta en el texto
-                qué partes son datos variables (predial, cédula, fechas...): confirma o descarta lo que el
-                sistema detectó solo, y marca a mano el nombre del propietario y la dirección (eso nunca se
-                detecta automáticamente). Elige categoría y origen — se usan después para que la plantilla
-                aparezca al buscar por coincidencia — y aprueba para activarla.
+                {esActiva
+                  ? "Esta plantilla ya está activa y aparece al buscar por coincidencia. Aquí puedes marcar o ajustar " +
+                    "sus datos variables (predial, cédula, fechas, propietario, dirección...) para que el flujo de " +
+                    "\"Buscar y generar\" tenga campos que llenar — los cambios se guardan al instante y no afectan " +
+                    "los documentos que ya generaste con ella."
+                  : "Esta plantilla no se puede usar en un caso nuevo hasta que la apruebes. Resalta en el texto " +
+                    "qué partes son datos variables (predial, cédula, fechas...): confirma o descarta lo que el " +
+                    "sistema detectó solo, y marca a mano el nombre del propietario y la dirección (eso nunca se " +
+                    "detecta automáticamente). Elige categoría y origen — se usan después para que la plantilla " +
+                    "aparezca al buscar por coincidencia — y aprueba para activarla."}
               </p>
             </div>
 
@@ -393,6 +531,12 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
               </div>
             )}
 
+            {!selectionError && deteccionAutomatica && (
+              <div className="text-xs text-brand-primary flex items-center gap-1.5">
+                <Info size={13} />{deteccionAutomatica}
+              </div>
+            )}
+
             <div
               onMouseUp={onMouseUpTexto}
               className="text-sm leading-relaxed rounded-lg border p-4 max-h-[50vh] overflow-y-auto"
@@ -459,18 +603,36 @@ export default function BibliotecaRevisionPanel({ onCambio, plantillaIdInicial }
               </div>
             )}
 
+            {accionExito && (
+              <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-sm text-brand-success">
+                <CheckCircle2 size={16} />{accionExito}
+              </div>
+            )}
+
             <div className="flex items-center gap-3 pt-2">
               <button type="button" onClick={handleAprobar} disabled={accionEnCurso} className="btn-primary">
                 <CheckCircle2 size={15} />
-                {accionEnCurso ? "Procesando..." : "Aprobar y activar plantilla"}
+                {accionEnCurso ? "Procesando..." : esActiva ? "Guardar cambios" : "Aprobar y activar plantilla"}
               </button>
-              <button type="button" onClick={handleMarcarAtipico} disabled={accionEnCurso} className="btn-ghost">
-                <FileWarning size={14} />
-                Marcar como caso atípico
+              {!esActiva && (
+                <button type="button" onClick={handleMarcarAtipico} disabled={accionEnCurso} className="btn-ghost">
+                  <FileWarning size={14} />
+                  Marcar como caso atípico
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleEliminar(detalle.id, detalle.nombre_original)}
+                disabled={accionEnCurso || eliminandoId === detalle.id}
+                className="btn-ghost text-brand-danger"
+              >
+                <Trash2 size={14} />
+                Eliminar plantilla
               </button>
             </div>
           </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );
