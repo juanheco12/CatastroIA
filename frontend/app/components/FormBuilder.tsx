@@ -44,11 +44,11 @@ export interface SolicitudFormData {
   contexto_adicional?:  string;
 }
 
-/** Catálogo de fuentes administrativas para Primera Clase y Complementación
- * — reemplaza el listado libre de "documentos justificativos" en esos dos
- * tipos: ahí el dato relevante no es elegir entre muchas opciones sueltas,
- * sino identificar UNA fuente administrativa concreta (con su número, fecha
- * y ente emisor) que sustenta el trámite. */
+/** Catálogo de fuentes administrativas para Primera Clase, Complementación y
+ * Rectificación — reemplaza el listado libre de "documentos justificativos"
+ * en esos tipos: ahí el dato relevante no es elegir entre muchas opciones
+ * sueltas, sino identificar UNA fuente administrativa concreta (con su
+ * número, fecha y ente emisor) que sustenta el trámite. */
 const FUENTES_ADMINISTRATIVAS: { value: string; label: string }[] = [
   { value: "acto_administrativo", label: "Acto administrativo" },
   { value: "documento_privado",   label: "Documento privado" },
@@ -59,7 +59,7 @@ const FUENTES_ADMINISTRATIVAS: { value: string; label: string }[] = [
   { value: "sin_documento",       label: "Sin documento" },
 ];
 
-/** Catálogo fijo del modal "Doc. Aportados" de Primera Clase / Complementación. */
+/** Catálogo fijo del modal "Doc. Aportados" de Primera Clase / Complementación / Rectificación. */
 const DOCS_JUSTIFICATIVOS_CATALOGO = [
   "Acta de defunción", "Carta de solicitud", "Cédula de ciudadanía",
   "Certificado de tradición y libertad", "Planos", "Registro civil",
@@ -104,7 +104,7 @@ function documentosAutomaticos(data: SolicitudFormData): string[] {
     docs.push(`Documento de compraventa del ${data.fecha_compraventa} de la ${data.entidad_compraventa}`);
   }
   if (
-    (data.tipo_mutacion === "primera_clase" || data.tipo_mutacion === "complementacion") &&
+    (data.tipo_mutacion === "primera_clase" || data.tipo_mutacion === "complementacion" || data.tipo_mutacion === "rectificacion") &&
     data.fuente_administrativa_tipo && data.fuente_administrativa_tipo !== "sin_documento" &&
     data.fuente_administrativa_numero && data.fuente_administrativa_fecha && data.fuente_administrativa_ente_emisor
   ) {
@@ -190,19 +190,25 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
     nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
     numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
     campo_rectificado: "el área construida",
-    documentos_aportados: ["Certificado de tradición y libertad 140-38712", "Copia cédula de ciudadanía"],
+    fuente_administrativa_tipo: "escritura_publica", fuente_administrativa_numero: "1053",
+    fuente_administrativa_fecha: "23/11/2023", fuente_administrativa_ente_emisor: "Notaría Cuarta de Montería",
+    documentos_aportados: [],
   },
   rectificacion_autorizado: {
     nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ", cedula_solicitante: "1.234.567",
     nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
     numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
     campo_rectificado: "la dirección",
-    documentos_aportados: ["Certificado de tradición y libertad 140-38712", "Documento de autorización"],
+    fuente_administrativa_tipo: "documento_publico", fuente_administrativa_numero: "045",
+    fuente_administrativa_fecha: "10/02/2022", fuente_administrativa_ente_emisor: "Curaduría Urbana Primera de Montería",
+    documentos_aportados: [],
   },
   rectificacion_oficio: {
     numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
     campo_rectificado: "el propietario",
-    documentos_aportados: ["Certificado de tradición y libertad 140-38712"],
+    fuente_administrativa_tipo: "sentencia_judicial", fuente_administrativa_numero: "SN",
+    fuente_administrativa_fecha: "15/05/2021", fuente_administrativa_ente_emisor: "Juzgado Segundo de Familia de Montería",
+    documentos_aportados: [],
   },
   complementacion_propietario: {
     nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
@@ -474,7 +480,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
   const needsPropietario = (tipoMutacion === "cancelacion" || tipoMutacion === "quinta_clase") ? true : (tipoOrigen !== "snr" && tipoOrigen !== "oficio");
   const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder";
   const needsRadicado    = tipoOrigen === "snr" || tipoMutacion === "complementacion";
-  const usaFuenteAdministrativa = tipoMutacion === "primera_clase" || tipoMutacion === "complementacion";
+  const usaFuenteAdministrativa = tipoMutacion === "primera_clase" || tipoMutacion === "complementacion" || tipoMutacion === "rectificacion";
   const fuenteVacia = !data.fuente_administrativa_tipo;
   const fuenteSinDocumento = data.fuente_administrativa_tipo === "sin_documento";
   const detalleFuenteDeshabilitado = fuenteVacia || fuenteSinDocumento;
