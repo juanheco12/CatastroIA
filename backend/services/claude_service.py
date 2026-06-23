@@ -772,15 +772,9 @@ def _articulos_finales(tipo: str, mun: str) -> str:
         "Resolución 1040 de 2023 expedida por el IGAC."
     )
     art5 = (
-        f"ARTÍCULO QUINTO: La información física, jurídica y económica, aplicada al predio "
-        f"objeto de esta resolución, entrará en vigencia para efectos catastrales al momento de "
-        f"quedar en firme su inscripción o incorporación en las bases catastrales del municipio "
-        f"de {mun}."
-    )
-    art6 = (
-        f"ARTÍCULO SEXTO: REMITIR copia del acto administrativo, cuando quede en firme, a la "
-        f"Dirección de Rentas del municipio de {mun} para la actualización de la información "
-        f"para fines fiscales y tributarios."
+        f"ARTÍCULO QUINTO: REMITIR copia del acto administrativo a la Secretaría de Hacienda del "
+        f"municipio de {mun}, para la actualización de la información respecto al nombre del "
+        f"propietario para fines fiscales y tributarios."
     )
     if tipo == "notificable":
         art3 = (
@@ -809,7 +803,7 @@ def _articulos_finales(tipo: str, mun: str) -> str:
             "conforme lo preceptúa el artículo 4.8.5 de la Resolución 1040 de 2023 y el artículo "
             "75 de la Ley 1437 de 2011."
         )
-    return "\n\n".join([art2, art3, art4, art5, art6, "COMUNÍQUESE Y CÚMPLASE"])
+    return "\n\n".join([art2, art3, art4, art5, "COMUNÍQUESE Y CÚMPLASE"])
 
 
 def _motivada_demo(data: SolicitudUnificada) -> str:

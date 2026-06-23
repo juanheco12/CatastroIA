@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Wand2, Plus, Minus, Bell, BellOff, BellMinus, Upload, ListChecks, X } from "lucide-react";
+import { Wand2, Plus, Minus, Bell, BellOff, BellMinus, Upload, ListChecks, X, ChevronDown } from "lucide-react";
 import { TipoMutacion, TipoOrigen } from "./MutationSelector";
 import { extraerInformeTecnico, extractErrorMessage } from "@/lib/api";
 import clsx from "clsx";
@@ -182,7 +182,7 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
   },
   tercera_clase_propietario: {
     nombre_propietario: "María Fernanda Gómez Restrepo", cedula_propietario: "43512876",
-    numero_predial: "05001000200000010001000", folio_matricula: "001-123456",
+    numero_predial: "05001000200000010001000", folio_matricula: "140-123456",
     area_construida_m2: 95.5, area_terreno_m2: 120,
     documentos_aportados: ["Formulario de solicitud", "Copia cédula de ciudadanía", "Licencia de construcción"],
   },
@@ -359,6 +359,29 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
+/** Círculo registral de Montería: se antepone solo, el usuario solo digita el número de folio. */
+const CIRCULO_REGISTRAL = "140-";
+
+function FolioInput({ value, onChange, onKeyDown }: { value: string; onChange: (v: string) => void; onKeyDown?: React.KeyboardEventHandler<HTMLInputElement> }) {
+  const sufijo = value.startsWith(CIRCULO_REGISTRAL) ? value.slice(CIRCULO_REGISTRAL.length) : value;
+  return (
+    <div className="w-full flex items-center bg-brand-muted border border-slate-600 rounded-lg pl-3 pr-1 focus-within:ring-2 focus-within:ring-brand-primary focus-within:border-transparent transition-all">
+      <span className="text-sm text-slate-500 font-medium select-none shrink-0">{CIRCULO_REGISTRAL}</span>
+      <input
+        className="flex-1 min-w-0 bg-transparent border-0 outline-none py-2 pl-0.5 pr-2 text-sm text-brand-text placeholder-slate-500"
+        value={sufijo}
+        onChange={e => {
+          let v = e.target.value;
+          if (v.startsWith(CIRCULO_REGISTRAL)) v = v.slice(CIRCULO_REGISTRAL.length);
+          onChange(CIRCULO_REGISTRAL + v);
+        }}
+        onKeyDown={onKeyDown}
+        placeholder="XXXXX"
+      />
+    </div>
+  );
+}
+
 export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLoading, contextoInicial }: Props) {
   const mockKey = `${tipoMutacion}_${tipoOrigen}`;
   const [data, setData] = useState<SolicitudFormData>({
@@ -368,6 +391,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
     parrafos_informe_tecnico: [],
     contexto_adicional: contextoInicial ?? "",
   });
+  const [asistenteAbierto, setAsistenteAbierto] = useState(!!contextoInicial);
   const [newDoc, setNewDoc] = useState("");
   const [newFolio, setNewFolio] = useState("");
   const [newParrafo, setNewParrafo] = useState("");
@@ -511,21 +535,30 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
         </button>
       </div>
 
-      {/* ── Análisis del asistente IA ── */}
-      <div className="card p-5 space-y-3">
-        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
-          Análisis del asistente (opcional)
-        </h3>
-        <p className="text-xs text-slate-500">
-          Si vienes del chat, aquí está la conclusión que te dio el Asistente Catastral. Puedes editarla —
-          se usará como fundamento al redactar la motivada.
-        </p>
-        <textarea
-          className="field-input min-h-[100px] resize-y text-sm"
-          value={data.contexto_adicional ?? ""}
-          onChange={e => set("contexto_adicional", e.target.value)}
-          placeholder="Pega o edita aquí el razonamiento que quieres usar como base de la motivada..."
-        />
+      {/* ── Análisis del asistente IA (desplegable) ── */}
+      <div className="card p-5">
+        <button
+          type="button"
+          onClick={() => setAsistenteAbierto(o => !o)}
+          className="w-full flex items-center justify-between gap-3 text-left"
+        >
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Análisis del asistente (opcional)</h3>
+          <ChevronDown size={16} className={clsx("text-slate-500 shrink-0 transition-transform", asistenteAbierto && "rotate-180")} />
+        </button>
+        {asistenteAbierto && (
+          <div className="space-y-3 mt-3 pt-3 border-t border-slate-700">
+            <p className="text-xs text-slate-500">
+              Si vienes del chat, aquí está la conclusión que te dio el Asistente Catastral. Puedes editarla —
+              se usará como fundamento al redactar la motivada.
+            </p>
+            <textarea
+              className="field-input min-h-[100px] resize-y text-sm"
+              value={data.contexto_adicional ?? ""}
+              onChange={e => set("contexto_adicional", e.target.value)}
+              placeholder="Pega o edita aquí el razonamiento que quieres usar como base de la motivada..."
+            />
+          </div>
+        )}
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2 items-start">
@@ -602,7 +635,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
             <input className={clsx(inp, "font-mono text-xs")} value={data.numero_predial} onChange={e => set("numero_predial", e.target.value)} placeholder="Código catastral" />
           </Field>
           <Field label="Folio de matrícula inmobiliaria" required>
-            <input className={inp} value={data.folio_matricula} onChange={e => set("folio_matricula", e.target.value)} placeholder="140-XXXXX" />
+            <FolioInput value={data.folio_matricula} onChange={v => set("folio_matricula", v)} />
           </Field>
           {/* Radicado para complementación propietario */}
           {needsRadicado && tipoOrigen !== "snr" && (
@@ -619,7 +652,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Desenglobe</h3>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Folio matriz" required>
-              <input className={inp} value={data.folio_matriz ?? ""} onChange={e => set("folio_matriz", e.target.value)} placeholder="140-XXXXX" />
+              <FolioInput value={data.folio_matriz ?? ""} onChange={v => set("folio_matriz", v)} />
             </Field>
             <Field label="Número de escritura" required>
               <input className={inp} value={data.numero_escritura ?? ""} onChange={e => set("numero_escritura", e.target.value)} placeholder="1308" />
@@ -643,8 +676,9 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
               ))}
             </div>
             <div className="flex gap-2 mt-1.5">
-              <input className={clsx(inp, "flex-1")} value={newFolio} onChange={e => setNewFolio(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addFolio())} placeholder="140-XXXXX" />
+              <div className="flex-1">
+                <FolioInput value={newFolio} onChange={setNewFolio} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addFolio())} />
+              </div>
               <button type="button" onClick={addFolio} className="btn-ghost px-3"><Plus size={16} /></button>
             </div>
           </Field>
@@ -967,7 +1001,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
         </div>
         {data.tipo_notificacion && (
           <p className="text-xs text-slate-500">
-            Se agregarán los artículos segundo al sexto + COMUNÍQUESE Y CÚMPLASE al final de la motivada.
+            Se agregarán los artículos segundo al quinto + COMUNÍQUESE Y CÚMPLASE al final de la motivada.
           </p>
         )}
       </div>
