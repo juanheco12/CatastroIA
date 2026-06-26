@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { CATEGORIAS_MOTIVADA } from "@/lib/api";
 
 export type TipoMutacion = "primera_clase" | "segunda_clase" | "tercera_clase" | "cuarta_clase" | "quinta_clase" | "rectificacion" | "complementacion" | "cancelacion";
-export type TipoOrigen   = "propietario"   | "autorizado" | "poder" | "snr" | "oficio";
+export type TipoOrigen   = "propietario"   | "autorizado" | "poder" | "heredero" | "snr" | "oficio";
 
 const MUTACIONES = [
   { id: "primera_clase"   as TipoMutacion, titulo: "Primera Clase",   subtitulo: "Cambio de propietario",          icon: Users        },
@@ -68,6 +68,9 @@ const ORIGENES_POR_MUTACION: Record<TipoMutacion, { id: TipoOrigen; titulo: stri
   ],
   complementacion: [
     { id: "propietario", titulo: "Por propietario", desc: "El propietario solicita la adición" },
+    { id: "autorizado",  titulo: "Por autorizado",  desc: "Contacto o autorizado del propietario" },
+    { id: "poder",       titulo: "Con poder",       desc: "Apoderado con poder notarial o TP" },
+    { id: "heredero",    titulo: "Por heredero",    desc: "Heredero(a) del propietario fallecido" },
     { id: "snr",         titulo: "De la SNR",       desc: "Superintendencia de Notariado y Registro" },
   ],
   cancelacion: [
@@ -92,6 +95,7 @@ export const LABEL_ORIGEN: Record<TipoOrigen, string> = {
   propietario: "Propietario",
   autorizado:  "Autorizado",
   poder:       "Con poder",
+  heredero:    "Heredero",
   snr:         "SNR",
   oficio:      "Oficio",
 };

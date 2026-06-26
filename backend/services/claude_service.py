@@ -743,6 +743,73 @@ def _demo_complementacion_propietario(data: SolicitudUnificada) -> str:
     )
     return "\n\n".join([_P1_COMPLEMENTACION, p2, p3, _P4_COMPLEMENTACION.format(mun=mun), _P5_COMPLEMENTACION])
 
+def _demo_complementacion_autorizado(data: SolicitudUnificada) -> str:
+    mun   = _municipio(data)
+    docs  = ", ".join(data.documentos_aportados)
+    campo = data.campo_complementado or ""
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
+        f"CC. No. {data.cedula_solicitante}, en su condición de contacto y/o autorizado del "
+        f"(la) señor(a) {data.nombre_propietario} identificado(a) con C.C. "
+        f"{data.cedula_propietario}, en calidad de propietario(a) del predio identificado "
+        f"catastralmente con {data.numero_predial}, inscrito en la base de datos catastral, "
+        f"presentó ante la Oficina de Catastro adscrita a la Secretaria de Planeación del "
+        f"municipio de {mun}, el trámite catastral correspondiente a complementación de datos "
+        f"bajo el radicado {data.numero_radicado or 'N/A'}, soportada en los siguientes "
+        f"documentos aportados: {docs}, con folio de matrícula inmobiliaria "
+        f"{data.folio_matricula}."
+    )
+    p3 = (
+        f"Que de acuerdo con el estudio de los documentos jurídicos se verifica por parte del "
+        f"operador que procede un trámite de complementación de(la) {campo}."
+    )
+    return "\n\n".join([_P1_COMPLEMENTACION, p2, p3, _P4_COMPLEMENTACION.format(mun=mun), _P5_COMPLEMENTACION])
+
+def _demo_complementacion_poder(data: SolicitudUnificada) -> str:
+    mun    = _municipio(data)
+    docs   = ", ".join(data.documentos_aportados)
+    campo  = data.campo_complementado or ""
+    tp_txt = f", TP. {data.tp_solicitante}" if data.tp_solicitante else ""
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
+        f"{data.tipo_doc_solicitante or 'CC'} No. {data.cedula_solicitante}{tp_txt}, actuando "
+        f"en calidad de apoderado del señor(a) {data.nombre_propietario}, identificado con "
+        f"C.C. {data.cedula_propietario}, en calidad de propietario(a) del predio identificado "
+        f"catastralmente con {data.numero_predial}, inscrito en la base de datos catastral, "
+        f"presentó ante la Oficina de Catastro adscrita a la Secretaria de Planeación del "
+        f"municipio de {mun}, el trámite catastral correspondiente a complementación de datos "
+        f"bajo el radicado {data.numero_radicado or 'N/A'}, soportada en los siguientes "
+        f"documentos aportados: {docs}, con folio de matrícula inmobiliaria "
+        f"{data.folio_matricula}."
+    )
+    p3 = (
+        f"Que de acuerdo con el estudio de los documentos jurídicos se verifica por parte del "
+        f"operador que procede un trámite de complementación de(la) {campo}."
+    )
+    return "\n\n".join([_P1_COMPLEMENTACION, p2, p3, _P4_COMPLEMENTACION.format(mun=mun), _P5_COMPLEMENTACION])
+
+def _demo_complementacion_heredero(data: SolicitudUnificada) -> str:
+    mun   = _municipio(data)
+    docs  = ", ".join(data.documentos_aportados)
+    campo = data.campo_complementado or ""
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
+        f"C.C. No. {data.cedula_solicitante}, en su condición de heredero(a) del (la) señor(a) "
+        f"{data.nombre_propietario} (Q.E.P.D.), identificado(a) con C.C. "
+        f"{data.cedula_propietario}, en calidad de propietario(a) del predio identificado "
+        f"catastralmente con {data.numero_predial}, inscrito en la base de datos catastral, "
+        f"presentó ante la Oficina de Catastro adscrita a la Secretaria de Planeación del "
+        f"municipio de {mun}, el trámite catastral correspondiente a complementación de datos "
+        f"bajo el radicado {data.numero_radicado or 'N/A'}, soportada en los siguientes "
+        f"documentos aportados: {docs}, con folio de matrícula inmobiliaria "
+        f"{data.folio_matricula}."
+    )
+    p3 = (
+        f"Que de acuerdo con el estudio de los documentos jurídicos se verifica por parte del "
+        f"operador que procede un trámite de complementación de(la) {campo}."
+    )
+    return "\n\n".join([_P1_COMPLEMENTACION, p2, p3, _P4_COMPLEMENTACION.format(mun=mun), _P5_COMPLEMENTACION])
+
 def _demo_complementacion_snr(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
@@ -834,7 +901,13 @@ def _motivada_demo(data: SolicitudUnificada) -> str:
         else:
             return _demo_rectificacion_propietario(data)
     elif data.tipo_mutacion == "complementacion":
-        if data.tipo_origen == "snr":
+        if data.tipo_origen == "autorizado":
+            return _demo_complementacion_autorizado(data)
+        elif data.tipo_origen == "poder":
+            return _demo_complementacion_poder(data)
+        elif data.tipo_origen == "heredero":
+            return _demo_complementacion_heredero(data)
+        elif data.tipo_origen == "snr":
             return _demo_complementacion_snr(data)
         else:
             return _demo_complementacion_propietario(data)
