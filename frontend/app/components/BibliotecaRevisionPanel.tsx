@@ -48,6 +48,8 @@ const ANCLAS_CONTEXTO_CAMPO: { pat: RegExp; tipo: string }[] = [
   { pat: /radicado/gi, tipo: "radicado" },
   { pat: /escritura\s+p[uú]blica/gi, tipo: "escritura" },
   { pat: /resoluci[oó]n/gi, tipo: "numero_resolucion" },
+  { pat: /no\.?\s*de\s+consulta|consulta\s+de\s+la\s+ventanilla/gi, tipo: "numero_consulta" },
+  { pat: /anotaci[oó]n/gi, tipo: "numero_anotacion" },
   { pat: /oficina\s+de\s+registro/gi, tipo: "oficina_registro" },
   { pat: /direcci[oó]n|ubicado\s+en|predio\s+ubicado/gi, tipo: "direccion" },
   { pat: /[aá]rea/gi, tipo: "area" },

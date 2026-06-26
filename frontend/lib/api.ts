@@ -247,6 +247,8 @@ export const TIPOS_CAMPO_VARIABLE: { value: string; label: string }[] = [
   { value: "numero_predial", label: "Número predial" },
   { value: "matricula_inmobiliaria", label: "Matrícula inmobiliaria" },
   { value: "numero_resolucion", label: "Número de resolución" },
+  { value: "numero_consulta", label: "Número de consulta" },
+  { value: "numero_anotacion", label: "Número de anotación" },
   { value: "radicado", label: "Radicado" },
   { value: "acto_administrativo", label: "Acto administrativo" },
   { value: "escritura", label: "Escritura" },
