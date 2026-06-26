@@ -47,6 +47,10 @@ PAT_RADICADO = re.compile(r"radicado\s+(?:No\.?\s*)?(\d{4}-[\w\d]+)", re.IGNOREC
 
 PAT_ESCRITURA = re.compile(r"escritura\s+p[uú]blica\s*(?:No\.?\s*)?(\d+)", re.IGNORECASE)
 
+PAT_CONSULTA = re.compile(r"No\.?\s*de\s+consulta\s+(\d+)", re.IGNORECASE)
+
+PAT_ANOTACION = re.compile(r"anotaci[oó]n\s+No\.?\s*(\d+)", re.IGNORECASE)
+
 PAT_AREA = re.compile(
     r"[áa]rea[a-záéíóúñ\s]{0,30}?de\s+([\d.,]+)\s*metros\s*cuadrados", re.IGNORECASE
 )
@@ -188,6 +192,8 @@ def detectar_campos(texto: str) -> list[CampoDetectado]:
     candidatos += _detectar_resolucion(texto)
     candidatos += _detectar_simple(PAT_RADICADO, TipoCampoVariable.RADICADO.value, texto)
     candidatos += _detectar_simple(PAT_ESCRITURA, TipoCampoVariable.ESCRITURA.value, texto)
+    candidatos += _detectar_simple(PAT_CONSULTA, TipoCampoVariable.NUMERO_CONSULTA.value, texto)
+    candidatos += _detectar_simple(PAT_ANOTACION, TipoCampoVariable.NUMERO_ANOTACION.value, texto)
     candidatos += _detectar_simple(PAT_AREA, TipoCampoVariable.AREA.value, texto)
     candidatos += _detectar_fechas(texto, rangos_prediales)
     candidatos.sort(key=lambda c: c.offset_inicio)

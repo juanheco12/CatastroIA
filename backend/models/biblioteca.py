@@ -35,6 +35,8 @@ class TipoCampoVariable(str, enum.Enum):
     NUMERO_PREDIAL = "numero_predial"
     MATRICULA_INMOBILIARIA = "matricula_inmobiliaria"
     NUMERO_RESOLUCION = "numero_resolucion"
+    NUMERO_CONSULTA = "numero_consulta"
+    NUMERO_ANOTACION = "numero_anotacion"
     RADICADO = "radicado"
     ACTO_ADMINISTRATIVO = "acto_administrativo"
     ESCRITURA = "escritura"
