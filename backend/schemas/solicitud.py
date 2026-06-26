@@ -3,7 +3,7 @@ from typing import Optional, Literal
 
 
 TipoMutacion  = Literal["primera_clase", "segunda_clase", "tercera_clase", "cuarta_clase", "quinta_clase", "rectificacion", "complementacion", "cancelacion"]
-TipoOrigen    = Literal["propietario", "autorizado", "poder", "heredero", "snr", "oficio"]
+TipoOrigen    = Literal["propietario", "autorizado", "poder", "heredero", "snr", "oficio", "representante_legal"]
 
 
 class SolicitudUnificada(BaseModel):

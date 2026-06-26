@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { CATEGORIAS_MOTIVADA } from "@/lib/api";
 
 export type TipoMutacion = "primera_clase" | "segunda_clase" | "tercera_clase" | "cuarta_clase" | "quinta_clase" | "rectificacion" | "complementacion" | "cancelacion";
-export type TipoOrigen   = "propietario"   | "autorizado" | "poder" | "heredero" | "snr" | "oficio";
+export type TipoOrigen   = "propietario"   | "autorizado" | "poder" | "representante_legal" | "heredero" | "snr" | "oficio";
 
 const MUTACIONES = [
   { id: "primera_clase"   as TipoMutacion, titulo: "Primera Clase",   subtitulo: "Cambio de propietario",          icon: Users        },
@@ -34,6 +34,7 @@ const ORIGENES_POR_MUTACION: Record<TipoMutacion, { id: TipoOrigen; titulo: stri
     { id: "propietario", titulo: "De parte del propietario", desc: "El propietario gestiona directamente" },
     { id: "autorizado",  titulo: "De parte con autorizado",  desc: "Contacto o autorizado del propietario" },
     { id: "poder",       titulo: "De parte con poder",       desc: "Apoderado con poder notarial o TP" },
+    { id: "representante_legal", titulo: "Con representante legal", desc: "Representante legal de la empresa propietaria" },
     { id: "snr",         titulo: "De la SNR",                desc: "Superintendencia de Notariado y Registro" },
     { id: "oficio",      titulo: "De oficio",                desc: "La oficina inicia la actualización registral" },
   ],
@@ -92,12 +93,13 @@ export const LABEL_MUTACION: Record<TipoMutacion, string> = {
 };
 
 export const LABEL_ORIGEN: Record<TipoOrigen, string> = {
-  propietario: "Propietario",
-  autorizado:  "Autorizado",
-  poder:       "Con poder",
-  heredero:    "Heredero",
-  snr:         "SNR",
-  oficio:      "Oficio",
+  propietario:          "Propietario",
+  autorizado:           "Autorizado",
+  poder:                "Con poder",
+  representante_legal:  "Rep. legal",
+  heredero:             "Heredero",
+  snr:                  "SNR",
+  oficio:               "Oficio",
 };
 
 interface Props {

@@ -79,6 +79,20 @@ def _demo_primera_autorizado(data: SolicitudUnificada) -> str:
     )
     return "\n\n".join([_P1_PRIMERA, p2, _P3_PRIMERA, _p4_primera(mun)])
 
+def _demo_primera_representante_legal(data: SolicitudUnificada) -> str:
+    mun  = _municipio(data)
+    docs = ", ".join(data.documentos_aportados)
+    p2 = (
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con CC No. "
+        f"{data.cedula_solicitante}, en su condición de representante legal del (la) señor(a) "
+        f"{data.nombre_propietario}, identificado con NIT. {data.cedula_propietario}, propietario "
+        f"del inmueble identificado con número predial {data.numero_predial}, inscrito en la base "
+        f"de datos catastral del municipio de {mun}, presentó ante la Oficina de atención al "
+        f"público una solicitud de trámite catastral, consistente en Cambio de propietario, "
+        f"soportada en los siguientes documentos aportados: {docs}."
+    )
+    return "\n\n".join([_P1_PRIMERA, p2, _P3_PRIMERA, _p4_primera(mun)])
+
 def _demo_primera_poder(data: SolicitudUnificada) -> str:
     mun    = _municipio(data)
     docs   = ", ".join(data.documentos_aportados)
@@ -887,6 +901,8 @@ def _motivada_demo(data: SolicitudUnificada) -> str:
             return _demo_primera_autorizado(data)
         elif data.tipo_origen == "poder":
             return _demo_primera_poder(data)
+        elif data.tipo_origen == "representante_legal":
+            return _demo_primera_representante_legal(data)
         elif data.tipo_origen == "snr":
             return _demo_primera_snr(data)
         elif data.tipo_origen == "oficio":
