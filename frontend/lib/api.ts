@@ -230,6 +230,7 @@ export const ORIGENES_TRAMITE: { value: string; label: string }[] = [
   { value: "propietario", label: "Propietario" },
   { value: "autorizado", label: "Autorizado" },
   { value: "poder", label: "Con poder" },
+  { value: "heredero", label: "Heredero" },
   { value: "snr", label: "SNR" },
   { value: "oficio", label: "Oficio" },
 ];

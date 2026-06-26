@@ -217,6 +217,34 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
     campo_complementado: "propietario",
     documentos_aportados: ["Certificado de tradición y libertad", "Cédula de ciudadanía"],
   },
+  complementacion_autorizado: {
+    nombre_solicitante: "CARLOS ANDRES PEREZ GOMEZ", cedula_solicitante: "1.234.567",
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
+    numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
+    numero_radicado: "2024-1528", campo_complementado: "propietario",
+    fuente_administrativa_tipo: "documento_publico", fuente_administrativa_numero: "045",
+    fuente_administrativa_fecha: "10/02/2022", fuente_administrativa_ente_emisor: "Curaduría Urbana Primera de Montería",
+    documentos_aportados: [],
+  },
+  complementacion_poder: {
+    nombre_solicitante: "JORGE LUIS MARTINEZ RUIZ", tipo_doc_solicitante: "CC",
+    cedula_solicitante: "9.876.543", tp_solicitante: "45678",
+    nombre_propietario: "HERNAN JOSE CAUSIL MARTINEZ", cedula_propietario: "6.872.472",
+    numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
+    numero_radicado: "2024-1528", campo_complementado: "propietario",
+    fuente_administrativa_tipo: "escritura_publica", fuente_administrativa_numero: "1053",
+    fuente_administrativa_fecha: "23/11/2023", fuente_administrativa_ente_emisor: "Notaría Cuarta de Montería",
+    documentos_aportados: [],
+  },
+  complementacion_heredero: {
+    nombre_solicitante: "LUIS ALFONSO HERRERA OSORIO", cedula_solicitante: "6.887.586",
+    nombre_propietario: "ANA MARIA OSORIO OVIEDO", cedula_propietario: "26.208.979",
+    numero_predial: "01-03-00-0333-0023-0-00-00-0000", folio_matricula: "140-54500",
+    numero_radicado: "2024-1528", campo_complementado: "propietario",
+    fuente_administrativa_tipo: "escritura_publica", fuente_administrativa_numero: "99",
+    fuente_administrativa_fecha: "15/02/1968", fuente_administrativa_ente_emisor: "Notaría Segunda de Montería",
+    documentos_aportados: [],
+  },
   complementacion_snr: {
     numero_radicado: "2024-3312", numero_predial: "23001000100039002700000",
     folio_matricula: "140-133775", municipio: "Montería",
@@ -478,7 +506,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
 
   const inp = "field-input";
   const needsPropietario = (tipoMutacion === "cancelacion" || tipoMutacion === "quinta_clase") ? true : (tipoOrigen !== "snr" && tipoOrigen !== "oficio");
-  const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder";
+  const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder" || tipoOrigen === "heredero";
   const needsRadicado    = tipoOrigen === "snr" || tipoMutacion === "complementacion";
   const usaFuenteAdministrativa = tipoMutacion === "primera_clase" || tipoMutacion === "complementacion" || tipoMutacion === "rectificacion";
   const fuenteVacia = !data.fuente_administrativa_tipo;
@@ -587,11 +615,11 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
       {needsSolicitante && (
         <div className="card p-5 space-y-4">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
-            {tipoOrigen === "autorizado" ? "Datos del autorizado" : "Datos del apoderado"}
+            {tipoOrigen === "autorizado" ? "Datos del autorizado" : tipoOrigen === "heredero" ? "Datos del heredero" : "Datos del apoderado"}
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Field label={tipoOrigen === "autorizado" ? "Nombre del autorizado" : "Nombre del apoderado"} required>
+              <Field label={tipoOrigen === "autorizado" ? "Nombre del autorizado" : tipoOrigen === "heredero" ? "Nombre del heredero" : "Nombre del apoderado"} required>
                 <input className={inp} value={data.nombre_solicitante ?? ""} onChange={e => set("nombre_solicitante", e.target.value)} placeholder="Nombre completo" />
               </Field>
             </div>
