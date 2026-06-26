@@ -40,8 +40,8 @@ _P1_PRIMERA = (
 _P3_PRIMERA = (
     "Que, en consecuencia, procede una mutación de primera y su correspondiente inscripción en "
     "el catastro, conforme lo indican en los artículos 4.5.1, y subsiguientes de la Resolución "
-    "1040 de 2023, 'por la cual se expide la resolución única de la gestión catastral "
-    "multipropósito', el artículo 4.6.1 y subsiguientes de la resolución vigente sobre los "
+    "1040 de 2023, por la cual se expide la resolución única de la gestión catastral "
+    "multipropósito, el artículo 4.6.1 y subsiguientes de la resolución vigente sobre los "
     "requisitos para trámites y otros procedimientos administrativos."
 )
 

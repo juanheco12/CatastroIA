@@ -6,7 +6,7 @@ import {
   eliminarPlantilla,
   PlantillaDetalle, CampoVariable, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
-import { RefreshCw, AlertCircle, Wand2, Download, ArrowLeft, Trash2, CheckCircle, FileText, Tag, Eye } from "lucide-react";
+import { RefreshCw, AlertCircle, Wand2, Download, ArrowLeft, Trash2, Tag, Eye } from "lucide-react";
 import CopyButton from "./CopyButton";
 import clsx from "clsx";
 
@@ -313,39 +313,11 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
 
       {resultado && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2" style={{ color: "var(--text)" }}>
-            <CheckCircle size={16} className="text-brand-success" />
-            <p className="text-sm font-semibold">Motivada generada</p>
-          </div>
-
-          {resultado.campos_reemplazados.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                Cambios aplicados
-              </p>
-              <div className="space-y-1">
-                {resultado.campos_reemplazados.map((c) => (
-                  <div key={c.campo_id} className="text-xs flex items-center gap-2 flex-wrap">
-                    <span style={{ color: "var(--text-muted)" }}>{labelTipoCampo(c.tipo_campo)}:</span>
-                    <span className="font-mono line-through text-slate-500">{c.valor_anterior}</span>
-                    <span>→</span>
-                    <span className="font-mono" style={{ color: "var(--text)" }}>{c.valor_nuevo}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-              Motivada
-            </p>
-            <div
-              className="text-sm leading-relaxed rounded-lg border p-4 max-h-[40vh] overflow-y-auto"
-              style={{ borderColor: "var(--border)", whiteSpace: "pre-wrap", color: "var(--text)" }}
-            >
-              {resultado.texto}
-            </div>
+          <div
+            className="text-sm leading-relaxed rounded-lg border p-4 max-h-[40vh] overflow-y-auto"
+            style={{ borderColor: "var(--border)", whiteSpace: "pre-wrap", color: "var(--text)" }}
+          >
+            {resultado.texto}
           </div>
 
           <CopyButton getText={() => resultado.texto} label="Copiar motivada" />
@@ -357,24 +329,6 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
           >
             <Download size={13} />Descargar también el .docx (opcional)
           </button>
-          <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
-            <FileText size={12} />
-            El texto ya tiene los datos de este caso sustituidos — el formato jurídico nunca se reescribe.
-          </p>
-
-          <div className="pt-3 border-t" style={{ borderColor: "var(--border)" }}>
-            <p className="text-xs mb-1.5" style={{ color: "var(--text-muted)" }}>
-              ¿Esta plantilla quedó mal configurada (campos incorrectos, texto erróneo)?
-            </p>
-            <button
-              type="button"
-              onClick={handleEliminar}
-              disabled={eliminando}
-              className="flex items-center gap-1.5 text-xs btn-ghost px-2 py-1 text-brand-danger"
-            >
-              <Trash2 size={13} />{eliminando ? "Eliminando..." : "Eliminar esta plantilla de la biblioteca"}
-            </button>
-          </div>
         </div>
       )}
     </div>

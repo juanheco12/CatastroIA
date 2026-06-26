@@ -53,20 +53,32 @@ def _call_anthropic(messages: list[dict], system: str, max_tokens: int) -> tuple
     return r.content[0].text, r.usage.input_tokens + r.usage.output_tokens
 
 
+_TAGS_INESTABLES = ("thinking", "exp", "preview", "8b")
+
+
 def _discover_gemini_model() -> str:
     import google.generativeai as genai
     candidates = [
         m.name for m in genai.list_models()
         if "generateContent" in m.supported_generation_methods
     ]
-    flash = sorted(
-        (c for c in candidates if "flash" in c.lower() and "8b" not in c.lower()),
-        reverse=True,
-    )
+
+    def _flash_sin_tags(tags: tuple[str, ...]) -> list[str]:
+        return sorted(
+            (c for c in candidates if "flash" in c.lower() and not any(t in c.lower() for t in tags)),
+            reverse=True,
+        )
+
+    # Las variantes "thinking"/"exp"/"preview" responden mucho mas lento (razonan
+    # de mas) y tienen cuotas de la API muchisimo mas bajas que el modelo estable
+    # — preferirlas por ordenar despues alfabeticamente causaba respuestas lentas
+    # y errores de cuota en horas de uso concurrido. Se prueba primero la lista
+    # estable; solo si no hay ninguna disponible se cae a la version permisiva.
+    flash = _flash_sin_tags(_TAGS_INESTABLES) or _flash_sin_tags(("8b",))
     return (flash or sorted(candidates, reverse=True) or ["models/gemini-1.5-flash"])[0]
 
 
-_resolve_gemini_model = _make_model_resolver(".gemini_model_cache.json", _discover_gemini_model)
+_resolve_gemini_model = _make_model_resolver(".gemini_model_cache_v2.json", _discover_gemini_model)
 
 
 def _discover_gemini_embed_model() -> str:
@@ -127,13 +139,17 @@ def embed_texts(texts: list[str], task_type: str) -> list[list[float]]:
 
     def _lote(textos: list[str], model: str) -> list[list[float]]:
         # Modelos nuevos como gemini-embedding-001 devuelven 3072 dimensiones
-        # por defecto; hay que pedir explicitamente 768 para que coincida con
-        # la columna Vector(768) de la base de datos.
+        # por defecto; se pide explicitamente 768, pero la API no siempre
+        # honra output_dimensionality (se ha visto ignorado en llamadas en
+        # lote) — se trunca tambien del lado del cliente para que la columna
+        # Vector(768) jamas reciba un vector de tamano distinto. Truncar es
+        # seguro: es la misma tecnica (Matryoshka) que aplica el parametro
+        # output_dimensionality del lado del servidor.
         resultado = genai.embed_content(
             model=model, content=textos, task_type=task_type,
             output_dimensionality=EMBEDDING_DIM,
         )
-        return resultado["embedding"]
+        return [v[:EMBEDDING_DIM] for v in resultado["embedding"]]
 
     model = _resolve_gemini_embed_model()
     embeddings: list[list[float]] = []

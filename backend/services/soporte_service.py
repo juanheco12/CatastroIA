@@ -117,7 +117,10 @@ def guardar_soporte(db: Session, file_bytes: bytes, filename: str) -> SoporteInf
         try:
             _indexar_chunks(db, doc)
         except Exception:
-            pass
+            # Un fallo aqui (p. ej. la API de embeddings caida) deja la sesion
+            # en estado "pending rollback" — sin esto, cualquier consulta
+            # posterior en esta misma sesion fallaria con un error opaco.
+            db.rollback()
 
     return _a_response(doc)
 
@@ -231,6 +234,10 @@ def buscar_contexto_relevante(db: Session, pregunta: str) -> str:
             .limit(MAX_CHUNKS_CONTEXTO)
         ).all()
     except Exception:
+        # El fallback por palabras clave reutiliza esta misma sesion — si la
+        # excepcion vino de un flush fallido, hay que liberar la sesion antes
+        # de volver a usarla o el fallback fallaria tambien.
+        db.rollback()
         return _buscar_contexto_legacy(db, pregunta)
 
     if not filas:
