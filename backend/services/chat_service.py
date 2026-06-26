@@ -86,7 +86,7 @@ def respond(data: SolicitudChat, db: Session) -> RespuestaChat:
 
         messages = [{"role": m.role, "content": m.content} for m in data.historial]
         messages.append({"role": "user", "content": data.mensaje})
-        texto, tokens = call_ai(messages, system_prompt, max_tokens=700)
+        texto, tokens = call_ai(messages, system_prompt, max_tokens=1500)
         texto, sugerencia = _extraer_sugerencia(texto)
         return RespuestaChat(respuesta=texto, tokens_usados=tokens, sugerencia=sugerencia)
     except Exception as e:
