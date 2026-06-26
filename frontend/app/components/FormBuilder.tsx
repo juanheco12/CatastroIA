@@ -140,6 +140,14 @@ const MOCKS: Record<string, Partial<SolicitudFormData>> = {
     fuente_administrativa_fecha: "31/12/2015", fuente_administrativa_ente_emisor: "Gobernación de Córdoba",
     documentos_aportados: [],
   },
+  primera_clase_representante_legal: {
+    nombre_solicitante: "IVAN ENRIQUE VERGARA ORDOSGOITA", cedula_solicitante: "1.102.812.454",
+    nombre_propietario: "INVERSIONES Y NEGOCIOS DBEB S.A.S", cedula_propietario: "901.916.558-8",
+    numero_predial: "23001000090004000000000", folio_matricula: "140-38712",
+    fuente_administrativa_tipo: "documento_privado", fuente_administrativa_numero: "0826",
+    fuente_administrativa_fecha: "31/12/2015", fuente_administrativa_ente_emisor: "Gobernación de Córdoba",
+    documentos_aportados: [],
+  },
   primera_clase_snr: {
     numero_radicado: "2024-3312", numero_predial: "23001000100039002700000",
     folio_matricula: "140-133775", municipio: "Montería",
@@ -506,7 +514,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
 
   const inp = "field-input";
   const needsPropietario = (tipoMutacion === "cancelacion" || tipoMutacion === "quinta_clase") ? true : (tipoOrigen !== "snr" && tipoOrigen !== "oficio");
-  const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder" || tipoOrigen === "heredero";
+  const needsSolicitante = tipoOrigen === "autorizado" || tipoOrigen === "poder" || tipoOrigen === "heredero" || tipoOrigen === "representante_legal";
   const needsRadicado    = tipoOrigen === "snr" || tipoMutacion === "complementacion";
   const usaFuenteAdministrativa = tipoMutacion === "primera_clase" || tipoMutacion === "complementacion" || tipoMutacion === "rectificacion";
   const fuenteVacia = !data.fuente_administrativa_tipo;
@@ -615,11 +623,11 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
       {needsSolicitante && (
         <div className="card p-5 space-y-4">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
-            {tipoOrigen === "autorizado" ? "Datos del autorizado" : tipoOrigen === "heredero" ? "Datos del heredero" : "Datos del apoderado"}
+            {tipoOrigen === "autorizado" ? "Datos del autorizado" : tipoOrigen === "heredero" ? "Datos del heredero" : tipoOrigen === "representante_legal" ? "Datos del representante legal" : "Datos del apoderado"}
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Field label={tipoOrigen === "autorizado" ? "Nombre del autorizado" : tipoOrigen === "heredero" ? "Nombre del heredero" : "Nombre del apoderado"} required>
+              <Field label={tipoOrigen === "autorizado" ? "Nombre del autorizado" : tipoOrigen === "heredero" ? "Nombre del heredero" : tipoOrigen === "representante_legal" ? "Nombre del representante legal" : "Nombre del apoderado"} required>
                 <input className={inp} value={data.nombre_solicitante ?? ""} onChange={e => set("nombre_solicitante", e.target.value)} placeholder="Nombre completo" />
               </Field>
             </div>
@@ -646,16 +654,16 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
       {needsPropietario && (
         <div className="card p-5 space-y-4">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">
-            {tipoMutacion === "cancelacion" || tipoMutacion === "quinta_clase" ? "Poseedor" : "Propietario"}
+            {tipoMutacion === "cancelacion" || tipoMutacion === "quinta_clase" ? "Poseedor" : tipoOrigen === "representante_legal" ? "Empresa propietaria" : "Propietario"}
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Field label="Nombre completo" required>
-                <input className={inp} value={data.nombre_propietario ?? ""} onChange={e => set("nombre_propietario", e.target.value)} placeholder="Nombre completo del propietario" />
+              <Field label={tipoOrigen === "representante_legal" ? "Razón social" : "Nombre completo"} required>
+                <input className={inp} value={data.nombre_propietario ?? ""} onChange={e => set("nombre_propietario", e.target.value)} placeholder={tipoOrigen === "representante_legal" ? "Razón social de la empresa" : "Nombre completo del propietario"} />
               </Field>
             </div>
-            <Field label="Cédula" required>
-              <input className={inp} value={data.cedula_propietario ?? ""} onChange={e => set("cedula_propietario", e.target.value)} placeholder="C.C. del propietario" />
+            <Field label={tipoOrigen === "representante_legal" ? "NIT" : "Cédula"} required>
+              <input className={inp} value={data.cedula_propietario ?? ""} onChange={e => set("cedula_propietario", e.target.value)} placeholder={tipoOrigen === "representante_legal" ? "NIT de la empresa" : "C.C. del propietario"} />
             </Field>
           </div>
         </div>
