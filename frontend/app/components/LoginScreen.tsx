@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ClipboardList, User, Lock, Eye, EyeOff, LogIn, MapPin, Landmark, Zap, CheckCircle2, Scale } from "lucide-react";
+import { ClipboardList, User, Lock, Eye, EyeOff, LogIn, MapPin, Landmark, Zap, CheckCircle2, Scale, Fingerprint, ShieldCheck } from "lucide-react";
 
 interface Props {
   onLogin: (recordar: boolean) => void;
@@ -39,6 +39,7 @@ export default function LoginScreen({ onLogin }: Props) {
         {/* ── Panel izquierdo (45%) ── */}
         <div className="w-full lg:w-[45%]">
           <div
+            className="flex flex-col"
             style={{
               marginLeft: 40,
               marginTop: 40,
@@ -54,21 +55,21 @@ export default function LoginScreen({ onLogin }: Props) {
           >
             <div
               className="flex items-center justify-center"
-              style={{ width: 64, height: 64, background: TURQUOISE, borderRadius: 16, marginBottom: 24 }}
+              style={{ width: 60, height: 60, background: TURQUOISE, borderRadius: 16, marginBottom: 22 }}
             >
-              <ClipboardList size={30} className="text-white" strokeWidth={2.2} />
+              <ClipboardList size={28} className="text-white" strokeWidth={2.2} />
             </div>
 
-            <h1 style={{ fontSize: 60, fontWeight: 800, color: "#fff", lineHeight: 1.08 }}>
+            <h1 style={{ fontSize: 40, fontWeight: 800, color: "#fff", lineHeight: 1.1 }}>
               Generador de<br />
               <span style={{ color: ACCENT }}>Motivadas Catastrales</span>
             </h1>
 
-            <p className="mt-4 text-base" style={{ color: TEXT_MUTED }}>
-              Accede a tu asistente inteligente de conservación catastral
+            <p className="mt-3 text-sm" style={{ color: TEXT_MUTED }}>
+              Accede a tu asistente inteligente<br />de conservación catastral
             </p>
 
-            <form onSubmit={handleSubmit} className="space-y-5 mt-8">
+            <form onSubmit={handleSubmit} className="space-y-4 mt-7">
               <div>
                 <label className="block text-sm font-medium mb-1.5" style={{ color: "#fff" }}>Usuario</label>
                 <div className="relative">
@@ -78,7 +79,7 @@ export default function LoginScreen({ onLogin }: Props) {
                     value={usuario}
                     onChange={(e) => setUsuario(e.target.value)}
                     placeholder="Ingresa tu usuario"
-                    className="w-full h-[58px] rounded-xl pl-12 pr-4 text-sm focus:outline-none focus:ring-2 transition-all"
+                    className="w-full h-[54px] rounded-xl pl-12 pr-4 text-sm focus:outline-none focus:ring-2 transition-all"
                     style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", color: "#fff" }}
                   />
                 </div>
@@ -93,7 +94,7 @@ export default function LoginScreen({ onLogin }: Props) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Ingresa tu contraseña"
-                    className="w-full h-[58px] rounded-xl pl-12 pr-12 text-sm focus:outline-none focus:ring-2 transition-all"
+                    className="w-full h-[54px] rounded-xl pl-12 pr-12 text-sm focus:outline-none focus:ring-2 transition-all"
                     style={{ background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.06)", color: "#fff" }}
                   />
                   <button
@@ -107,30 +108,64 @@ export default function LoginScreen({ onLogin }: Props) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-sm flex-wrap gap-2">
-                <label className="flex items-center gap-2 cursor-pointer select-none" style={{ color: TEXT_MUTED }}>
-                  <input
-                    type="checkbox"
-                    checked={recordar}
-                    onChange={(e) => setRecordar(e.target.checked)}
-                    className="w-4 h-4 rounded"
-                    style={{ accentColor: TURQUOISE }}
-                  />
-                  Recordar sesión
-                </label>
-                <button type="button" className="hover:underline transition-colors" style={{ color: TURQUOISE }}>
-                  ¿Olvidaste tu contraseña?
-                </button>
-              </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none text-sm" style={{ color: TEXT_MUTED }}>
+                <input
+                  type="checkbox"
+                  checked={recordar}
+                  onChange={(e) => setRecordar(e.target.checked)}
+                  className="w-4 h-4 rounded"
+                  style={{ accentColor: TURQUOISE }}
+                />
+                Recordar sesión
+              </label>
 
               <button
                 type="submit"
                 className="flex items-center justify-center gap-2 text-sm font-semibold text-white"
-                style={{ width: "100%", height: 60, background: TURQUOISE, borderRadius: 14 }}
+                style={{ width: "100%", height: 56, background: TURQUOISE, borderRadius: 14 }}
               >
-                <LogIn size={18} />Iniciar sesión
+                <LogIn size={18} />Iniciar Sesión
               </button>
             </form>
+
+            {/* o continúa con */}
+            <div className="flex items-center gap-3 my-5">
+              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+              <span className="text-xs" style={{ color: TEXT_MUTED }}>o continúa con</span>
+              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,.08)" }} />
+            </div>
+
+            {/* Iniciar con huella */}
+            <button
+              type="button"
+              className="flex items-center justify-center gap-2 text-sm font-medium"
+              style={{
+                width: "100%",
+                height: 54,
+                borderRadius: 14,
+                border: "1px solid rgba(255,255,255,.10)",
+                background: "rgba(255,255,255,.02)",
+                color: "#fff",
+              }}
+            >
+              <Fingerprint size={18} style={{ color: TURQUOISE }} />Iniciar con huella
+            </button>
+
+            {/* Sistema seguro */}
+            <div className="flex items-center gap-3 mt-auto pt-6">
+              <div
+                className="flex items-center justify-center shrink-0"
+                style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(33,214,199,0.12)" }}
+              >
+                <ShieldCheck size={18} style={{ color: TURQUOISE }} />
+              </div>
+              <div className="leading-snug">
+                <p className="text-sm font-semibold text-white">Sistema seguro</p>
+                <p className="text-xs" style={{ color: TEXT_MUTED }}>
+                  Tus datos están protegidos bajo estándares de seguridad
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
