@@ -1,11 +1,25 @@
 "use client";
 
-import { Building2, Users, ClipboardEdit, FilePlus2, ChevronRight, Library, SplitSquareHorizontal, FileX, FileSearch, Home } from "lucide-react";
+import {
+  Building2, Users, ClipboardEdit, FilePlus2, ChevronRight, Library, SplitSquareHorizontal,
+  FileX, FileSearch, Home, User, UserCheck, FileSignature, Scale, Landmark, type LucideIcon,
+} from "lucide-react";
 import clsx from "clsx";
 import { CATEGORIAS_MOTIVADA } from "@/lib/api";
 
 export type TipoMutacion = "primera_clase" | "segunda_clase" | "tercera_clase" | "cuarta_clase" | "quinta_clase" | "rectificacion" | "complementacion" | "cancelacion";
 export type TipoOrigen   = "propietario"   | "autorizado" | "poder" | "representante_legal" | "heredero" | "snr" | "oficio";
+
+// Icono por origen — "snr" se muestra con la sigla en texto en vez de icono.
+const ICONO_ORIGEN: Record<TipoOrigen, LucideIcon | null> = {
+  propietario:         User,
+  autorizado:          UserCheck,
+  poder:               FileSignature,
+  representante_legal: Scale,
+  heredero:            Users,
+  snr:                 null,
+  oficio:              Landmark,
+};
 
 const MUTACIONES = [
   { id: "primera_clase"   as TipoMutacion, titulo: "Primera Clase",   subtitulo: "Cambio de propietario",          icon: Users        },
@@ -159,15 +173,16 @@ export default function MutationSelector({
               key={value}
               type="button"
               onClick={() => onSelectCategoriaBiblioteca(value)}
-              className="card p-4 text-left transition-all duration-200 flex items-start gap-3 hover:border-slate-500 hover:bg-slate-800/50"
+              className="card p-4 text-left transition-all duration-200 flex items-center gap-3 hover:border-slate-500 hover:bg-slate-800/50"
             >
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 bg-slate-700">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-slate-700">
                 <Library size={18} className="text-white" />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="font-semibold text-slate-100 text-sm">{label}</p>
                 <p className="text-xs text-slate-400 mt-0.5">Desde tu Biblioteca</p>
               </div>
+              <ChevronRight size={16} className="text-slate-500 shrink-0" />
             </button>
           ))}
         </div>
@@ -181,30 +196,38 @@ export default function MutationSelector({
             ¿Cómo viene la solicitud?
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {origenes.map(({ id, titulo, desc }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onSelectOrigen(id)}
-                className={clsx(
-                  "card p-3.5 text-left transition-all duration-200 flex items-center justify-between gap-2",
-                  selectedOrigen === id
-                    ? "border-brand-success bg-emerald-500/10"
-                    : "hover:border-slate-500 hover:bg-slate-800/50"
-                )}
-              >
-                <div>
-                  <p className={clsx(
-                    "font-semibold text-sm",
-                    selectedOrigen === id ? "text-brand-success" : "text-slate-200"
-                  )}>{titulo}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
-                </div>
-                {selectedOrigen === id && (
-                  <ChevronRight size={16} className="text-brand-success shrink-0" />
-                )}
-              </button>
-            ))}
+            {origenes.map(({ id, titulo, desc }) => {
+              const Icon = ICONO_ORIGEN[id];
+              const seleccionado = selectedOrigen === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onSelectOrigen(id)}
+                  className={clsx(
+                    "card p-3.5 text-left transition-all duration-200 flex items-center gap-3",
+                    seleccionado
+                      ? "border-brand-success bg-emerald-500/10"
+                      : "hover:border-slate-500 hover:bg-slate-800/50"
+                  )}
+                >
+                  <div className={clsx(
+                    "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold",
+                    seleccionado ? "bg-brand-success text-white" : "bg-slate-700 text-slate-200"
+                  )}>
+                    {Icon ? <Icon size={18} /> : "SNR"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={clsx(
+                      "font-semibold text-sm",
+                      seleccionado ? "text-brand-success" : "text-slate-200"
+                    )}>{titulo}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
+                  </div>
+                  <ChevronRight size={16} className={clsx("shrink-0", seleccionado ? "text-brand-success" : "text-slate-500")} />
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
