@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel
 
 
@@ -121,6 +121,8 @@ class CampoReemplazadoPreview(BaseModel):
 class GenerarRequest(BaseModel):
     valores: dict[int, str]
     tipo_tramite_manual: Optional[str] = None
+    tipo_notificacion: Optional[Literal["notificable", "no_notificable"]] = None
+    municipio: Optional[str] = None
     aprobado: bool = False
 
 
@@ -129,9 +131,11 @@ class PreviewGeneracionResponse(BaseModel):
     campos_reemplazados: list[CampoReemplazadoPreview]
     fundamento_legal: Optional[str] = None
     parte_resolutiva: Optional[str] = None
+    articulos_finales: Optional[str] = None
 
 
 class GenerarFinalResponse(BaseModel):
     filename: str
     content_base64: str
     size_bytes: int
+    articulos_finales: Optional[str] = None

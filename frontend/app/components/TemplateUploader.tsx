@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getTemplateInfo, uploadTemplate, extractErrorMessage } from "@/lib/api";
+import { getTemplateInfo, uploadTemplate, extractErrorMessage, formatFechaCO } from "@/lib/api";
 import { Upload, FileCheck, Tag, AlertCircle, RefreshCw } from "lucide-react";
 import clsx from "clsx";
 
@@ -130,7 +130,7 @@ export default function TemplateUploader() {
           </div>
           {info.fecha_subida && (
             <p className="text-xs text-slate-500">
-              Subido: {new Date(info.fecha_subida).toLocaleString("es-CO")}
+              Subido: {formatFechaCO(info.fecha_subida)}
             </p>
           )}
           {info.campos_detectados.length > 0 && (
