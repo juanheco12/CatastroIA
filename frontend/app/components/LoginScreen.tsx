@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ClipboardList, User, Lock, Eye, EyeOff, LogIn, MapPin, Landmark, Zap, CheckCircle2, Scale, Fingerprint, ShieldCheck } from "lucide-react";
+import type { CSSProperties } from "react";
+import { ClipboardList, User, Lock, Eye, EyeOff, LogIn, Landmark, Zap, CheckCircle2, Scale, Fingerprint, ShieldCheck } from "lucide-react";
 
 interface Props {
   onLogin: (recordar: boolean) => void;
@@ -11,7 +12,14 @@ const TURQUOISE  = "#21D6C7";
 const ACCENT     = "#18D8CA";
 const TEXT_MUTED = "#9DAAC1";
 
-const PARCELAS = ["00345", "00346", "00347", "00348", "00349", "00350", "00351"];
+const glass: CSSProperties = {
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  borderRadius: 18,
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  boxShadow: "0 12px 40px rgba(0,0,0,0.28)",
+};
 
 const FEATURES = [
   { icon: Zap, title: "Rápido", desc: "Generación inmediata", color: "#FFC93C" },
@@ -169,114 +177,118 @@ export default function LoginScreen({ onLogin }: Props) {
           </div>
         </div>
 
-        {/* ── Panel derecho (55%) ── */}
-        <div className="hidden lg:flex w-[55%] relative flex-col items-center justify-center gap-6" style={{ padding: 50 }}>
-          <div className="relative w-full flex-1 min-h-0">
-            {/* Mapa catastral */}
-            <div
-              className="absolute left-[6%] top-[14%] grid grid-cols-3 gap-[3px]"
-              style={{ width: "52%", height: "58%", transform: "rotate(-6deg) skewX(-10deg)" }}
-            >
-              {PARCELAS.map((n, i) => (
-                <div
-                  key={n}
-                  className="flex items-end p-2 text-[11px] font-mono border rounded-[2px]"
-                  style={{
-                    borderColor: "rgba(33,214,199,0.45)",
-                    color: TEXT_MUTED,
-                    background: i === 4
-                      ? `linear-gradient(135deg, rgba(33,214,199,0.5), rgba(24,224,209,0.15))`
-                      : "rgba(33,214,199,0.04)",
-                    boxShadow: i === 4 ? "0 0 18px rgba(33,214,199,0.4)" : undefined,
-                  }}
-                >
-                  {n}
+        {/* ── Panel derecho (55%) — composición premium ── */}
+        <div
+          className="hidden lg:flex w-[55%] relative flex-col justify-center overflow-hidden"
+          style={{ padding: 64 }}
+        >
+          {/* Fondo: degradado malla + blobs */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(60% 50% at 22% 18%, rgba(33,214,199,0.20), transparent 60%)," +
+                "radial-gradient(55% 50% at 85% 78%, rgba(34,118,200,0.22), transparent 60%)," +
+                "linear-gradient(160deg, #07182e 0%, #0a2138 100%)",
+            }}
+          />
+          {/* Rejilla sutil */}
+          <div
+            className="absolute inset-0 opacity-[0.4]"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px)," +
+                "linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px)",
+              backgroundSize: "44px 44px",
+              maskImage: "radial-gradient(70% 70% at 50% 40%, #000 40%, transparent 100%)",
+              WebkitMaskImage: "radial-gradient(70% 70% at 50% 40%, #000 40%, transparent 100%)",
+            }}
+          />
+
+          {/* Contenido */}
+          <div className="relative z-10 w-full max-w-[480px] mx-auto flex flex-col gap-6">
+            {/* Encabezado */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style={{ background: TURQUOISE }} />
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: TURQUOISE }} />
+                </span>
+                <span className="text-xs font-semibold tracking-[0.18em] uppercase" style={{ color: TURQUOISE }}>
+                  Plataforma inteligente
+                </span>
+              </div>
+              <h2 className="text-[30px] font-bold leading-[1.18]" style={{ color: "#fff" }}>
+                Motivadas catastrales con<br />
+                respaldo jurídico, <span style={{ color: ACCENT }}>en minutos</span>
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed" style={{ color: TEXT_MUTED }}>
+                Automatiza la generación de resoluciones de conservación catastral sin reescribir
+                el texto jurídico — solo confirmas los datos del predio.
+              </p>
+            </div>
+
+            {/* Tarjetas de métricas */}
+            <div className="grid grid-cols-2 gap-4">
+              <div style={glass} className="p-5">
+                <div className="flex items-center gap-2 mb-3" style={{ color: TEXT_MUTED }}>
+                  <Landmark size={16} style={{ color: TURQUOISE }} />
+                  <span className="text-xs">Predios procesados</span>
+                </div>
+                <p className="text-3xl font-bold" style={{ color: "#fff" }}>1.248</p>
+                <p className="text-xs mt-1" style={{ color: "#5BE3D5" }}>+18% este mes</p>
+              </div>
+
+              <div style={glass} className="p-5 flex items-center gap-4">
+                <svg width="56" height="56" viewBox="0 0 56 56" className="shrink-0 -rotate-90">
+                  <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="6" />
+                  <circle
+                    cx="28" cy="28" r="22" fill="none" stroke={TURQUOISE} strokeWidth="6" strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 22}
+                    strokeDashoffset={2 * Math.PI * 22 * (1 - 0.98)}
+                  />
+                </svg>
+                <div>
+                  <p className="text-2xl font-bold leading-none" style={{ color: "#fff" }}>98%</p>
+                  <p className="text-xs mt-1.5 leading-snug" style={{ color: TEXT_MUTED }}>Validado<br />jurídicamente</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Actividad en tiempo real */}
+            <div style={glass} className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-semibold" style={{ color: "#fff" }}>Actividad en tiempo real</span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ color: TURQUOISE, background: "rgba(33,214,199,0.12)" }}>
+                  En vivo
+                </span>
+              </div>
+              <div className="space-y-3.5">
+                {[
+                  { t: "Resolución 00349 generada", s: "ahora" },
+                  { t: "Predio urbano validado", s: "hace 2 min" },
+                  { t: "Motivada exportada a PDF", s: "hace 5 min" },
+                ].map((row) => (
+                  <div key={row.t} className="flex items-center gap-3">
+                    <CheckCircle2 size={18} style={{ color: TURQUOISE }} className="shrink-0" />
+                    <span className="text-sm flex-1" style={{ color: "#D6DEEC" }}>{row.t}</span>
+                    <span className="text-xs" style={{ color: TEXT_MUTED }}>{row.s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Chips de valor */}
+            <div className="grid grid-cols-3 gap-3">
+              {FEATURES.map(({ icon: Icon, title, color }) => (
+                <div key={title} style={glass} className="px-3 py-3 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}1F` }}>
+                    <Icon size={15} style={{ color }} />
+                  </div>
+                  <span className="text-xs font-semibold" style={{ color: "#fff" }}>{title}</span>
                 </div>
               ))}
             </div>
-
-            {/* Marcador de ubicación */}
-            <div className="absolute" style={{ left: "27%", top: "38%" }}>
-              <div
-                className="absolute -inset-3 rounded-full"
-                style={{ background: "radial-gradient(circle, rgba(33,214,199,0.45), transparent 70%)", filter: "blur(2px)" }}
-              />
-              <MapPin size={34} className="relative" style={{ color: TURQUOISE, fill: "rgba(33,214,199,0.35)" }} />
-            </div>
-
-            {/* Documento resolución */}
-            <div
-              className="absolute right-[4%] top-[8%] w-52 rounded-xl border p-4"
-              style={{ backgroundColor: "rgba(18,33,58,0.9)", borderColor: "rgba(33,214,199,0.3)" }}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "rgba(33,214,199,0.2)" }}>
-                  <Landmark size={14} style={{ color: TURQUOISE }} />
-                </div>
-                <span className="text-xs font-bold tracking-wide" style={{ color: TURQUOISE }}>RESOLUCIÓN</span>
-              </div>
-              <div className="space-y-1.5">
-                {[100, 90, 75, 95, 60].map((w, i) => (
-                  <div key={i} className="h-1.5 rounded-full" style={{ width: `${w}%`, background: "rgba(255,255,255,.08)" }} />
-                ))}
-              </div>
-              <div className="flex items-center justify-between mt-4">
-                <svg width="44" height="18" viewBox="0 0 44 18">
-                  <path d="M2 14 Q9 2 16 12 T29 9 T42 4" fill="none" stroke={TEXT_MUTED} strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                <div className="relative w-7 h-7 rounded-full flex items-center justify-center" style={{ border: "2px dashed rgba(33,214,199,0.6)" }}>
-                  <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: TURQUOISE }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={TURQUOISE} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Casa isométrica */}
-            <svg className="absolute bottom-[4%] right-[2%]" width="206" height="172" viewBox="0 0 220 190">
-              <polygon points="110,125 210,148 110,172 10,148" fill={TURQUOISE} fillOpacity="0.03" stroke={TURQUOISE} strokeOpacity="0.3" strokeWidth="1.1" />
-              <line x1="10" y1="148" x2="210" y2="148" stroke={TURQUOISE} strokeOpacity="0.15" strokeWidth="1" />
-              <line x1="110" y1="125" x2="110" y2="172" stroke={TURQUOISE} strokeOpacity="0.15" strokeWidth="1" />
-
-              <polygon points="125,85 150,71 150,116 125,130" fill={TURQUOISE} fillOpacity="0.06" stroke={TURQUOISE} strokeOpacity="0.45" strokeWidth="1.2" />
-              <polygon points="130,85 155,71 115,41 90,55" fill={TURQUOISE} fillOpacity="0.1" stroke={TURQUOISE} strokeOpacity="0.45" strokeWidth="1.2" />
-
-              <rect x="55" y="85" width="70" height="45" fill={TURQUOISE} fillOpacity="0.05" stroke={TURQUOISE} strokeOpacity="0.6" strokeWidth="1.3" />
-              <polygon points="50,85 130,85 90,55" fill={TURQUOISE} fillOpacity="0.12" stroke={TURQUOISE} strokeOpacity="0.6" strokeWidth="1.3" />
-              <line x1="90" y1="55" x2="115" y2="41" stroke={TURQUOISE} strokeOpacity="0.6" strokeWidth="1.3" />
-
-              <rect x="61" y="93" width="14" height="13" fill="none" stroke={TURQUOISE} strokeOpacity="0.65" strokeWidth="1.1" />
-              <line x1="68" y1="93" x2="68" y2="106" stroke={TURQUOISE} strokeOpacity="0.5" strokeWidth="0.9" />
-              <line x1="61" y1="99.5" x2="75" y2="99.5" stroke={TURQUOISE} strokeOpacity="0.5" strokeWidth="0.9" />
-
-              <rect x="103" y="93" width="14" height="13" fill="none" stroke={TURQUOISE} strokeOpacity="0.65" strokeWidth="1.1" />
-              <line x1="110" y1="93" x2="110" y2="106" stroke={TURQUOISE} strokeOpacity="0.5" strokeWidth="0.9" />
-              <line x1="103" y1="99.5" x2="117" y2="99.5" stroke={TURQUOISE} strokeOpacity="0.5" strokeWidth="0.9" />
-
-              <rect x="82" y="104" width="16" height="26" fill="none" stroke={TURQUOISE} strokeOpacity="0.65" strokeWidth="1.2" />
-            </svg>
-          </div>
-
-          {/* Tarjetas de valor */}
-          <div className="flex gap-4 shrink-0">
-            {FEATURES.map(({ icon: Icon, title, desc, color }) => (
-              <div
-                key={title}
-                className="p-4"
-                style={{ width: 220, height: 120, background: "rgba(15,25,45,.70)", borderRadius: 18 }}
-              >
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-                  style={{ background: `${color}1F` }}
-                >
-                  <Icon size={18} style={{ color }} />
-                </div>
-                <p className="text-sm font-semibold text-white">{title}</p>
-                <p className="text-xs mt-0.5 leading-snug" style={{ color: TEXT_MUTED }}>{desc}</p>
-              </div>
-            ))}
           </div>
         </div>
       </div>
