@@ -14,7 +14,7 @@ import BibliotecaPreviewAprobacion from "./components/BibliotecaPreviewAprobacio
 import { generarMotivada, extractErrorMessage, MotivadaGeneradaResponse, HistorialDetalle, PlantillaInfo } from "@/lib/api";
 import {
   FileText, Eye, History, Settings, AlertCircle, ArrowLeft,
-  Sun, Moon, Building2, Home, MessageCircle, Library,
+  Sun, Moon, Building2, Home, MessageCircle, Library, ShieldCheck,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -224,6 +224,13 @@ export default function Dashboard() {
                 {id === "preview" && motivada && <span className="ml-auto w-2 h-2 rounded-full bg-brand-success" />}
               </button>
             ))}
+            <div className="mt-auto pt-4 flex items-start gap-2.5 text-xs" style={{ color: "var(--text-muted)" }}>
+              <ShieldCheck size={20} className="text-brand-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium" style={{ color: "var(--text)" }}>Sistema seguro</p>
+                <p className="mt-0.5">Tus datos están protegidos bajo estándares de seguridad</p>
+              </div>
+            </div>
           </nav>
 
           {/* Main */}
@@ -315,6 +322,10 @@ export default function Dashboard() {
             )}
           </main>
         </div>
+      </div>
+
+      <div className="hidden md:block text-center text-xs pb-6" style={{ color: "var(--text-muted)" }}>
+        Conservación Catastral 2026
       </div>
 
       {/* Mobile tab bar */}

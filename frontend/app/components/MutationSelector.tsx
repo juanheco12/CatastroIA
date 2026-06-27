@@ -165,7 +165,7 @@ export default function MutationSelector({
         </div>
 
         <p className="text-xs mt-4 mb-2" style={{ color: "var(--text-muted)" }}>
-          Otras categorías — usan motivadas reales de tu Biblioteca en vez de redactar con IA
+          Otras categorías — usar motivadas reales de tu Biblioteca en vez de redactar con IA
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {CATEGORIAS_BIBLIOTECA.map(({ value, label }) => (
