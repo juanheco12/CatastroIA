@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ClipboardList, User, Lock, Eye, EyeOff, LogIn, MapPin, FileText } from "lucide-react";
+import { ClipboardList, User, Lock, Eye, EyeOff, LogIn, MapPin, Landmark, Zap, CheckCircle2, Scale } from "lucide-react";
 
 interface Props {
   onLogin: (recordar: boolean) => void;
@@ -14,6 +14,12 @@ const TEXT_MUTED    = "#9DAAC1";
 const BORDER        = "rgba(255,255,255,.05)";
 
 const PARCELAS = ["00345", "00346", "00347", "00348", "00349", "00350", "00351", "00352"];
+
+const FEATURES = [
+  { icon: Zap, title: "Rápido", desc: "Generación inmediata", color: "#FFC93C" },
+  { icon: CheckCircle2, title: "Preciso", desc: "Validado jurídicamente", color: PRIMARY },
+  { icon: Scale, title: "Normado", desc: "Basado en normativa vigente", color: PRIMARY },
+];
 
 export default function LoginScreen({ onLogin }: Props) {
   const [usuario, setUsuario] = useState("");
@@ -135,120 +141,127 @@ export default function LoginScreen({ onLogin }: Props) {
             boxShadow: "inset 0 0 60px rgba(21,201,184,.15)",
           }}
         >
-          <div className="relative w-full h-full max-h-[640px]">
-            {/* Líneas luminosas turquesa */}
-            <svg className="absolute inset-0 w-full h-full opacity-40" preserveAspectRatio="none">
-              <line x1="55%" y1="6%" x2="92%" y2="0%" stroke={PRIMARY} strokeWidth="1" />
-              <line x1="2%" y1="70%" x2="18%" y2="96%" stroke={PRIMARY} strokeWidth="1" />
-              <circle cx="92%" cy="0%" r="2.5" fill={PRIMARY} />
-              <circle cx="18%" cy="96%" r="2.5" fill={PRIMARY} />
-            </svg>
+          <div className="relative w-full h-full max-h-[640px] flex flex-col gap-5">
+            <div className="relative flex-1 min-h-0">
+              {/* Líneas luminosas turquesa */}
+              <svg className="absolute inset-0 w-full h-full opacity-40" preserveAspectRatio="none">
+                <line x1="55%" y1="6%" x2="92%" y2="0%" stroke={PRIMARY} strokeWidth="1" />
+                <line x1="2%" y1="70%" x2="18%" y2="96%" stroke={PRIMARY} strokeWidth="1" />
+                <circle cx="92%" cy="0%" r="2.5" fill={PRIMARY} />
+                <circle cx="18%" cy="96%" r="2.5" fill={PRIMARY} />
+              </svg>
 
-            {/* Mapa catastral */}
-            <div
-              className="absolute left-[6%] top-[14%] grid grid-cols-3 gap-[3px]"
-              style={{ width: "52%", height: "58%", transform: "rotate(-6deg) skewX(-10deg)" }}
-            >
-              {PARCELAS.map((n, i) => (
-                <div
-                  key={n}
-                  className="flex items-end p-2 text-[11px] font-mono border rounded-[2px]"
-                  style={{
-                    borderColor: "rgba(21,201,184,0.45)",
-                    color: TEXT_MUTED,
-                    background: i === 4
-                      ? `linear-gradient(135deg, rgba(21,201,184,0.5), rgba(24,224,209,0.15))`
-                      : "rgba(21,201,184,0.04)",
-                    boxShadow: i === 4 ? "0 0 18px rgba(21,201,184,0.4)" : undefined,
-                  }}
-                >
-                  {n}
-                </div>
-              ))}
-            </div>
-
-            {/* Marcador de ubicación */}
-            <div className="absolute" style={{ left: "27%", top: "38%" }}>
+              {/* Mapa catastral */}
               <div
-                className="absolute -inset-3 rounded-full"
-                style={{ background: "radial-gradient(circle, rgba(21,201,184,0.45), transparent 70%)", filter: "blur(2px)" }}
-              />
-              <MapPin size={34} className="relative drop-shadow-lg" style={{ color: PRIMARY, fill: "rgba(21,201,184,0.35)" }} />
-            </div>
-
-            {/* Documento resolución */}
-            <div
-              className="absolute right-[4%] top-[8%] w-52 rounded-xl border p-4 shadow-2xl"
-              style={{ backgroundColor: "rgba(18,33,58,0.9)", borderColor: "rgba(21,201,184,0.3)" }}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "rgba(21,201,184,0.2)" }}>
-                  <FileText size={14} style={{ color: PRIMARY }} />
-                </div>
-                <span className="text-xs font-bold tracking-wide" style={{ color: PRIMARY }}>RESOLUCIÓN</span>
-              </div>
-              <div className="space-y-1.5">
-                {[100, 90, 75, 95, 60].map((w, i) => (
-                  <div key={i} className="h-1.5 rounded-full" style={{ width: `${w}%`, background: "rgba(255,255,255,.08)" }} />
+                className="absolute left-[6%] top-[14%] grid grid-cols-3 gap-[3px]"
+                style={{ width: "52%", height: "58%", transform: "rotate(-6deg) skewX(-10deg)" }}
+              >
+                {PARCELAS.map((n, i) => (
+                  <div
+                    key={n}
+                    className="flex items-end p-2 text-[11px] font-mono border rounded-[2px]"
+                    style={{
+                      borderColor: "rgba(21,201,184,0.45)",
+                      color: TEXT_MUTED,
+                      background: i === 4
+                        ? `linear-gradient(135deg, rgba(21,201,184,0.5), rgba(24,224,209,0.15))`
+                        : "rgba(21,201,184,0.04)",
+                      boxShadow: i === 4 ? "0 0 18px rgba(21,201,184,0.4)" : undefined,
+                    }}
+                  >
+                    {n}
+                  </div>
                 ))}
               </div>
-              <div className="flex items-center justify-between mt-4">
-                <svg width="44" height="18" viewBox="0 0 44 18">
-                  <path d="M2 14 Q9 2 16 12 T29 9 T42 4" fill="none" stroke={TEXT_MUTED} strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                <div className="relative w-7 h-7 rounded-full flex items-center justify-center" style={{ border: "2px dashed rgba(21,201,184,0.6)" }}>
-                  <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: PRIMARY }}>
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={PRIMARY} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
+
+              {/* Marcador de ubicación */}
+              <div className="absolute" style={{ left: "27%", top: "38%" }}>
+                <div
+                  className="absolute -inset-3 rounded-full"
+                  style={{ background: "radial-gradient(circle, rgba(21,201,184,0.45), transparent 70%)", filter: "blur(2px)" }}
+                />
+                <MapPin size={34} className="relative drop-shadow-lg" style={{ color: PRIMARY, fill: "rgba(21,201,184,0.35)" }} />
+              </div>
+
+              {/* Documento resolución */}
+              <div
+                className="absolute right-[4%] top-[8%] w-52 rounded-xl border p-4 shadow-2xl"
+                style={{ backgroundColor: "rgba(18,33,58,0.9)", borderColor: "rgba(21,201,184,0.3)" }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "rgba(21,201,184,0.2)" }}>
+                    <Landmark size={14} style={{ color: PRIMARY }} />
+                  </div>
+                  <span className="text-xs font-bold tracking-wide" style={{ color: PRIMARY }}>RESOLUCIÓN</span>
+                </div>
+                <div className="space-y-1.5">
+                  {[100, 90, 75, 95, 60].map((w, i) => (
+                    <div key={i} className="h-1.5 rounded-full" style={{ width: `${w}%`, background: "rgba(255,255,255,.08)" }} />
+                  ))}
+                </div>
+                <div className="flex items-center justify-between mt-4">
+                  <svg width="44" height="18" viewBox="0 0 44 18">
+                    <path d="M2 14 Q9 2 16 12 T29 9 T42 4" fill="none" stroke={TEXT_MUTED} strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  <div className="relative w-7 h-7 rounded-full flex items-center justify-center" style={{ border: "2px dashed rgba(21,201,184,0.6)" }}>
+                    <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: PRIMARY }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={PRIMARY} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Plataforma y casa isométrica */}
+              <svg className="absolute bottom-[4%] right-[2%]" width="206" height="172" viewBox="0 0 220 190">
+                {/* Plataforma base */}
+                <polygon points="110,125 210,148 110,172 10,148" fill={PRIMARY} fillOpacity="0.03" stroke={PRIMARY} strokeOpacity="0.3" strokeWidth="1.1" />
+                <line x1="10" y1="148" x2="210" y2="148" stroke={PRIMARY} strokeOpacity="0.15" strokeWidth="1" />
+                <line x1="110" y1="125" x2="110" y2="172" stroke={PRIMARY} strokeOpacity="0.15" strokeWidth="1" />
+
+                {/* Cara lateral y faldón del techo */}
+                <polygon points="125,85 150,71 150,116 125,130" fill={PRIMARY} fillOpacity="0.06" stroke={PRIMARY} strokeOpacity="0.45" strokeWidth="1.2" />
+                <polygon points="130,85 155,71 115,41 90,55" fill={PRIMARY} fillOpacity="0.1" stroke={PRIMARY} strokeOpacity="0.45" strokeWidth="1.2" />
+
+                {/* Cara frontal y faldón del techo */}
+                <rect x="55" y="85" width="70" height="45" fill={PRIMARY} fillOpacity="0.05" stroke={PRIMARY} strokeOpacity="0.6" strokeWidth="1.3" />
+                <polygon points="50,85 130,85 90,55" fill={PRIMARY} fillOpacity="0.12" stroke={PRIMARY} strokeOpacity="0.6" strokeWidth="1.3" />
+                <line x1="90" y1="55" x2="115" y2="41" stroke={PRIMARY} strokeOpacity="0.6" strokeWidth="1.3" />
+
+                {/* Ventanas */}
+                <rect x="61" y="93" width="14" height="13" fill="none" stroke={PRIMARY} strokeOpacity="0.65" strokeWidth="1.1" />
+                <line x1="68" y1="93" x2="68" y2="106" stroke={PRIMARY} strokeOpacity="0.5" strokeWidth="0.9" />
+                <line x1="61" y1="99.5" x2="75" y2="99.5" stroke={PRIMARY} strokeOpacity="0.5" strokeWidth="0.9" />
+
+                <rect x="103" y="93" width="14" height="13" fill="none" stroke={PRIMARY} strokeOpacity="0.65" strokeWidth="1.1" />
+                <line x1="110" y1="93" x2="110" y2="106" stroke={PRIMARY} strokeOpacity="0.5" strokeWidth="0.9" />
+                <line x1="103" y1="99.5" x2="117" y2="99.5" stroke={PRIMARY} strokeOpacity="0.5" strokeWidth="0.9" />
+
+                {/* Puerta */}
+                <rect x="82" y="104" width="16" height="26" fill="none" stroke={PRIMARY} strokeOpacity="0.65" strokeWidth="1.2" />
+              </svg>
             </div>
 
-            {/* Casa isométrica */}
-            <svg className="absolute bottom-[6%] right-[4%]" width="186" height="158" viewBox="0 0 200 170">
-              <defs>
-                <linearGradient id="roofFrontGrad" x1="0" y1="1" x2="0" y2="0">
-                  <stop offset="0%" stopColor={PRIMARY} stopOpacity="0.1" />
-                  <stop offset="100%" stopColor={PRIMARY_LIGHT} stopOpacity="0.5" />
-                </linearGradient>
-                <radialGradient id="houseGlow" cx="50%" cy="55%" r="60%">
-                  <stop offset="0%" stopColor={PRIMARY} stopOpacity="0.22" />
-                  <stop offset="100%" stopColor={PRIMARY} stopOpacity="0" />
-                </radialGradient>
-              </defs>
-
-              {/* Halo y sombra de piso */}
-              <ellipse cx="100" cy="85" rx="90" ry="68" fill="url(#houseGlow)" />
-              <ellipse cx="102" cy="132" rx="75" ry="12" fill="none" stroke={PRIMARY} strokeOpacity="0.25" />
-
-              {/* Cara lateral y faldón del techo en sombra */}
-              <polygon points="125,85 150,71 150,116 125,130" fill="rgba(8,16,30,0.92)" stroke={PRIMARY} strokeOpacity="0.3" strokeWidth="1.3" />
-              <polygon points="130,85 155,71 115,41 90,55" fill="rgba(21,201,184,0.1)" stroke={PRIMARY} strokeOpacity="0.3" strokeWidth="1.3" />
-
-              {/* Chimenea */}
-              <rect x="128" y="46" width="12" height="22" fill="rgba(8,16,30,0.92)" stroke={PRIMARY} strokeOpacity="0.35" strokeWidth="1.2" />
-              <rect x="126" y="43" width="16" height="4" rx="1" fill="rgba(8,16,30,0.92)" stroke={PRIMARY} strokeOpacity="0.35" strokeWidth="1" />
-
-              {/* Cara frontal y faldón del techo iluminados */}
-              <rect x="55" y="85" width="70" height="45" fill="rgba(18,33,58,0.92)" stroke={PRIMARY} strokeOpacity="0.5" strokeWidth="1.4" />
-              <polygon points="50,85 130,85 90,55" fill="url(#roofFrontGrad)" stroke={PRIMARY} strokeWidth="1.4" />
-              <line x1="90" y1="55" x2="115" y2="41" stroke={PRIMARY} strokeWidth="1.6" />
-
-              {/* Ventanas */}
-              <rect x="61" y="93" width="14" height="13" rx="1.5" fill="rgba(21,201,184,0.18)" stroke={PRIMARY} strokeWidth="1.2" />
-              <line x1="68" y1="93" x2="68" y2="106" stroke={PRIMARY} strokeWidth="1" />
-              <line x1="61" y1="99.5" x2="75" y2="99.5" stroke={PRIMARY} strokeWidth="1" />
-
-              <rect x="103" y="93" width="14" height="13" rx="1.5" fill="rgba(21,201,184,0.18)" stroke={PRIMARY} strokeWidth="1.2" />
-              <line x1="110" y1="93" x2="110" y2="106" stroke={PRIMARY} strokeWidth="1" />
-              <line x1="103" y1="99.5" x2="117" y2="99.5" stroke={PRIMARY} strokeWidth="1" />
-
-              {/* Puerta */}
-              <rect x="82" y="104" width="16" height="26" rx="2" fill="rgba(6,17,32,0.95)" stroke={PRIMARY} strokeOpacity="0.55" strokeWidth="1.3" />
-              <circle cx="95" cy="117" r="1.3" fill={PRIMARY} />
-            </svg>
+            {/* Tarjetas de valor */}
+            <div className="grid grid-cols-3 gap-3 shrink-0">
+              {FEATURES.map(({ icon: Icon, title, desc, color }) => (
+                <div
+                  key={title}
+                  className="rounded-2xl p-4 border"
+                  style={{ background: "rgba(12,24,42,0.6)", borderColor: "rgba(255,255,255,.06)" }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+                    style={{ background: `${color}1F` }}
+                  >
+                    <Icon size={18} style={{ color }} />
+                  </div>
+                  <p className="text-sm font-semibold" style={{ color: TEXT }}>{title}</p>
+                  <p className="text-xs mt-0.5 leading-snug" style={{ color: TEXT_MUTED }}>{desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
