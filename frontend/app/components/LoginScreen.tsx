@@ -207,12 +207,47 @@ export default function LoginScreen({ onLogin }: Props) {
             </div>
 
             {/* Casa isométrica */}
-            <svg className="absolute bottom-[10%] right-[8%] opacity-80" width="170" height="120" viewBox="0 0 170 120">
-              <ellipse cx="85" cy="100" rx="78" ry="14" fill="none" stroke={PRIMARY} strokeOpacity="0.25" />
-              <polyline points="20,68 85,22 150,68" fill="none" stroke={PRIMARY} strokeWidth="1.5" />
-              <rect x="38" y="68" width="94" height="36" fill="none" stroke={PRIMARY} strokeWidth="1.5" />
-              <rect x="58" y="78" width="18" height="26" fill="none" stroke={PRIMARY} strokeWidth="1.5" />
-              <rect x="92" y="78" width="18" height="16" fill="none" stroke={PRIMARY} strokeWidth="1.5" />
+            <svg className="absolute bottom-[6%] right-[4%]" width="186" height="158" viewBox="0 0 200 170">
+              <defs>
+                <linearGradient id="roofFrontGrad" x1="0" y1="1" x2="0" y2="0">
+                  <stop offset="0%" stopColor={PRIMARY} stopOpacity="0.1" />
+                  <stop offset="100%" stopColor={PRIMARY_LIGHT} stopOpacity="0.5" />
+                </linearGradient>
+                <radialGradient id="houseGlow" cx="50%" cy="55%" r="60%">
+                  <stop offset="0%" stopColor={PRIMARY} stopOpacity="0.22" />
+                  <stop offset="100%" stopColor={PRIMARY} stopOpacity="0" />
+                </radialGradient>
+              </defs>
+
+              {/* Halo y sombra de piso */}
+              <ellipse cx="100" cy="85" rx="90" ry="68" fill="url(#houseGlow)" />
+              <ellipse cx="102" cy="132" rx="75" ry="12" fill="none" stroke={PRIMARY} strokeOpacity="0.25" />
+
+              {/* Cara lateral y faldón del techo en sombra */}
+              <polygon points="125,85 150,71 150,116 125,130" fill="rgba(8,16,30,0.92)" stroke={PRIMARY} strokeOpacity="0.3" strokeWidth="1.3" />
+              <polygon points="130,85 155,71 115,41 90,55" fill="rgba(21,201,184,0.1)" stroke={PRIMARY} strokeOpacity="0.3" strokeWidth="1.3" />
+
+              {/* Chimenea */}
+              <rect x="128" y="46" width="12" height="22" fill="rgba(8,16,30,0.92)" stroke={PRIMARY} strokeOpacity="0.35" strokeWidth="1.2" />
+              <rect x="126" y="43" width="16" height="4" rx="1" fill="rgba(8,16,30,0.92)" stroke={PRIMARY} strokeOpacity="0.35" strokeWidth="1" />
+
+              {/* Cara frontal y faldón del techo iluminados */}
+              <rect x="55" y="85" width="70" height="45" fill="rgba(18,33,58,0.92)" stroke={PRIMARY} strokeOpacity="0.5" strokeWidth="1.4" />
+              <polygon points="50,85 130,85 90,55" fill="url(#roofFrontGrad)" stroke={PRIMARY} strokeWidth="1.4" />
+              <line x1="90" y1="55" x2="115" y2="41" stroke={PRIMARY} strokeWidth="1.6" />
+
+              {/* Ventanas */}
+              <rect x="61" y="93" width="14" height="13" rx="1.5" fill="rgba(21,201,184,0.18)" stroke={PRIMARY} strokeWidth="1.2" />
+              <line x1="68" y1="93" x2="68" y2="106" stroke={PRIMARY} strokeWidth="1" />
+              <line x1="61" y1="99.5" x2="75" y2="99.5" stroke={PRIMARY} strokeWidth="1" />
+
+              <rect x="103" y="93" width="14" height="13" rx="1.5" fill="rgba(21,201,184,0.18)" stroke={PRIMARY} strokeWidth="1.2" />
+              <line x1="110" y1="93" x2="110" y2="106" stroke={PRIMARY} strokeWidth="1" />
+              <line x1="103" y1="99.5" x2="117" y2="99.5" stroke={PRIMARY} strokeWidth="1" />
+
+              {/* Puerta */}
+              <rect x="82" y="104" width="16" height="26" rx="2" fill="rgba(6,17,32,0.95)" stroke={PRIMARY} strokeOpacity="0.55" strokeWidth="1.3" />
+              <circle cx="95" cy="117" r="1.3" fill={PRIMARY} />
             </svg>
           </div>
         </div>
