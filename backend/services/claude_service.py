@@ -28,6 +28,18 @@ def _lista_y(items: list[str]) -> str:
         return items[0]
     return ", ".join(items[:-1]) + f" y {items[-1]}"
 
+_DOC_LABELS = {"CC": "C.C.", "NIT": "NIT.", "CE": "C.E.", "TI": "T.I.", "PA": "Pasaporte"}
+
+def _doc_solicitante(data: SolicitudUnificada) -> str:
+    return _DOC_LABELS.get(data.tipo_doc_solicitante or "CC", "C.C.")
+
+def _doc_propietario(data: SolicitudUnificada) -> str:
+    """Etiqueta del tipo de documento del propietario/poseedor (C.C., NIT., etc.)
+    según lo elegido en el formulario; por defecto NIT para representante legal
+    (el propietario es una empresa) y C.C. en el resto de los casos."""
+    default = "NIT" if data.tipo_origen == "representante_legal" else "CC"
+    return _DOC_LABELS.get(data.tipo_doc_propietario or default, _DOC_LABELS[default])
+
 # ── Demo motivadas ────────────────────────────────────────────────────────────
 
 _P1_PRIMERA = (
@@ -56,7 +68,7 @@ def _demo_primera_propietario(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
     p2 = (
-        f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con C.C. No. "
+        f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con {_doc_propietario(data)} No. "
         f"{data.cedula_propietario}, propietario del inmueble identificado con número predial "
         f"{data.numero_predial}, inscrito en la base de datos catastral del municipio de {mun}, "
         f"presentó ante la Oficina de atención al público una solicitud de trámite catastral, "
@@ -69,9 +81,9 @@ def _demo_primera_autorizado(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
     p2 = (
-        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con CC No. "
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con {_doc_solicitante(data)} No. "
         f"{data.cedula_solicitante}, en su condición de autorizado del señor(a) "
-        f"{data.nombre_propietario}, identificado con CC. {data.cedula_propietario}, propietario "
+        f"{data.nombre_propietario}, identificado con {_doc_propietario(data)} {data.cedula_propietario}, propietario "
         f"del inmueble identificado con número predial {data.numero_predial}, inscrito en la base "
         f"de datos catastral del municipio de {mun}, presentó ante la Oficina de atención al "
         f"público una solicitud de trámite catastral, consistente en Cambio de propietario, "
@@ -83,9 +95,9 @@ def _demo_primera_representante_legal(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
     p2 = (
-        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con CC No. "
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con {_doc_solicitante(data)} No. "
         f"{data.cedula_solicitante}, en su condición de representante legal del (la) señor(a) "
-        f"{data.nombre_propietario}, identificado con NIT. {data.cedula_propietario}, propietario "
+        f"{data.nombre_propietario}, identificado con {_doc_propietario(data)} {data.cedula_propietario}, propietario "
         f"del inmueble identificado con número predial {data.numero_predial}, inscrito en la base "
         f"de datos catastral del municipio de {mun}, presentó ante la Oficina de atención al "
         f"público una solicitud de trámite catastral, consistente en Cambio de propietario, "
@@ -100,7 +112,7 @@ def _demo_primera_poder(data: SolicitudUnificada) -> str:
     p2 = (
         f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
         f"{data.tipo_doc_solicitante or 'CC'} No. {data.cedula_solicitante}{tp_txt}, actuando "
-        f"en calidad de apoderado del señor(a) {data.nombre_propietario}, identificado con C.C. "
+        f"en calidad de apoderado del señor(a) {data.nombre_propietario}, identificado con {_doc_propietario(data)} "
         f"{data.cedula_propietario}, propietario del inmueble identificado con número predial "
         f"{data.numero_predial}, inscrito en la base de datos catastral del municipio de {mun}, "
         f"presentó ante la Oficina de atención al público una solicitud de trámite catastral, "
@@ -142,17 +154,17 @@ def _demo_tercera(data: SolicitudUnificada) -> str:
     # Opening paragraph varies by origin
     if data.tipo_origen == "autorizado":
         apertura = (
-            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con CC NO. "
+            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con {_doc_solicitante(data)} NO. "
             f"{data.cedula_solicitante}, en su condición de contacto y/o autorizado del señor(a) "
-            f"{data.nombre_propietario}, identificado con C.C. {data.cedula_propietario},"
+            f"{data.nombre_propietario}, identificado con {_doc_propietario(data)} {data.cedula_propietario},"
         )
     elif data.tipo_origen == "poder":
         tp_txt = f", TP. {data.tp_solicitante}" if data.tp_solicitante else ""
         apertura = (
             f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
-            f"{data.tipo_doc_solicitante or 'CC'} NO. {data.cedula_solicitante}{tp_txt}, "
+            f"{_doc_solicitante(data)} NO. {data.cedula_solicitante}{tp_txt}, "
             f"en su condición de apoderado del señor(a) {data.nombre_propietario}, "
-            f"identificado con C.C. {data.cedula_propietario},"
+            f"identificado con {_doc_propietario(data)} {data.cedula_propietario},"
         )
     elif data.tipo_origen == "snr":
         snr_p2 = (
@@ -186,7 +198,7 @@ def _demo_tercera(data: SolicitudUnificada) -> str:
         )
     else:  # propietario
         apertura = (
-            f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con C.C. No. "
+            f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con {_doc_propietario(data)} No. "
             f"{data.cedula_propietario},"
         )
 
@@ -262,8 +274,8 @@ def _demo_segunda_propietario(data: SolicitudUnificada) -> str:
     docs   = ", ".join(data.documentos_aportados)
     folios = _lista_y(data.folios_resultantes)
     p2 = (
-        f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con cedula de "
-        f"ciudadanía No. {data.cedula_propietario}, propietario del inmueble con matrícula "
+        f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con "
+        f"{_doc_propietario(data)} No. {data.cedula_propietario}, propietario del inmueble con matrícula "
         f"inmobiliaria No. {data.folio_matricula}, segregado del folio matriz "
         f"{data.folio_matriz}, vinculado al número predial {data.numero_predial} inscrito en "
         f"la base de datos catastral, presento ante la Oficina de Catastro adscrita a la "
@@ -280,9 +292,9 @@ def _demo_segunda_poder(data: SolicitudUnificada) -> str:
     tp_txt = f", TP. {data.tp_solicitante}" if data.tp_solicitante else ""
     p2 = (
         f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
-        f"{data.tipo_doc_solicitante or 'cedula de ciudadanía'} No. {data.cedula_solicitante}"
+        f"{_doc_solicitante(data)} No. {data.cedula_solicitante}"
         f"{tp_txt}, en calidad de apoderado del señor(a) {data.nombre_propietario}, "
-        f"identificado con CC. {data.cedula_propietario}, propietario del inmueble con "
+        f"identificado con {_doc_propietario(data)} {data.cedula_propietario}, propietario del inmueble con "
         f"matrícula inmobiliaria No. {data.folio_matricula}, segregado del folio matriz "
         f"{data.folio_matriz}, vinculado al número predial {data.numero_predial} inscrito en "
         f"la base de datos catastral, presento ante la Oficina de Catastro adscrita a la "
@@ -297,9 +309,9 @@ def _demo_segunda_autorizado(data: SolicitudUnificada) -> str:
     docs   = ", ".join(data.documentos_aportados)
     folios = _lista_y(data.folios_resultantes)
     p2 = (
-        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con cedula de "
-        f"ciudadanía No. {data.cedula_solicitante}, en condición de contacto y/o autorizado "
-        f"del señor(a) {data.nombre_propietario}, identificado con CC. {data.cedula_propietario}, "
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
+        f"{_doc_solicitante(data)} No. {data.cedula_solicitante}, en condición de contacto y/o autorizado "
+        f"del señor(a) {data.nombre_propietario}, identificado con {_doc_propietario(data)} {data.cedula_propietario}, "
         f"propietario del inmueble con matrícula inmobiliaria No. {data.folio_matricula}, "
         f"segregado del folio matriz {data.folio_matriz}, vinculado al número predial "
         f"{data.numero_predial} inscrito en la base de datos catastral, presento ante la "
@@ -395,7 +407,7 @@ def _demo_cancelacion_propietario(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
     p2 = (
-        f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con CC. "
+        f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con {_doc_propietario(data)} "
         f"{data.cedula_propietario}, en su condición de poseedor(a) del inmueble con número "
         f"predial {data.numero_predial}, inscrito en la base de datos catastral, solicita "
         f"ante la Oficina de Catastro adscrita a la secretaria de Planeación del municipio "
@@ -411,9 +423,9 @@ def _demo_cancelacion_poder(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
     p2 = (
-        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con CC. "
+        f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con {_doc_solicitante(data)} "
         f"{data.cedula_solicitante}, quien actúa como apoderado del señor(a) "
-        f"{data.nombre_propietario}, identificado con CC. {data.cedula_propietario}, en su "
+        f"{data.nombre_propietario}, identificado con {_doc_propietario(data)} {data.cedula_propietario}, en su "
         f"condición de poseedor(a) del inmueble con número predial {data.numero_predial}, "
         f"inscrito en la base de datos catastral, solicita ante la Oficina de Catastro "
         f"adscrita a la secretaria de Planeación del municipio de {mun}, un trámite "
@@ -481,7 +493,7 @@ def _apertura_cuarta(data: SolicitudUnificada, mun: str) -> str:
         tp_txt = f", TP. {data.tp_solicitante}" if data.tp_solicitante else ""
         return (
             f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
-            f"{data.tipo_doc_solicitante or 'CC'}. {data.cedula_solicitante}{tp_txt}, quien "
+            f"{_doc_solicitante(data)} {data.cedula_solicitante}{tp_txt}, quien "
             f"actúa en calidad de apoderado del señor(a) {data.nombre_propietario} en su "
             f"condición de propietario, del inmueble con número predial "
             f"{data.numero_predial}{direccion_txt} de la zona urbana del municipio de {mun} "
@@ -492,7 +504,7 @@ def _apertura_cuarta(data: SolicitudUnificada, mun: str) -> str:
         )
     elif data.tipo_origen == "autorizado":
         return (
-            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con C.C. "
+            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con {_doc_solicitante(data)} "
             f"{data.cedula_solicitante}, quien actúa en calidad de autorizado del señor(a) "
             f"{data.nombre_propietario} en su condición de propietario, del inmueble con "
             f"número predial {data.numero_predial}{direccion_txt} de la zona urbana del "
@@ -512,7 +524,7 @@ def _apertura_cuarta(data: SolicitudUnificada, mun: str) -> str:
         )
     else:  # propietario
         return (
-            f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con C.C. "
+            f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con {_doc_propietario(data)} "
             f"{data.cedula_propietario}, en su condición de propietario, del inmueble con "
             f"número predial {data.numero_predial}{direccion_txt} de la zona urbana del "
             f"municipio de {mun} con matrícula inmobiliaria {data.folio_matricula}, inscrito "
@@ -556,7 +568,7 @@ def _apertura_quinta(data: SolicitudUnificada, mun: str) -> str:
         tp_txt = f", TP. {data.tp_solicitante}" if data.tp_solicitante else ""
         return (
             f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
-            f"{data.tipo_doc_solicitante or 'CC'}. {data.cedula_solicitante}{tp_txt}, quien "
+            f"{_doc_solicitante(data)} {data.cedula_solicitante}{tp_txt}, quien "
             f"actúa en calidad de apoderado del señor(a) {data.nombre_propietario} en su "
             f"condición de poseedor(a) de una mejora ubicada sobre el inmueble con número "
             f"predial {data.numero_predial}, inscrito en la base de datos catastral del "
@@ -567,7 +579,7 @@ def _apertura_quinta(data: SolicitudUnificada, mun: str) -> str:
         )
     elif data.tipo_origen == "autorizado":
         return (
-            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con C.C. "
+            f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con {_doc_solicitante(data)} "
             f"{data.cedula_solicitante}, quien actúa en calidad de autorizado del señor(a) "
             f"{data.nombre_propietario} en su condición de poseedor(a) de una mejora ubicada "
             f"sobre el inmueble con número predial {data.numero_predial}, inscrito en la base "
@@ -586,7 +598,7 @@ def _apertura_quinta(data: SolicitudUnificada, mun: str) -> str:
         )
     else:  # propietario / poseedor
         return (
-            f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con C.C. "
+            f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con {_doc_propietario(data)} "
             f"{data.cedula_propietario}, en su condición de poseedor(a) de una mejora ubicada "
             f"sobre el inmueble con número predial {data.numero_predial}, inscrito en la base "
             f"de datos catastral del municipio de {mun}, presentó ante la Oficina de Catastro "
@@ -677,7 +689,7 @@ def _demo_rectificacion_propietario(data: SolicitudUnificada) -> str:
     docs = ", ".join(data.documentos_aportados)
     p2 = (
         f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con "
-        f"C.C. No. {data.cedula_propietario}, en su condición de propietario del inmueble con "
+        f"{_doc_propietario(data)} No. {data.cedula_propietario}, en su condición de propietario del inmueble con "
         f"número predial {data.numero_predial} inscrito en la base de datos catastral, presentó "
         f"ante la Oficina de Catastro adscrita a la Secretaria de Planeación del municipio de "
         f"{mun}, el trámite catastral correspondiente a rectificación general de datos del "
@@ -690,8 +702,8 @@ def _demo_rectificacion_autorizado(data: SolicitudUnificada) -> str:
     docs = ", ".join(data.documentos_aportados)
     p2 = (
         f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
-        f"CC. No. {data.cedula_solicitante}, en su condición de contacto y/o autorizado del "
-        f"(la) señor(a) {data.nombre_propietario} identificado(a) con C.C. "
+        f"{_doc_solicitante(data)} No. {data.cedula_solicitante}, en su condición de contacto y/o autorizado del "
+        f"(la) señor(a) {data.nombre_propietario} identificado(a) con {_doc_propietario(data)} "
         f"{data.cedula_propietario} propietario del inmueble identificado con número predial "
         f"{data.numero_predial} inscrito en la base de datos catastral, presentó ante la "
         f"Oficina de Catastro adscrita a la Secretaria de Planeación del municipio de {mun}, "
@@ -743,7 +755,7 @@ def _demo_complementacion_propietario(data: SolicitudUnificada) -> str:
     campo = data.campo_complementado or ""
     p2 = (
         f"Que el(la) señor(a) {data.nombre_propietario}, identificado(a) con "
-        f"C.C. No. {data.cedula_propietario}, en calidad de propietario(a) del predio "
+        f"{_doc_propietario(data)} No. {data.cedula_propietario}, en calidad de propietario(a) del predio "
         f"identificado catastralmente con {data.numero_predial}, inscrito en la base de datos "
         f"catastral, presentó ante la Oficina de Catastro adscrita a la Secretaria de "
         f"Planeación del municipio de {mun}, el trámite catastral correspondiente a "
@@ -763,8 +775,8 @@ def _demo_complementacion_autorizado(data: SolicitudUnificada) -> str:
     campo = data.campo_complementado or ""
     p2 = (
         f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
-        f"CC. No. {data.cedula_solicitante}, en su condición de contacto y/o autorizado del "
-        f"(la) señor(a) {data.nombre_propietario} identificado(a) con C.C. "
+        f"{_doc_solicitante(data)} No. {data.cedula_solicitante}, en su condición de contacto y/o autorizado del "
+        f"(la) señor(a) {data.nombre_propietario} identificado(a) con {_doc_propietario(data)} "
         f"{data.cedula_propietario}, en calidad de propietario(a) del predio identificado "
         f"catastralmente con {data.numero_predial}, inscrito en la base de datos catastral, "
         f"presentó ante la Oficina de Catastro adscrita a la Secretaria de Planeación del "
@@ -786,9 +798,9 @@ def _demo_complementacion_poder(data: SolicitudUnificada) -> str:
     tp_txt = f", TP. {data.tp_solicitante}" if data.tp_solicitante else ""
     p2 = (
         f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
-        f"{data.tipo_doc_solicitante or 'CC'} No. {data.cedula_solicitante}{tp_txt}, actuando "
+        f"{_doc_solicitante(data)} No. {data.cedula_solicitante}{tp_txt}, actuando "
         f"en calidad de apoderado del señor(a) {data.nombre_propietario}, identificado con "
-        f"C.C. {data.cedula_propietario}, en calidad de propietario(a) del predio identificado "
+        f"{_doc_propietario(data)} {data.cedula_propietario}, en calidad de propietario(a) del predio identificado "
         f"catastralmente con {data.numero_predial}, inscrito en la base de datos catastral, "
         f"presentó ante la Oficina de Catastro adscrita a la Secretaria de Planeación del "
         f"municipio de {mun}, el trámite catastral correspondiente a complementación de datos "
@@ -808,8 +820,8 @@ def _demo_complementacion_heredero(data: SolicitudUnificada) -> str:
     campo = data.campo_complementado or ""
     p2 = (
         f"Que el(la) señor(a) {data.nombre_solicitante}, identificado(a) con "
-        f"C.C. No. {data.cedula_solicitante}, en su condición de heredero(a) del (la) señor(a) "
-        f"{data.nombre_propietario} (Q.E.P.D.), identificado(a) con C.C. "
+        f"{_doc_solicitante(data)} No. {data.cedula_solicitante}, en su condición de heredero(a) del (la) señor(a) "
+        f"{data.nombre_propietario} (Q.E.P.D.), identificado(a) con {_doc_propietario(data)} "
         f"{data.cedula_propietario}, en calidad de propietario(a) del predio identificado "
         f"catastralmente con {data.numero_predial}, inscrito en la base de datos catastral, "
         f"presentó ante la Oficina de Catastro adscrita a la Secretaria de Planeación del "

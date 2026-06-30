@@ -13,6 +13,7 @@ export interface SolicitudFormData {
   folio_matricula:      string;
   municipio?:           string;
   nombre_propietario?:  string;
+  tipo_doc_propietario?:string;
   cedula_propietario?:  string;
   nombre_solicitante?:  string;
   tipo_doc_solicitante?:string;
@@ -49,6 +50,9 @@ export interface SolicitudFormData {
  * en esos tipos: ahí el dato relevante no es elegir entre muchas opciones
  * sueltas, sino identificar UNA fuente administrativa concreta (con su
  * número, fecha y ente emisor) que sustenta el trámite. */
+/** Catálogo de tipos de documento de identidad — se pide siempre antes del número. */
+const TIPOS_DOCUMENTO = ["CC", "NIT", "CE", "TI", "PA"];
+
 const FUENTES_ADMINISTRATIVAS: { value: string; label: string }[] = [
   { value: "acto_administrativo", label: "Acto administrativo" },
   { value: "documento_privado",   label: "Documento privado" },
@@ -631,13 +635,11 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
                 <input className={inp} value={data.nombre_solicitante ?? ""} onChange={e => set("nombre_solicitante", e.target.value)} placeholder="Nombre completo" />
               </Field>
             </div>
-            {tipoOrigen === "poder" && (
-              <Field label="Tipo de documento">
-                <select className={inp} value={data.tipo_doc_solicitante ?? "CC"} onChange={e => set("tipo_doc_solicitante", e.target.value)}>
-                  {["CC","NIT","CE","PA"].map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </Field>
-            )}
+            <Field label="Tipo de documento">
+              <select className={inp} value={data.tipo_doc_solicitante ?? "CC"} onChange={e => set("tipo_doc_solicitante", e.target.value)}>
+                {TIPOS_DOCUMENTO.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </Field>
             <Field label="Número de documento" required>
               <input className={inp} value={data.cedula_solicitante ?? ""} onChange={e => set("cedula_solicitante", e.target.value)} placeholder="Cédula / NIT" />
             </Field>
@@ -662,8 +664,15 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
                 <input className={inp} value={data.nombre_propietario ?? ""} onChange={e => set("nombre_propietario", e.target.value)} placeholder={tipoOrigen === "representante_legal" ? "Razón social de la empresa" : "Nombre completo del propietario"} />
               </Field>
             </div>
-            <Field label={tipoOrigen === "representante_legal" ? "NIT" : "Cédula"} required>
-              <input className={inp} value={data.cedula_propietario ?? ""} onChange={e => set("cedula_propietario", e.target.value)} placeholder={tipoOrigen === "representante_legal" ? "NIT de la empresa" : "C.C. del propietario"} />
+            {tipoOrigen !== "representante_legal" && (
+              <Field label="Tipo de documento">
+                <select className={inp} value={data.tipo_doc_propietario ?? "CC"} onChange={e => set("tipo_doc_propietario", e.target.value)}>
+                  {TIPOS_DOCUMENTO.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+            )}
+            <Field label={tipoOrigen === "representante_legal" ? "NIT" : "Número de documento"} required>
+              <input className={inp} value={data.cedula_propietario ?? ""} onChange={e => set("cedula_propietario", e.target.value)} placeholder={tipoOrigen === "representante_legal" ? "NIT de la empresa" : "Cédula / NIT"} />
             </Field>
           </div>
         </div>
