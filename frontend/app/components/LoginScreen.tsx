@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { CSSProperties } from "react";
-import { ClipboardList, User, Lock, Eye, EyeOff, LogIn, Landmark, Zap, CheckCircle2, Scale, Fingerprint, ShieldCheck } from "lucide-react";
+import { ClipboardList, User, Lock, Eye, EyeOff, LogIn, Workflow, ChevronRight, Upload, ScanSearch, Wand2, FileSignature, Zap, CheckCircle2, Scale, Fingerprint, ShieldCheck } from "lucide-react";
 
 interface Props {
   onLogin: (recordar: boolean) => void;
@@ -25,6 +25,19 @@ const FEATURES = [
   { icon: Zap, title: "Rápido", desc: "Generación inmediata", color: "#FFC93C" },
   { icon: CheckCircle2, title: "Preciso", desc: "Validado jurídicamente", color: TURQUOISE },
   { icon: Scale, title: "Normado", desc: "Basado en normativa vigente", color: TURQUOISE },
+];
+
+const PIPELINE_STEPS = [
+  { icon: Upload, label: "Captura" },
+  { icon: ScanSearch, label: "Validación IA" },
+  { icon: Wand2, label: "Generación" },
+  { icon: FileSignature, label: "Firma" },
+];
+
+const FLUJO_ITEMS = [
+  "Datos del predio capturados",
+  "Plantilla jurídica seleccionada",
+  "Resolución lista para firma",
 ];
 
 export default function LoginScreen({ onLogin }: Props) {
@@ -228,51 +241,42 @@ export default function LoginScreen({ onLogin }: Props) {
               </p>
             </div>
 
-            {/* Tarjetas de métricas */}
-            <div className="grid grid-cols-2 gap-4">
-              <div style={glass} className="p-5">
-                <div className="flex items-center gap-2 mb-3" style={{ color: TEXT_MUTED }}>
-                  <Landmark size={16} style={{ color: TURQUOISE }} />
-                  <span className="text-xs">Predios procesados</span>
-                </div>
-                <p className="text-3xl font-bold" style={{ color: "#fff" }}>1.248</p>
-                <p className="text-xs mt-1" style={{ color: "#5BE3D5" }}>+18% este mes</p>
+            {/* Flujo automatizado */}
+            <div style={glass} className="p-5">
+              <div className="flex items-center gap-2 mb-4" style={{ color: TEXT_MUTED }}>
+                <Workflow size={16} style={{ color: TURQUOISE }} />
+                <span className="text-xs font-semibold uppercase tracking-wide">Flujo automatizado</span>
               </div>
-
-              <div style={glass} className="p-5 flex items-center gap-4">
-                <svg width="56" height="56" viewBox="0 0 56 56" className="shrink-0 -rotate-90">
-                  <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="6" />
-                  <circle
-                    cx="28" cy="28" r="22" fill="none" stroke={TURQUOISE} strokeWidth="6" strokeLinecap="round"
-                    strokeDasharray={2 * Math.PI * 22}
-                    strokeDashoffset={2 * Math.PI * 22 * (1 - 0.98)}
-                  />
-                </svg>
-                <div>
-                  <p className="text-2xl font-bold leading-none" style={{ color: "#fff" }}>98%</p>
-                  <p className="text-xs mt-1.5 leading-snug" style={{ color: TEXT_MUTED }}>Validado<br />jurídicamente</p>
-                </div>
+              <div className="flex items-center justify-between">
+                {PIPELINE_STEPS.map((step, i) => (
+                  <div key={step.label} className="flex items-center" style={{ flex: i < PIPELINE_STEPS.length - 1 ? 1 : "0 0 auto" }}>
+                    <div className="flex flex-col items-center gap-2" style={{ width: 64 }}>
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(33,214,199,0.12)" }}>
+                        <step.icon size={18} style={{ color: TURQUOISE }} />
+                      </div>
+                      <span className="text-[11px] text-center leading-tight" style={{ color: "#D6DEEC" }}>{step.label}</span>
+                    </div>
+                    {i < PIPELINE_STEPS.length - 1 && (
+                      <ChevronRight size={16} className="shrink-0 mx-1" style={{ color: "rgba(255,255,255,.18)" }} />
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Actividad en tiempo real */}
+            {/* Resumen del proceso */}
             <div style={glass} className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-semibold" style={{ color: "#fff" }}>Actividad en tiempo real</span>
+                <span className="text-sm font-semibold" style={{ color: "#fff" }}>Cómo funciona</span>
                 <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ color: TURQUOISE, background: "rgba(33,214,199,0.12)" }}>
-                  En vivo
+                  Automático
                 </span>
               </div>
               <div className="space-y-3.5">
-                {[
-                  { t: "Resolución 00349 generada", s: "ahora" },
-                  { t: "Predio urbano validado", s: "hace 2 min" },
-                  { t: "Motivada exportada a PDF", s: "hace 5 min" },
-                ].map((row) => (
-                  <div key={row.t} className="flex items-center gap-3">
+                {FLUJO_ITEMS.map((t) => (
+                  <div key={t} className="flex items-center gap-3">
                     <CheckCircle2 size={18} style={{ color: TURQUOISE }} className="shrink-0" />
-                    <span className="text-sm flex-1" style={{ color: "#D6DEEC" }}>{row.t}</span>
-                    <span className="text-xs" style={{ color: TEXT_MUTED }}>{row.s}</span>
+                    <span className="text-sm flex-1" style={{ color: "#D6DEEC" }}>{t}</span>
                   </div>
                 ))}
               </div>
@@ -280,9 +284,16 @@ export default function LoginScreen({ onLogin }: Props) {
 
             {/* Chips de valor */}
             <div className="grid grid-cols-3 gap-3">
-              {FEATURES.map(({ icon: Icon, title, color }) => (
-                <div key={title} style={glass} className="px-3 py-3 flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}1F` }}>
+              {FEATURES.map(({ icon: Icon, title, color }, i) => (
+                <div
+                  key={title}
+                  style={glass}
+                  className="px-3 py-3 flex items-center gap-2 transition-transform duration-300 hover:-translate-y-1 hover:scale-[1.03]"
+                >
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 animate-pulse"
+                    style={{ background: `${color}1F`, animationDuration: "2.4s", animationDelay: `${i * 0.3}s` }}
+                  >
                     <Icon size={15} style={{ color }} />
                   </div>
                   <span className="text-xs font-semibold" style={{ color: "#fff" }}>{title}</span>
