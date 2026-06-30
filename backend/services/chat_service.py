@@ -27,7 +27,15 @@ Orígenes posibles de la solicitud: propietario, autorizado (contacto del propie
 - Gestores catastrales habilitados: IGAC (por defecto), catastros descentralizados (Bogotá-UAECD, Medellín, Cali, Barranquilla, Antioquia) y gestores privados habilitados por el SNR.
 
 ## Apoyo en redacción
-Quien te escribe normalmente es un ejecutor catastral: hace visitas técnicas en terreno y necesita ayuda para convertir lo que observó u quiere decir en texto bien redactado para una motivada, una observación técnica o un oficio. Cuando te pida parafrasear, redactar, estructurar o mejorar un texto ("parafraseame esto", "estructura bien lo que voy a decir", "mejora este párrafo"), hazlo directamente: entrega el texto ya redactado, sin ningún preámbulo ni comentario introductorio (nunca escribas cosas como "le sugiero la siguiente redacción formal:" o "aquí tienes el párrafo mejorado:") — la respuesta empieza directamente con el texto redactado. Escríbelo en prosa formal-administrativa, siguiendo la convención de los actos administrativos colombianos de abrir cada párrafo o consideración con "Que," (ej. "Que, una vez verificada la información catastral del predio..."), usando además conectores adecuados (en consecuencia, dado que, conforme a, por lo expuesto, en virtud de, entre otros) para que las ideas fluyan con la lógica de una motivada y queden listas para pegarse tal cual en el documento. No lo trates como una consulta fuera de tema, y no le agregues una cita normativa si el usuario no la pidió y no aporta nada al párrafo — solo cita la norma cuando realmente sea pertinente. Una vez entregado el texto redactado, no agregues preguntas ni ofrezcas generar la motivada a menos que el usuario ya haya dejado claro que quiere usar este texto para eso (ver la sección siguiente).
+Quien te escribe normalmente es un ejecutor catastral: hace visitas técnicas en terreno y necesita ayuda para convertir lo que observó u quiere decir en texto bien redactado para una motivada, una observación técnica o un oficio. Cuando te pida parafrasear, redactar, estructurar o mejorar un texto ("parafraseame esto", "estructura bien lo que voy a decir", "mejora este párrafo"), hazlo directamente: entrega el texto ya redactado, sin ningún preámbulo ni comentario introductorio (nunca escribas cosas como "le sugiero la siguiente redacción formal:" o "aquí tienes el párrafo mejorado:"). Escríbelo en prosa formal-administrativa, siguiendo la convención de los actos administrativos colombianos de abrir cada párrafo o consideración con "Que," (ej. "Que, una vez verificada la información catastral del predio..."), usando conectores adecuados (en consecuencia, dado que, conforme a, por lo expuesto, en virtud de, entre otros) para que las ideas fluyan con la lógica de una motivada y queden listas para pegarse tal cual en el documento.
+
+IMPORTANTE — marcado de párrafos: cuando entregues párrafos jurídicos redactados en formato "Que," para incluir en una motivada, envuélvelos SIEMPRE entre estas dos etiquetas exactas (el usuario no las verá — se procesan internamente):
+<<PARRAFOS>>
+[aquí SOLO los párrafos "Que," redactados, sin texto introductorio ni cierre]
+<<FIN_PARRAFOS>>
+Fuera de esas etiquetas puede ir cualquier otra parte de tu respuesta: preguntas de seguimiento, comentarios o la etiqueta <<SUGERIR>>. No incluyas nada dentro de las etiquetas que no sea el texto jurídico "Que," para la motivada.
+
+No le agregues una cita normativa si el usuario no la pidió y no aporta nada al párrafo — solo cita la norma cuando sea realmente pertinente. Una vez entregado el texto redactado, no agregues preguntas ni ofrezcas generar la motivada a menos que el usuario ya haya dejado claro que quiere usar este texto para eso (ver la sección siguiente).
 
 ## Cómo debes responder
 - Responde en español, en prosa corriente, SIN markdown: nada de asteriscos, símbolos #, ni listas numeradas. Si necesitas enumerar algo, hazlo en la misma frase o con guiones simples "-", sin negritas ni encabezados.
@@ -50,8 +58,24 @@ _TAG_RE = re.compile(
     r'<<SUGERIR\s+tipo_mutacion="(?P<mutacion>[a-z_]+)"\s+tipo_origen="(?P<origen>[a-z]+)"\s*>>',
     re.IGNORECASE,
 )
+_PARRAFOS_RE = re.compile(
+    r'<<PARRAFOS>>\s*(.*?)\s*<<FIN_PARRAFOS>>',
+    re.DOTALL | re.IGNORECASE,
+)
 _MUTACIONES_VALIDAS = {"primera_clase", "tercera_clase", "rectificacion", "complementacion"}
 _ORIGENES_VALIDOS = {"propietario", "autorizado", "poder", "snr", "oficio"}
+
+
+def _extraer_parrafos(texto: str) -> tuple[str, str | None]:
+    """Extrae y elimina los bloques <<PARRAFOS>>...<<FIN_PARRAFOS>>.
+    Devuelve (texto_sin_tags, contenido_o_None)."""
+    match = _PARRAFOS_RE.search(texto)
+    if not match:
+        return texto, None
+    parrafos = match.group(1).strip()
+    limpio = (texto[:match.start()] + texto[match.end():]).strip()
+    limpio = re.sub(r'\n{3,}', '\n\n', limpio)
+    return limpio, parrafos or None
 
 
 def _extraer_sugerencia(texto: str) -> tuple[str, SugerenciaMotivada | None]:
@@ -88,8 +112,9 @@ def respond(data: SolicitudChat, db: Session) -> RespuestaChat:
         messages = [{"role": m.role, "content": m.content} for m in data.historial]
         messages.append({"role": "user", "content": data.mensaje})
         texto, tokens = call_ai(messages, system_prompt, max_tokens=1500)
+        texto, parrafos = _extraer_parrafos(texto)
         texto, sugerencia = _extraer_sugerencia(texto)
-        return RespuestaChat(respuesta=texto, tokens_usados=tokens, sugerencia=sugerencia)
+        return RespuestaChat(respuesta=texto, tokens_usados=tokens, sugerencia=sugerencia, parrafos_motivada=parrafos)
     except Exception as e:
         return RespuestaChat(
             respuesta=f"Error al procesar tu consulta ({provider}): {str(e)}",

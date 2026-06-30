@@ -950,6 +950,16 @@ def generate_motivada(data: SolicitudUnificada) -> dict:
     # que la respuesta sea instantánea.
     texto = _motivada_demo(data)
 
+    # Si el asistente catastral ya redactó párrafos "Que," específicos del caso,
+    # se insertan como considerandos adicionales antes de los dos últimos párrafos
+    # de cierre ("en consecuencia" y "revisados los antecedentes").
+    if data.contexto_adicional and data.contexto_adicional.strip():
+        parrafos = texto.split("\n\n")
+        # Garantizamos al menos [P1, P2, CIERRE] antes de insertar
+        insert_pos = max(2, len(parrafos) - 2)
+        parrafos.insert(insert_pos, data.contexto_adicional.strip())
+        texto = "\n\n".join(parrafos)
+
     articulos = None
     if data.tipo_notificacion:
         articulos = _articulos_finales(data.tipo_notificacion, _municipio(data))

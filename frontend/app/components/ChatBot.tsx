@@ -8,6 +8,7 @@ import clsx from "clsx";
 
 interface UIMessage extends ChatMessage {
   sugerencia?: { tipo_mutacion: TipoMutacion; tipo_origen: TipoOrigen } | null;
+  parrafos_motivada?: string | null;
 }
 
 const PREGUNTAS_RAPIDAS = [
@@ -101,6 +102,7 @@ export default function ChatBot({ onSugerirMotivada }: Props) {
         role: "assistant",
         content: res.respuesta,
         sugerencia: res.sugerencia as UIMessage["sugerencia"],
+        parrafos_motivada: res.parrafos_motivada ?? null,
       }]);
     } catch {
       setMessages([...newHistory, {
@@ -201,11 +203,11 @@ export default function ChatBot({ onSugerirMotivada }: Props) {
                       <button
                         type="button"
                         onClick={() => {
-                          const contexto = messages
-                            .slice(0, i + 1)
-                            .filter((msg) => msg.role === "assistant")
-                            .map((msg) => msg.content)
-                            .join("\n\n");
+                          // Usar solo los párrafos "Que," que el asistente marcó
+                          // explícitamente para la motivada (campo parrafos_motivada).
+                          // Si por algún motivo no vienen marcados, caer de vuelta
+                          // al contenido del mensaje que tiene la sugerencia.
+                          const contexto = m.parrafos_motivada ?? m.content;
                           onSugerirMotivada?.(m.sugerencia!.tipo_mutacion, m.sugerencia!.tipo_origen, contexto);
                         }}
                         className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-brand-primary text-white hover:bg-teal-600 transition-all shrink-0"
