@@ -64,6 +64,8 @@ export default function Dashboard() {
 
   const handleLogin = (recordar: boolean) => {
     if (recordar) localStorage.setItem("catia-sesion", "1");
+    const stored = localStorage.getItem("catia-theme");
+    if (stored) applyTheme(stored === "dark");
     setLoggedIn(true);
   };
 
