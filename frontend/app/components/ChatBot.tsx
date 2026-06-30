@@ -200,7 +200,14 @@ export default function ChatBot({ onSugerirMotivada }: Props) {
                       </div>
                       <button
                         type="button"
-                        onClick={() => onSugerirMotivada?.(m.sugerencia!.tipo_mutacion, m.sugerencia!.tipo_origen, m.content)}
+                        onClick={() => {
+                          const contexto = messages
+                            .slice(0, i + 1)
+                            .filter((msg) => msg.role === "assistant")
+                            .map((msg) => msg.content)
+                            .join("\n\n");
+                          onSugerirMotivada?.(m.sugerencia!.tipo_mutacion, m.sugerencia!.tipo_origen, contexto);
+                        }}
                         className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-brand-primary text-white hover:bg-teal-600 transition-all shrink-0"
                       >
                         Generar motivada
