@@ -53,6 +53,23 @@ export interface SolicitudFormData {
 /** Catálogo de tipos de documento de identidad — se pide siempre antes del número. */
 const TIPOS_DOCUMENTO = ["CC", "NIT", "CE", "TI", "PA"];
 
+/** Palabras que van en minúscula en nombres institucionales españoles (excepto al inicio). */
+const _PREP = new Set(["de","del","el","la","los","las","en","y","a","con","por","para","o","e","u","ni","que","al","ante","bajo","cabe","entre","hacia","hasta","sin","so","sobre","tras"]);
+
+/** Title case para nombres de entidades: cada palabra en mayúscula salvo preposiciones/artículos.
+ *  Las siglas con puntos (D.C., S.A.S., E.S.P.) se preservan tal cual. */
+function toInstitucionalCase(text: string): string {
+  return text.split(" ").map((word, i) => {
+    if (!word) return word;
+    // Siglas con puntos en mayúscula (D.C., S.A.S.) → conservar
+    if (word.includes(".") && word.toUpperCase() === word) return word;
+    const lower = word.toLowerCase();
+    return (i === 0 || !_PREP.has(lower))
+      ? lower[0].toUpperCase() + lower.slice(1)
+      : lower;
+  }).join(" ");
+}
+
 const FUENTES_ADMINISTRATIVAS: { value: string; label: string }[] = [
   { value: "acto_administrativo", label: "Acto administrativo" },
   { value: "documento_privado",   label: "Documento privado" },
@@ -923,7 +940,7 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
                   onPaste={e => {
                     e.preventDefault();
                     const raw = e.clipboardData.getData("text");
-                    const formatted = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+                    const formatted = toInstitucionalCase(raw);
                     const el = e.currentTarget;
                     const start = el.selectionStart ?? 0;
                     const end   = el.selectionEnd   ?? 0;
