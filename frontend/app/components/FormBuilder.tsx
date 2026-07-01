@@ -920,6 +920,16 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
                   className={clsx(inp, detalleFuenteDeshabilitado && "opacity-50 cursor-not-allowed")} disabled={detalleFuenteDeshabilitado}
                   value={data.fuente_administrativa_ente_emisor ?? ""}
                   onChange={e => set("fuente_administrativa_ente_emisor", e.target.value)}
+                  onPaste={e => {
+                    e.preventDefault();
+                    const raw = e.clipboardData.getData("text");
+                    const formatted = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+                    const el = e.currentTarget;
+                    const start = el.selectionStart ?? 0;
+                    const end   = el.selectionEnd   ?? 0;
+                    const cur   = data.fuente_administrativa_ente_emisor ?? "";
+                    set("fuente_administrativa_ente_emisor", cur.slice(0, start) + formatted + cur.slice(end));
+                  }}
                   placeholder="Ente emisor"
                 />
               </Field>
