@@ -870,14 +870,6 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
       {tipoMutacion === "rectificacion" && (
         <div className="card p-5 space-y-3">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Dato a rectificar</h3>
-          <div className="flex flex-wrap gap-1.5">
-            {CAMPOS_RAPIDOS_RECT.filter(c => c !== data.campo_rectificado).map(campo => (
-              <button key={campo} type="button" onClick={() => set("campo_rectificado", campo)}
-                className="text-xs px-2.5 py-1 rounded-full border border-slate-600 text-slate-400 hover:border-brand-primary hover:text-brand-primary transition-all">
-                {campo}
-              </button>
-            ))}
-          </div>
           <Field label="Campo que se rectifica" required>
             <input className={inp} value={data.campo_rectificado ?? ""} onChange={e => set("campo_rectificado", e.target.value)} placeholder="ej: el área construida, la dirección..." />
           </Field>
