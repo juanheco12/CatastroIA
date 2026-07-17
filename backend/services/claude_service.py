@@ -864,11 +864,6 @@ def _articulos_finales(tipo: str, mun: str) -> str:
         "conformidad con lo dispuesto en el capítulo 6, artículos 4.6.1 y subsiguientes de la "
         "Resolución 1040 de 2023 expedida por el IGAC."
     )
-    art5 = (
-        f"ARTÍCULO QUINTO: REMITIR copia del acto administrativo a la Secretaría de Hacienda del "
-        f"municipio de {mun}, para la actualización de la información respecto al nombre del "
-        f"propietario para fines fiscales y tributarios."
-    )
     if tipo == "notificable":
         art3 = (
             "ARTÍCULO TERCERO: La notificación de la presente resolución se realizará conforme "
@@ -885,6 +880,12 @@ def _articulos_finales(tipo: str, mun: str) -> str:
             "queja de conformidad con lo establecido en el artículo 74 y siguientes de la Ley "
             "1437 de 2011. Recursos que se concederán en efecto suspensivo."
         )
+        art5 = (
+            "ARTÍCULO QUINTO: Los avalúos inscritos con posterioridad al primero (1°) de enero "
+            "tendrán vigencia fiscal para el año siguiente, ajustados con el índice que determine "
+            "el Gobierno Nacional, de conformidad con lo dispuesto en el artículo 4.7.13 de la "
+            "Resolución 1040 de 2023 expedida por el Instituto Geográfico Agustín Codazzi – IGAC."
+        )
     else:  # no_notificable
         art3 = (
             "ARTÍCULO TERCERO: La notificación de la presente resolución se realizará conforme "
@@ -895,6 +896,11 @@ def _articulos_finales(tipo: str, mun: str) -> str:
             "ARTÍCULO CUARTO: Contra el presente acto administrativo no procede recurso alguno, "
             "conforme lo preceptúa el artículo 4.8.5 de la Resolución 1040 de 2023 y el artículo "
             "75 de la Ley 1437 de 2011."
+        )
+        art5 = (
+            f"ARTÍCULO QUINTO: REMITIR copia del acto administrativo a la Secretaría de Hacienda del "
+            f"municipio de {mun}, para la actualización de la información respecto al nombre del "
+            f"propietario para fines fiscales y tributarios."
         )
     return "\n\n".join([art2, art3, art4, art5, "COMUNÍQUESE Y CÚMPLASE"])
 
