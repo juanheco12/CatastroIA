@@ -37,8 +37,11 @@ def get_db():
 
 
 def _tiene_columna_vector(tabla) -> bool:
-    from pgvector.sqlalchemy import Vector
-    return any(isinstance(c.type, Vector) for c in tabla.columns)
+    try:
+        from pgvector.sqlalchemy import Vector
+        return any(isinstance(c.type, Vector) for c in tabla.columns)
+    except ImportError:
+        return False
 
 
 def init_db():

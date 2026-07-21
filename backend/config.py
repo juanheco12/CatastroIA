@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     exports_path: str = "./exports"
     # Comma-separated list of allowed frontend origins (e.g. tu app en Vercel)
-    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,https://catastro-ia.vercel.app"
 
     class Config:
         env_file = ".env"
