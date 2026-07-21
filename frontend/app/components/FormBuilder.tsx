@@ -13,6 +13,7 @@ export interface SolicitudFormData {
   folio_matricula:      string;
   municipio?:           string;
   nombre_propietario?:  string;
+  tipo_doc_propietario?:string;
   cedula_propietario?:  string;
   nombre_solicitante?:  string;
   tipo_doc_solicitante?:string;
@@ -49,6 +50,26 @@ export interface SolicitudFormData {
  * en esos tipos: ahí el dato relevante no es elegir entre muchas opciones
  * sueltas, sino identificar UNA fuente administrativa concreta (con su
  * número, fecha y ente emisor) que sustenta el trámite. */
+/** Catálogo de tipos de documento de identidad — se pide siempre antes del número. */
+const TIPOS_DOCUMENTO = ["CC", "NIT", "CE", "TI", "PA"];
+
+/** Palabras que van en minúscula en nombres institucionales españoles (excepto al inicio). */
+const _PREP = new Set(["de","del","el","la","los","las","en","y","a","con","por","para","o","e","u","ni","que","al","ante","bajo","cabe","entre","hacia","hasta","sin","so","sobre","tras"]);
+
+/** Title case para nombres de entidades: cada palabra en mayúscula salvo preposiciones/artículos.
+ *  Las siglas con puntos (D.C., S.A.S., E.S.P.) se preservan tal cual. */
+function toInstitucionalCase(text: string): string {
+  return text.split(" ").map((word, i) => {
+    if (!word) return word;
+    // Siglas con puntos en mayúscula (D.C., S.A.S.) → conservar
+    if (word.includes(".") && word.toUpperCase() === word) return word;
+    const lower = word.toLowerCase();
+    return (i === 0 || !_PREP.has(lower))
+      ? lower[0].toUpperCase() + lower.slice(1)
+      : lower;
+  }).join(" ");
+}
+
 const FUENTES_ADMINISTRATIVAS: { value: string; label: string }[] = [
   { value: "acto_administrativo", label: "Acto administrativo" },
   { value: "documento_privado",   label: "Documento privado" },
@@ -631,13 +652,11 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
                 <input className={inp} value={data.nombre_solicitante ?? ""} onChange={e => set("nombre_solicitante", e.target.value)} placeholder="Nombre completo" />
               </Field>
             </div>
-            {tipoOrigen === "poder" && (
-              <Field label="Tipo de documento">
-                <select className={inp} value={data.tipo_doc_solicitante ?? "CC"} onChange={e => set("tipo_doc_solicitante", e.target.value)}>
-                  {["CC","NIT","CE","PA"].map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </Field>
-            )}
+            <Field label="Tipo de documento">
+              <select className={inp} value={data.tipo_doc_solicitante ?? "CC"} onChange={e => set("tipo_doc_solicitante", e.target.value)}>
+                {TIPOS_DOCUMENTO.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </Field>
             <Field label="Número de documento" required>
               <input className={inp} value={data.cedula_solicitante ?? ""} onChange={e => set("cedula_solicitante", e.target.value)} placeholder="Cédula / NIT" />
             </Field>
@@ -662,8 +681,15 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
                 <input className={inp} value={data.nombre_propietario ?? ""} onChange={e => set("nombre_propietario", e.target.value)} placeholder={tipoOrigen === "representante_legal" ? "Razón social de la empresa" : "Nombre completo del propietario"} />
               </Field>
             </div>
-            <Field label={tipoOrigen === "representante_legal" ? "NIT" : "Cédula"} required>
-              <input className={inp} value={data.cedula_propietario ?? ""} onChange={e => set("cedula_propietario", e.target.value)} placeholder={tipoOrigen === "representante_legal" ? "NIT de la empresa" : "C.C. del propietario"} />
+            {tipoOrigen !== "representante_legal" && (
+              <Field label="Tipo de documento">
+                <select className={inp} value={data.tipo_doc_propietario ?? "CC"} onChange={e => set("tipo_doc_propietario", e.target.value)}>
+                  {TIPOS_DOCUMENTO.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Field>
+            )}
+            <Field label={tipoOrigen === "representante_legal" ? "NIT" : "Número de documento"} required>
+              <input className={inp} value={data.cedula_propietario ?? ""} onChange={e => set("cedula_propietario", e.target.value)} placeholder={tipoOrigen === "representante_legal" ? "NIT de la empresa" : "Cédula / NIT"} />
             </Field>
           </div>
         </div>
@@ -844,14 +870,6 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
       {tipoMutacion === "rectificacion" && (
         <div className="card p-5 space-y-3">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">Dato a rectificar</h3>
-          <div className="flex flex-wrap gap-1.5">
-            {CAMPOS_RAPIDOS_RECT.filter(c => c !== data.campo_rectificado).map(campo => (
-              <button key={campo} type="button" onClick={() => set("campo_rectificado", campo)}
-                className="text-xs px-2.5 py-1 rounded-full border border-slate-600 text-slate-400 hover:border-brand-primary hover:text-brand-primary transition-all">
-                {campo}
-              </button>
-            ))}
-          </div>
           <Field label="Campo que se rectifica" required>
             <input className={inp} value={data.campo_rectificado ?? ""} onChange={e => set("campo_rectificado", e.target.value)} placeholder="ej: el área construida, la dirección..." />
           </Field>
@@ -911,6 +929,16 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
                   className={clsx(inp, detalleFuenteDeshabilitado && "opacity-50 cursor-not-allowed")} disabled={detalleFuenteDeshabilitado}
                   value={data.fuente_administrativa_ente_emisor ?? ""}
                   onChange={e => set("fuente_administrativa_ente_emisor", e.target.value)}
+                  onPaste={e => {
+                    e.preventDefault();
+                    const raw = e.clipboardData.getData("text");
+                    const formatted = toInstitucionalCase(raw);
+                    const el = e.currentTarget;
+                    const start = el.selectionStart ?? 0;
+                    const end   = el.selectionEnd   ?? 0;
+                    const cur   = data.fuente_administrativa_ente_emisor ?? "";
+                    set("fuente_administrativa_ente_emisor", cur.slice(0, start) + formatted + cur.slice(end));
+                  }}
                   placeholder="Ente emisor"
                 />
               </Field>

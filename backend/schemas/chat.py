@@ -21,3 +21,4 @@ class RespuestaChat(BaseModel):
     respuesta: str
     tokens_usados: Optional[int] = None
     sugerencia: Optional[SugerenciaMotivada] = None
+    parrafos_motivada: Optional[str] = None

@@ -3,7 +3,7 @@ import re
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, case, exists
 from docx import Document
-from database.db import IS_SQLITE
+from database.db import IS_SQLITE, SessionLocal
 from models.soporte import SoporteDocumento, SoporteChunk
 from schemas.soporte import SoporteInfoResponse
 from services import ai_provider
@@ -98,6 +98,12 @@ def _indexar_chunks(db: Session, doc: SoporteDocumento) -> None:
 
 
 def guardar_soporte(db: Session, file_bytes: bytes, filename: str) -> SoporteInfoResponse:
+    """Persiste el documento y devuelve la respuesta de inmediato. La
+    indexacion para RAG (embeddings) se programa por separado (ver
+    indexar_soporte_en_segundo_plano) porque para documentos grandes puede
+    tardar varios minutos — si corriera aqui de forma sincrona, la respuesta
+    HTTP tardaria lo mismo y el cliente terminaria viendo un error de red por
+    timeout aunque el documento ya haya quedado guardado."""
     tipo_archivo = filename.rsplit(".", 1)[-1].lower()
     texto = _extraer_texto(file_bytes, tipo_archivo)
     if not texto.strip():
@@ -113,7 +119,21 @@ def guardar_soporte(db: Session, file_bytes: bytes, filename: str) -> SoporteInf
     db.commit()
     db.refresh(doc)
 
-    if not IS_SQLITE:
+    return _a_response(doc)
+
+
+def indexar_soporte_en_segundo_plano(soporte_id: int) -> None:
+    """Genera los embeddings de un soporte ya guardado. Se ejecuta despues de
+    responder la peticion HTTP (ver BackgroundTasks en soporte_routes), con su
+    propia sesion de base de datos porque la sesion de la peticion original ya
+    se cerro para entonces."""
+    if IS_SQLITE:
+        return
+    db = SessionLocal()
+    try:
+        doc = db.get(SoporteDocumento, soporte_id)
+        if doc is None:
+            return
         try:
             _indexar_chunks(db, doc)
         except Exception:
@@ -121,8 +141,8 @@ def guardar_soporte(db: Session, file_bytes: bytes, filename: str) -> SoporteInf
             # en estado "pending rollback" — sin esto, cualquier consulta
             # posterior en esta misma sesion fallaria con un error opaco.
             db.rollback()
-
-    return _a_response(doc)
+    finally:
+        db.close()
 
 
 def listar_soportes(db: Session) -> list[SoporteInfoResponse]:

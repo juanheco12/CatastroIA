@@ -149,7 +149,7 @@ export interface SugerenciaMotivada {
 export async function enviarMensajeChat(
   mensaje: string,
   historial: ChatMessage[]
-): Promise<{ respuesta: string; tokens_usados?: number; sugerencia?: SugerenciaMotivada | null }> {
+): Promise<{ respuesta: string; tokens_usados?: number; sugerencia?: SugerenciaMotivada | null; parrafos_motivada?: string | null }> {
   const res = await api.post("/chat/mensaje", { mensaje, historial });
   return res.data;
 }
@@ -205,6 +205,18 @@ export function downloadBase64Docx(base64: string, filename: string) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// El backend guarda fechas en UTC "naive" (sin sufijo de zona horaria), por lo
+// que un `new Date(iso)` directo hace que el navegador las interprete como
+// hora local en vez de UTC. Se fuerza el sufijo 'Z' y se formatea siempre en
+// horario de Colombia (America/Bogota, GMT-5) sin importar dónde se ejecute.
+export function formatFechaCO(iso: string, opts?: Intl.DateTimeFormatOptions): string {
+  const isoUtc = /[zZ]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`;
+  return new Date(isoUtc).toLocaleString("es-CO", {
+    timeZone: "America/Bogota",
+    ...opts,
+  });
 }
 
 // ── Biblioteca de motivadas reutilizables ──
@@ -368,12 +380,14 @@ export interface PreviewGeneracionResponse {
   campos_reemplazados: CampoReemplazadoPreview[];
   fundamento_legal?: string | null;
   parte_resolutiva?: string | null;
+  articulos_finales?: string | null;
 }
 
 export interface GenerarFinalResponse {
   filename: string;
   content_base64: string;
   size_bytes: number;
+  articulos_finales?: string | null;
 }
 
 export async function eliminarTodasPlantillas(): Promise<{ eliminadas: number }> {
@@ -487,19 +501,25 @@ export async function marcarPlantillaFavorita(id: number, favorita: boolean): Pr
 }
 
 export async function previewGeneracionPlantilla(
-  id: number, valores: Record<number, string>, tipoTramiteManual?: string
+  id: number, valores: Record<number, string>, tipoTramiteManual?: string,
+  tipoNotificacion?: "notificable" | "no_notificable" | null, municipio?: string
 ): Promise<PreviewGeneracionResponse> {
   const res = await api.post(`/biblioteca/${id}/preview-generacion`, {
-    valores, tipo_tramite_manual: tipoTramiteManual || undefined, aprobado: false,
+    valores, tipo_tramite_manual: tipoTramiteManual || undefined,
+    tipo_notificacion: tipoNotificacion || undefined, municipio: municipio || undefined,
+    aprobado: false,
   });
   return res.data;
 }
 
 export async function generarFinalPlantilla(
-  id: number, valores: Record<number, string>, tipoTramiteManual?: string
+  id: number, valores: Record<number, string>, tipoTramiteManual?: string,
+  tipoNotificacion?: "notificable" | "no_notificable" | null, municipio?: string
 ): Promise<GenerarFinalResponse> {
   const res = await api.post(`/biblioteca/${id}/generar-final`, {
-    valores, tipo_tramite_manual: tipoTramiteManual || undefined, aprobado: true,
+    valores, tipo_tramite_manual: tipoTramiteManual || undefined,
+    tipo_notificacion: tipoNotificacion || undefined, municipio: municipio || undefined,
+    aprobado: true,
   });
   return res.data;
 }

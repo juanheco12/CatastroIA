@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from database.db import get_db
 from schemas.soporte import SoporteInfoResponse
@@ -11,7 +11,11 @@ EXTENSIONES_VALIDAS = {"pdf", "docx", "txt"}
 
 
 @router.post("/upload", response_model=SoporteInfoResponse)
-async def upload_soporte(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_soporte(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
     """Sube un documento de soporte (PDF/Word/texto) a la base de conocimiento permanente."""
     if not file.filename or "." not in file.filename:
         raise HTTPException(status_code=400, detail="Nombre de archivo inválido")
@@ -25,11 +29,17 @@ async def upload_soporte(file: UploadFile = File(...), db: Session = Depends(get
         raise HTTPException(status_code=413, detail="El archivo supera el límite de 200 MB")
 
     try:
-        return soporte_service.guardar_soporte(db, file_bytes, file.filename)
+        resultado = soporte_service.guardar_soporte(db, file_bytes, file.filename)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Error guardando soporte: {exc}")
+
+    # La indexacion para RAG (embeddings) puede tardar varios minutos en
+    # documentos grandes — se ejecuta despues de responder para que la subida
+    # no dependa de ese tiempo ni se caiga por timeout del servidor/proxy.
+    background_tasks.add_task(soporte_service.indexar_soporte_en_segundo_plano, resultado.id)
+    return resultado
 
 
 @router.get("/", response_model=list[SoporteInfoResponse])

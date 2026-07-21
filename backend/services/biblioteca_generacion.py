@@ -20,6 +20,7 @@ from schemas.biblioteca import (
 )
 from services.biblioteca_extraccion import extraer_texto_plano, extraer_parrafos_con_runs, PARRAFO_SEPARATOR
 from services.biblioteca_service import obtener_plantilla, registrar_uso
+from services.claude_service import _articulos_finales
 
 # Ancla heuristica para separar fundamento legal de parte resolutiva. Solo
 # detecta el patron en ~46% de los documentos reales (no existe un
@@ -83,11 +84,15 @@ def generar_preview(db: Session, plantilla_id: int, req: GenerarRequest) -> Prev
     reemplazados.reverse()  # devolver en orden de aparicion en el documento
 
     fundamento_legal, parte_resolutiva = _dividir_fundamento_y_resolutiva(texto)
+    articulos_finales = None
+    if req.tipo_notificacion:
+        articulos_finales = _articulos_finales(req.tipo_notificacion, req.municipio or "el municipio")
     return PreviewGeneracionResponse(
         texto_previsto=texto,
         campos_reemplazados=reemplazados,
         fundamento_legal=fundamento_legal,
         parte_resolutiva=parte_resolutiva,
+        articulos_finales=articulos_finales,
     )
 
 
@@ -197,6 +202,12 @@ def generar_docx_final(db: Session, plantilla_id: int, req: GenerarRequest) -> G
     if req.tipo_tramite_manual:
         p.tipo_tramite_manual = req.tipo_tramite_manual
 
+    articulos_finales = None
+    if req.tipo_notificacion:
+        articulos_finales = _articulos_finales(req.tipo_notificacion, req.municipio or "el municipio")
+        for parrafo in articulos_finales.split("\n\n"):
+            doc.add_paragraph(parrafo)
+
     buffer = io.BytesIO()
     doc.save(buffer)
     docx_bytes = buffer.getvalue()
@@ -209,4 +220,5 @@ def generar_docx_final(db: Session, plantilla_id: int, req: GenerarRequest) -> G
         filename=filename,
         content_base64=base64.b64encode(docx_bytes).decode("ascii"),
         size_bytes=len(docx_bytes),
+        articulos_finales=articulos_finales,
     )

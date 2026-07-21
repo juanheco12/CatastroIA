@@ -2,12 +2,13 @@
 
 import { useState, useRef, useEffect } from "react";
 import { enviarMensajeChat, ChatMessage } from "@/lib/api";
-import { Send, Bot, User, Sparkles, RotateCcw, FileText } from "lucide-react";
+import { Send, Bot, User, Sparkles, RotateCcw, FileText, ArrowRight } from "lucide-react";
 import { TipoMutacion, TipoOrigen, LABEL_MUTACION, LABEL_ORIGEN } from "./MutationSelector";
 import clsx from "clsx";
 
 interface UIMessage extends ChatMessage {
   sugerencia?: { tipo_mutacion: TipoMutacion; tipo_origen: TipoOrigen } | null;
+  parrafos_motivada?: string | null;
 }
 
 const PREGUNTAS_RAPIDAS = [
@@ -101,6 +102,7 @@ export default function ChatBot({ onSugerirMotivada }: Props) {
         role: "assistant",
         content: res.respuesta,
         sugerencia: res.sugerencia as UIMessage["sugerencia"],
+        parrafos_motivada: res.parrafos_motivada ?? null,
       }]);
     } catch {
       setMessages([...newHistory, {
@@ -184,15 +186,36 @@ export default function ChatBot({ onSugerirMotivada }: Props) {
                   ? <BubbleUser text={m.content} />
                   : <BubbleBot  text={m.content} />}
                 {m.role === "assistant" && m.sugerencia && (
-                  <div className="flex pl-9 mt-1.5">
-                    <button
-                      type="button"
-                      onClick={() => onSugerirMotivada?.(m.sugerencia!.tipo_mutacion, m.sugerencia!.tipo_origen, m.content)}
-                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-brand-primary/40 text-brand-primary hover:bg-teal-500/10 transition-all"
+                  <div className="pl-9 mt-2">
+                    <div
+                      className="rounded-xl border p-3.5 flex items-center gap-3 transition-all hover:border-brand-primary/60"
+                      style={{ borderColor: "rgba(20,184,166,0.35)", background: "rgba(20,184,166,0.06)" }}
                     >
-                      <FileText size={13} />
-                      Generar motivada — {LABEL_MUTACION[m.sugerencia.tipo_mutacion]} · {LABEL_ORIGEN[m.sugerencia.tipo_origen]}
-                    </button>
+                      <div className="w-9 h-9 rounded-lg bg-teal-500/15 flex items-center justify-center shrink-0">
+                        <FileText size={16} className="text-brand-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Análisis completo</p>
+                        <p className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>
+                          {LABEL_MUTACION[m.sugerencia.tipo_mutacion]} · {LABEL_ORIGEN[m.sugerencia.tipo_origen]}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Usar solo los párrafos "Que," que el asistente marcó
+                          // explícitamente para la motivada (campo parrafos_motivada).
+                          // Si por algún motivo no vienen marcados, caer de vuelta
+                          // al contenido del mensaje que tiene la sugerencia.
+                          const contexto = m.parrafos_motivada ?? m.content;
+                          onSugerirMotivada?.(m.sugerencia!.tipo_mutacion, m.sugerencia!.tipo_origen, contexto);
+                        }}
+                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-brand-primary text-white hover:bg-teal-600 transition-all shrink-0"
+                      >
+                        Generar motivada
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

@@ -6,7 +6,7 @@ import {
   eliminarPlantilla,
   PlantillaDetalle, CampoVariable, ORIGENES_TRAMITE, labelCategoria, labelTipoCampo,
 } from "@/lib/api";
-import { RefreshCw, AlertCircle, Wand2, Download, ArrowLeft, Trash2, Tag, Eye } from "lucide-react";
+import { RefreshCw, AlertCircle, Wand2, Download, ArrowLeft, Trash2, Tag, Eye, Bell, BellOff, BellMinus, ScrollText } from "lucide-react";
 import CopyButton from "./CopyButton";
 import clsx from "clsx";
 
@@ -22,6 +22,7 @@ interface ResultadoGeneracion {
   texto: string;
   campos_reemplazados: { campo_id: number; tipo_campo: string; valor_anterior: string; valor_nuevo: string }[];
   docx: { filename: string; content_base64: string };
+  articulosFinales: string | null;
 }
 
 interface GrupoCampo {
@@ -60,6 +61,8 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
   const [loading, setLoading] = useState(true);
   const [valores, setValores] = useState<Record<number, string>>({});
   const [tipoTramiteManual, setTipoTramiteManual] = useState("");
+  const [tipoNotificacion, setTipoNotificacion] = useState<"notificable" | "no_notificable" | null>(null);
+  const [municipio, setMunicipio] = useState("");
 
   const [resultado, setResultado] = useState<ResultadoGeneracion | null>(null);
   const [generando, setGenerando] = useState(false);
@@ -95,13 +98,14 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
     setError(null);
     try {
       const [preview, final] = await Promise.all([
-        previewGeneracionPlantilla(plantillaId, valores, tipoTramiteManual || undefined),
-        generarFinalPlantilla(plantillaId, valores, tipoTramiteManual || undefined),
+        previewGeneracionPlantilla(plantillaId, valores, tipoTramiteManual || undefined, tipoNotificacion, municipio || undefined),
+        generarFinalPlantilla(plantillaId, valores, tipoTramiteManual || undefined, tipoNotificacion, municipio || undefined),
       ]);
       setResultado({
         texto: preview.texto_previsto,
         campos_reemplazados: preview.campos_reemplazados,
         docx: final,
+        articulosFinales: preview.articulos_finales ?? null,
       });
     } catch (err: unknown) {
       setError(extractErrorMessage(err, "Error al generar la motivada."));
@@ -279,6 +283,36 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
               ))}
             </select>
           </div>
+
+          <div className="p-3 rounded-lg border space-y-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--surface)" }}>
+            <label className="field-label">Artículos finales</label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { id: null,              label: "Sin artículos", icon: BellMinus },
+                { id: "notificable",     label: "Notificable",   icon: Bell     },
+                { id: "no_notificable",  label: "No notificable",icon: BellOff  },
+              ] as const).map(({ id, label, icon: Icon }) => (
+                <button key={label} type="button"
+                  onClick={() => { setTipoNotificacion(id); setResultado(null); }}
+                  className={clsx(
+                    "flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium border transition-all",
+                    tipoNotificacion === id
+                      ? "border-brand-primary bg-blue-500/10 text-brand-primary"
+                      : "border-slate-600 text-slate-400 hover:border-slate-400 hover:text-slate-200"
+                  )}>
+                  <Icon size={14} />{label}
+                </button>
+              ))}
+            </div>
+            {tipoNotificacion && (
+              <input
+                className="field-input"
+                value={municipio}
+                onChange={(e) => { setMunicipio(e.target.value); setResultado(null); }}
+                placeholder="Municipio (opcional, para el artículo quinto)"
+              />
+            )}
+          </div>
         </div>
 
         {mostrarVistaPrevia && (
@@ -321,6 +355,21 @@ export default function BibliotecaPreviewAprobacion({ plantillaId, onVolver, onE
           </div>
 
           <CopyButton getText={() => resultado.texto} label="Copiar motivada" />
+
+          {resultado.articulosFinales && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <ScrollText size={14} className="text-brand-warning" />
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Artículos Finales</span>
+              </div>
+              <div className="rounded-lg border border-amber-500/20 p-4 text-sm leading-relaxed" style={{ whiteSpace: "pre-wrap", color: "var(--text)" }}>
+                {resultado.articulosFinales}
+              </div>
+              <div className="mt-2">
+                <CopyButton getText={() => resultado.articulosFinales!} label="Copiar artículos finales" />
+              </div>
+            </div>
+          )}
 
           <button
             type="button"

@@ -18,8 +18,9 @@ class SolicitudUnificada(BaseModel):
     municipio:            Optional[str] = None
 
     # ── Propietario ───────────────────────────────────────────────
-    nombre_propietario: Optional[str] = None
-    cedula_propietario: Optional[str] = None
+    nombre_propietario:   Optional[str] = None
+    tipo_doc_propietario: Optional[str] = None
+    cedula_propietario:   Optional[str] = None
 
     # ── Solicitante (autorizado / apoderado) ─────────────────────
     nombre_solicitante:    Optional[str] = None

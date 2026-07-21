@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import LandingPage from "./components/LandingPage";
+import LoginScreen from "./components/LoginScreen";
 import MutationSelector, { TipoMutacion, TipoOrigen, LABEL_MUTACION, LABEL_ORIGEN } from "./components/MutationSelector";
 import FormBuilder, { SolicitudFormData } from "./components/FormBuilder";
 import PreviewMotivada from "./components/PreviewMotivada";
@@ -14,7 +14,7 @@ import BibliotecaPreviewAprobacion from "./components/BibliotecaPreviewAprobacio
 import { generarMotivada, extractErrorMessage, MotivadaGeneradaResponse, HistorialDetalle, PlantillaInfo } from "@/lib/api";
 import {
   FileText, Eye, History, Settings, AlertCircle, ArrowLeft,
-  Sun, Moon, Building2, Home, MessageCircle, Library,
+  Sun, Moon, Building2, Home, MessageCircle, Library, ShieldCheck,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -31,7 +31,7 @@ const TABS = [
 ];
 
 export default function Dashboard() {
-  const [showLanding, setShowLanding] = useState(true);
+  const [loggedIn,    setLoggedIn]    = useState(false);
   const [darkMode,    setDarkMode]    = useState(true);
   const [tab,      setTab]      = useState<Tab>("form");
   const [step,     setStep]     = useState<Step>("select");
@@ -51,6 +51,8 @@ export default function Dashboard() {
     const isDark = stored ? stored === "dark" : true;
     setDarkMode(isDark);
     document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+
+    if (localStorage.getItem("catia-sesion") === "1") setLoggedIn(true);
   }, []);
 
   const applyTheme = (isDark: boolean) => {
@@ -60,7 +62,19 @@ export default function Dashboard() {
     localStorage.setItem("catia-theme", t);
   };
 
-  if (showLanding) return <LandingPage onStart={() => setShowLanding(false)} />;
+  const handleLogin = (recordar: boolean) => {
+    if (recordar) localStorage.setItem("catia-sesion", "1");
+    const stored = localStorage.getItem("catia-theme");
+    if (stored) applyTheme(stored === "dark");
+    setLoggedIn(true);
+  };
+
+  const handleCerrarSesion = () => {
+    localStorage.removeItem("catia-sesion");
+    setLoggedIn(false);
+  };
+
+  if (!loggedIn) return <LoginScreen onLogin={handleLogin} />;
 
   const handleOrigenSelect = (v: TipoOrigen) => { setOrigen(v); setStep("form"); };
 
@@ -178,10 +192,10 @@ export default function Dashboard() {
                 : <Moon size={16} className="text-brand-primary" />}
             </button>
 
-            {/* Back to landing */}
+            {/* Cerrar sesión */}
             <button
               type="button"
-              onClick={() => setShowLanding(true)}
+              onClick={handleCerrarSesion}
               className="flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-xl border transition-all duration-200 hover:border-brand-primary"
               style={{
                 backgroundColor: "var(--muted)",
@@ -212,6 +226,13 @@ export default function Dashboard() {
                 {id === "preview" && motivada && <span className="ml-auto w-2 h-2 rounded-full bg-brand-success" />}
               </button>
             ))}
+            <div className="mt-auto pt-4 flex items-start gap-2.5 text-xs" style={{ color: "var(--text-muted)" }}>
+              <ShieldCheck size={20} className="text-brand-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium" style={{ color: "var(--text)" }}>Sistema seguro</p>
+                <p className="mt-0.5">Tus datos están protegidos bajo estándares de seguridad</p>
+              </div>
+            </div>
           </nav>
 
           {/* Main */}
@@ -303,6 +324,10 @@ export default function Dashboard() {
             )}
           </main>
         </div>
+      </div>
+
+      <div className="hidden md:block text-center text-xs pb-6" style={{ color: "var(--text-muted)" }}>
+        Conservación Catastral 2026
       </div>
 
       {/* Mobile tab bar */}

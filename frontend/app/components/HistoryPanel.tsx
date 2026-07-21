@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   getHistorial, getHistorialDetalle, deleteHistorialItem,
-  HistorialItem, HistorialDetalle,
+  HistorialItem, HistorialDetalle, formatFechaCO,
 } from "@/lib/api";
 import {
   Search, Trash2, ExternalLink, ChevronDown, ChevronUp,
@@ -19,7 +19,7 @@ function Badge({ estado }: { estado: string }) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("es-CO", {
+  return formatFechaCO(iso, {
     year: "numeric", month: "short", day: "numeric",
     hour: "2-digit", minute: "2-digit",
   });
