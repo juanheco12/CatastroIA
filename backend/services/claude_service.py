@@ -898,9 +898,10 @@ def _articulos_finales(tipo: str, mun: str) -> str:
             "75 de la Ley 1437 de 2011."
         )
         art5 = (
-            f"ARTÍCULO QUINTO: REMITIR copia del acto administrativo a la Secretaría de Hacienda del "
-            f"municipio de {mun}, para la actualización de la información respecto al nombre del "
-            f"propietario para fines fiscales y tributarios."
+            "ARTÍCULO QUINTO: Los avalúos inscritos con posterioridad al primero (1°) de enero "
+            "tendrán vigencia fiscal para el año siguiente, ajustados con el índice que determine "
+            "el Gobierno Nacional, de conformidad con lo dispuesto en el artículo 4.7.13 de la "
+            "Resolución 1040 de 2023 expedida por el Instituto Geográfico Agustín Codazzi – IGAC."
         )
     return "\n\n".join([art2, art3, art4, art5, "COMUNÍQUESE Y CÚMPLASE"])
 
