@@ -136,7 +136,7 @@ def _demo_primera_oficio(data: SolicitudUnificada) -> str:
 def _demo_primera_snr(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
-    p1 = (
+    p_snr = (
         f"Que teniendo en cuenta la interrelación catastro-registro y la colaboración armónica "
         f"que entre estas existe, la Superintendencia de Notariado y Registro del circuito de "
         f"{mun}, suministró información para realizar el debido estudio jurídico, con el fin de "
@@ -147,13 +147,13 @@ def _demo_primera_snr(data: SolicitudUnificada) -> str:
     )
     consulta  = getattr(data, 'numero_consulta',  None) or 'N/A'
     anotacion = getattr(data, 'numero_anotacion', None) or 'N/A'
-    p2 = (
+    p_consulta = (
         f"Que revisada la información vigente según la consulta No. {consulta} de la ventanilla "
         f"única de registro en el folio de matrícula inmobiliaria {data.folio_matricula}, "
         f"se procede a realizar el respectivo cambio de propietario de conformidad con la "
         f"anotación No. {anotacion}."
     )
-    return "\n\n".join([p1, p2])
+    return "\n\n".join([_P1_PRIMERA, p_snr, p_consulta, _P3_PRIMERA, _p4_primera(mun)])
 
 def _demo_tercera(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
