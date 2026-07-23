@@ -1,4 +1,5 @@
 "use client";
+// build: SNR primera clase — N° consulta y N° anotación (v2)
 
 import { useEffect, useRef, useState } from "react";
 import { Wand2, Plus, Minus, Bell, BellOff, BellMinus, Upload, ListChecks, X, ChevronDown } from "lucide-react";
