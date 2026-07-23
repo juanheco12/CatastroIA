@@ -136,17 +136,24 @@ def _demo_primera_oficio(data: SolicitudUnificada) -> str:
 def _demo_primera_snr(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
-    p2 = (
+    p1 = (
         f"Que teniendo en cuenta la interrelación catastro-registro y la colaboración armónica "
         f"que entre estas existe, la Superintendencia de Notariado y Registro del circuito de "
-        f"{mun}, suministra información para realizar el debido estudio jurídico, con el fin de "
+        f"{mun}, suministró información para realizar el debido estudio jurídico, con el fin de "
         f"inscribir en la base catastral del municipio de {mun} las respectivas mutaciones. "
-        f"La oficina de catastro radicó con el número de radicado {data.numero_radicado or 'N/A'}"
-        + (f", anotación No. {data.numero_anotacion}" if getattr(data, 'numero_anotacion', None) else "")
-        + f", una mutación de primera clase sobre el predio identificado con numero predial "
-        f"{data.numero_predial}, soportada en los siguientes documentos justificativos: {docs}."
+        f"La oficina de catastro radicó con el número {data.numero_radicado or 'N/A'}, "
+        f"el predio {data.numero_predial}, con el(los) siguiente(s) documento(s) aportado(s) "
+        f"por oficina de instrumentos públicos: {docs}."
     )
-    return "\n\n".join([_P1_PRIMERA, p2, _P3_PRIMERA, _p4_primera(mun)])
+    consulta  = getattr(data, 'numero_consulta',  None) or 'N/A'
+    anotacion = getattr(data, 'numero_anotacion', None) or 'N/A'
+    p2 = (
+        f"Que revisada la información vigente según la consulta No. {consulta} de la ventanilla "
+        f"única de registro en el folio de matrícula inmobiliaria {data.folio_matricula}, "
+        f"se procede a realizar el respectivo cambio de propietario de conformidad con la "
+        f"anotación No. {anotacion}."
+    )
+    return "\n\n".join([p1, p2])
 
 def _demo_tercera(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)

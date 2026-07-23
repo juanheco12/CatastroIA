@@ -21,6 +21,7 @@ export interface SolicitudFormData {
   tp_solicitante?:      string;
   numero_radicado?:     string;
   numero_anotacion?:    string;
+  numero_consulta?:     string;
   area_construida_m2?:  number | string;
   area_terreno_m2?:     number | string;
   folio_matriz?:        string;
@@ -630,12 +631,15 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
       {tipoOrigen === "snr" && (
         <div className="card p-5 space-y-4">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 pb-2">SNR</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Número de radicado" required>
               <input className={inp} value={data.numero_radicado ?? ""} onChange={e => set("numero_radicado", e.target.value)} placeholder="2024-3312" />
             </Field>
+            <Field label="N° de consulta (ventanilla única)">
+              <input className={inp} value={data.numero_consulta ?? ""} onChange={e => set("numero_consulta", e.target.value)} placeholder="Ej: 833764643" />
+            </Field>
             <Field label="N° de anotación">
-              <input className={inp} value={data.numero_anotacion ?? ""} onChange={e => set("numero_anotacion", e.target.value)} placeholder="Ej: 005" />
+              <input className={inp} value={data.numero_anotacion ?? ""} onChange={e => set("numero_anotacion", e.target.value)} placeholder="Ej: 8" />
             </Field>
             <Field label="Municipio">
               <input className={inp} value={data.municipio ?? ""} onChange={e => set("municipio", e.target.value)} placeholder="Montería" />
