@@ -141,8 +141,9 @@ def _demo_primera_snr(data: SolicitudUnificada) -> str:
         f"que entre estas existe, la Superintendencia de Notariado y Registro del circuito de "
         f"{mun}, suministra información para realizar el debido estudio jurídico, con el fin de "
         f"inscribir en la base catastral del municipio de {mun} las respectivas mutaciones. "
-        f"La oficina de catastro radicó con el número de radicado {data.numero_radicado or 'N/A'}, "
-        f"una mutación de primera clase sobre el predio identificado con numero predial "
+        f"La oficina de catastro radicó con el número de radicado {data.numero_radicado or 'N/A'}"
+        + (f", anotación No. {data.numero_anotacion}" if getattr(data, 'numero_anotacion', None) else "")
+        + f", una mutación de primera clase sobre el predio identificado con numero predial "
         f"{data.numero_predial}, soportada en los siguientes documentos justificativos: {docs}."
     )
     return "\n\n".join([_P1_PRIMERA, p2, _P3_PRIMERA, _p4_primera(mun)])
@@ -173,7 +174,9 @@ def _demo_tercera(data: SolicitudUnificada) -> str:
             f"circuito de {mun}, suministra información para realizar el debido estudio jurídico, "
             f"con el fin de inscribir en la base catastral del municipio de {mun} las respectivas "
             f"mutaciones. La oficina de catastro radicó con el número de radicado "
-            f"{data.numero_radicado or 'N/A'}, una mutación de tercera clase sobre el predio "
+            f"{data.numero_radicado or 'N/A'}"
+            + (f", anotación No. {data.numero_anotacion}" if getattr(data, 'numero_anotacion', None) else "")
+            + f", una mutación de tercera clase sobre el predio "
             f"identificado con numero predial {data.numero_predial}, soportada en los siguientes "
             f"documentos justificativos: {docs}."
         )
