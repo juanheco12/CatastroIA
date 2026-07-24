@@ -29,7 +29,9 @@ class SolicitudUnificada(BaseModel):
     tp_solicitante:        Optional[str] = None
 
     # ── SNR / Complementación ─────────────────────────────────────
-    numero_radicado: Optional[str] = None
+    numero_radicado:   Optional[str] = None
+    numero_anotacion:  Optional[str] = None
+    numero_consulta:   Optional[str] = None
 
     # ── Tercera Clase ────────────────────────────────────────────
     area_construida_m2: Optional[float] = None

@@ -136,16 +136,24 @@ def _demo_primera_oficio(data: SolicitudUnificada) -> str:
 def _demo_primera_snr(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
     docs = ", ".join(data.documentos_aportados)
-    p2 = (
+    p_snr = (
         f"Que teniendo en cuenta la interrelación catastro-registro y la colaboración armónica "
         f"que entre estas existe, la Superintendencia de Notariado y Registro del circuito de "
-        f"{mun}, suministra información para realizar el debido estudio jurídico, con el fin de "
+        f"{mun}, suministró información para realizar el debido estudio jurídico, con el fin de "
         f"inscribir en la base catastral del municipio de {mun} las respectivas mutaciones. "
-        f"La oficina de catastro radicó con el número de radicado {data.numero_radicado or 'N/A'}, "
-        f"una mutación de primera clase sobre el predio identificado con numero predial "
-        f"{data.numero_predial}, soportada en los siguientes documentos justificativos: {docs}."
+        f"La oficina de catastro radicó con el número {data.numero_radicado or 'N/A'}, "
+        f"el predio {data.numero_predial}, con el(los) siguiente(s) documento(s) aportado(s) "
+        f"por oficina de instrumentos públicos: {docs}."
     )
-    return "\n\n".join([_P1_PRIMERA, p2, _P3_PRIMERA, _p4_primera(mun)])
+    consulta  = getattr(data, 'numero_consulta',  None) or 'N/A'
+    anotacion = getattr(data, 'numero_anotacion', None) or 'N/A'
+    p_consulta = (
+        f"Que revisada la información vigente según la consulta No. {consulta} de la ventanilla "
+        f"única de registro en el folio de matrícula inmobiliaria {data.folio_matricula}, "
+        f"se procede a realizar el respectivo cambio de propietario de conformidad con la "
+        f"anotación No. {anotacion}."
+    )
+    return "\n\n".join([_P1_PRIMERA, p_snr, p_consulta, _P3_PRIMERA, _p4_primera(mun)])
 
 def _demo_tercera(data: SolicitudUnificada) -> str:
     mun  = _municipio(data)
@@ -173,7 +181,9 @@ def _demo_tercera(data: SolicitudUnificada) -> str:
             f"circuito de {mun}, suministra información para realizar el debido estudio jurídico, "
             f"con el fin de inscribir en la base catastral del municipio de {mun} las respectivas "
             f"mutaciones. La oficina de catastro radicó con el número de radicado "
-            f"{data.numero_radicado or 'N/A'}, una mutación de tercera clase sobre el predio "
+            f"{data.numero_radicado or 'N/A'}"
+            + (f", anotación No. {data.numero_anotacion}" if getattr(data, 'numero_anotacion', None) else "")
+            + f", una mutación de tercera clase sobre el predio "
             f"identificado con numero predial {data.numero_predial}, soportada en los siguientes "
             f"documentos justificativos: {docs}."
         )
@@ -898,9 +908,10 @@ def _articulos_finales(tipo: str, mun: str) -> str:
             "75 de la Ley 1437 de 2011."
         )
         art5 = (
-            f"ARTÍCULO QUINTO: REMITIR copia del acto administrativo a la Secretaría de Hacienda del "
-            f"municipio de {mun}, para la actualización de la información respecto al nombre del "
-            f"propietario para fines fiscales y tributarios."
+            "ARTÍCULO QUINTO: Los avalúos inscritos con posterioridad al primero (1°) de enero "
+            "tendrán vigencia fiscal para el año siguiente, ajustados con el índice que determine "
+            "el Gobierno Nacional, de conformidad con lo dispuesto en el artículo 4.7.13 de la "
+            "Resolución 1040 de 2023 expedida por el Instituto Geográfico Agustín Codazzi – IGAC."
         )
     return "\n\n".join([art2, art3, art4, art5, "COMUNÍQUESE Y CÚMPLASE"])
 

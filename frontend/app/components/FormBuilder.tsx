@@ -1,4 +1,5 @@
 "use client";
+// build: SNR primera clase — N° consulta y N° anotación (v2)
 
 import { useEffect, useRef, useState } from "react";
 import { Wand2, Plus, Minus, Bell, BellOff, BellMinus, Upload, ListChecks, X, ChevronDown } from "lucide-react";
@@ -20,6 +21,8 @@ export interface SolicitudFormData {
   cedula_solicitante?:  string;
   tp_solicitante?:      string;
   numero_radicado?:     string;
+  numero_anotacion?:    string;
+  numero_consulta?:     string;
   area_construida_m2?:  number | string;
   area_terreno_m2?:     number | string;
   folio_matriz?:        string;
@@ -632,6 +635,12 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
           <div className="grid grid-cols-2 gap-4">
             <Field label="Número de radicado" required>
               <input className={inp} value={data.numero_radicado ?? ""} onChange={e => set("numero_radicado", e.target.value)} placeholder="2024-3312" />
+            </Field>
+            <Field label="N° de consulta (ventanilla única)">
+              <input className={inp} value={data.numero_consulta ?? ""} onChange={e => set("numero_consulta", e.target.value)} placeholder="Ej: 833764643" />
+            </Field>
+            <Field label="N° de anotación">
+              <input className={inp} value={data.numero_anotacion ?? ""} onChange={e => set("numero_anotacion", e.target.value)} placeholder="Ej: 8" />
             </Field>
             <Field label="Municipio">
               <input className={inp} value={data.municipio ?? ""} onChange={e => set("municipio", e.target.value)} placeholder="Montería" />
