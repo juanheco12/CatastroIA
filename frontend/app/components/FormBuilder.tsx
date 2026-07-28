@@ -642,9 +642,6 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
             <Field label="N° de anotación">
               <input className={inp} value={data.numero_anotacion ?? ""} onChange={e => set("numero_anotacion", e.target.value)} placeholder="Ej: 8" />
             </Field>
-            <Field label="Municipio">
-              <input className={inp} value={data.municipio ?? ""} onChange={e => set("municipio", e.target.value)} placeholder="Montería" />
-            </Field>
           </div>
         </div>
       )}
