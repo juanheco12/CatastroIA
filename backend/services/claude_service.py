@@ -2,6 +2,7 @@ from schemas.solicitud import SolicitudUnificada
 
 # ── Lookup DANE → municipio ──────────────────────────────────────────────────
 _MUNICIPIOS: dict[str, str] = {
+    # Capitales / principales
     "05001": "Medellín",     "11001": "Bogotá D.C.",  "76001": "Cali",
     "08001": "Barranquilla", "13001": "Cartagena",     "23001": "Montería",
     "54001": "Cúcuta",       "68001": "Bucaramanga",   "17001": "Manizales",
@@ -11,13 +12,29 @@ _MUNICIPIOS: dict[str, str] = {
     "20001": "Valledupar",   "44001": "Riohacha",      "70001": "Sincelejo",
     "19001": "Popayán",      "27001": "Quibdó",        "15001": "Tunja",
     "05088": "Bello",        "05380": "Itagüí",        "25754": "Soacha",
+    # ── Córdoba (departamento 23) ──
+    "23068": "Ayapel",             "23079": "Buenavista",
+    "23090": "Canalete",           "23162": "Cereté",
+    "23168": "Chimá",              "23182": "Chinú",
+    "23189": "Ciénaga de Oro",     "23300": "Cotorra",
+    "23350": "La Apartada",        "23417": "Lorica",
+    "23419": "Los Córdobas",       "23464": "Momil",
+    "23466": "Montelíbano",        "23500": "Moñitos",
+    "23555": "Planeta Rica",       "23570": "Pueblo Nuevo",
+    "23574": "Puerto Escondido",   "23580": "Puerto Libertador",
+    "23586": "Purísima",           "23660": "Sahagún",
+    "23670": "San Andrés de Sotavento", "23672": "San Antero",
+    "23675": "San Bernardo del Viento", "23678": "San Carlos",
+    "23682": "San José de Uré",    "23686": "San Pelayo",
+    "23807": "Tierralta",          "23815": "Tuchín",
+    "23855": "Valencia",
 }
 
 def _municipio(data: SolicitudUnificada) -> str:
     if data.municipio:
         return data.municipio
     clean = data.numero_predial.replace("-", "").replace(" ", "")
-    return _MUNICIPIOS.get(clean[:5], "el municipio")
+    return _MUNICIPIOS.get(clean[:5], "__________")
 
 def _lista_y(items: list[str]) -> str:
     """Une una lista al estilo español: 'a, b y c'."""

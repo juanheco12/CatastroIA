@@ -556,41 +556,70 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
   };
 
   // ── Validation ────────────────────────────────────────────────
-  const canSubmit = (() => {
-    if (!data.numero_predial || !data.folio_matricula) return false;
+  const camposFaltantes = (() => {
+    const falta: string[] = [];
+    const req = (cond: boolean, etiqueta: string) => { if (!cond) falta.push(etiqueta); };
+
+    req(!!data.numero_predial, "Número predial");
+    req(!!data.folio_matricula, "Folio de matrícula inmobiliaria");
+
     if (tipoMutacion === "segunda_clase") {
-      if (!data.folio_matriz || data.folios_resultantes.length < 2) return false;
-      if (!data.numero_escritura || !data.fecha_escritura || !data.notaria) return false;
+      req(!!data.folio_matriz, "Folio matriz");
+      req(data.folios_resultantes.length >= 2, "Al menos 2 folios resultantes");
+      req(!!data.numero_escritura, "Número de escritura");
+      req(!!data.fecha_escritura, "Fecha de escritura");
+      req(!!data.notaria, "Notaría");
+      // no retorna: continúa a las validaciones comunes (propietario/solicitante) abajo
     }
     if (tipoMutacion === "cancelacion") {
-      if (!data.nombre_propietario || !data.cedula_propietario) return false;
-      if (!data.numero_predial_nuevo || !data.fecha_efectos) return false;
-      if (needsSolicitante && !data.cedula_solicitante) return false;
-      return true;
+      req(!!data.nombre_propietario, "Nombre del propietario");
+      req(!!data.cedula_propietario, "Número de documento del propietario");
+      req(!!data.numero_predial_nuevo, "Referencia catastral donde ya está inscrito");
+      req(!!data.fecha_efectos, "Fecha de efectos de la cancelación");
+      if (needsSolicitante) req(!!data.cedula_solicitante, "Número de documento del solicitante");
+      return falta;
     }
     if (tipoMutacion === "cuarta_clase") {
-      if (data.parrafos_informe_tecnico.length === 0) return false;
-      if (tipoOrigen === "oficio") return true;
-      if (!data.cedula_propietario || !data.nombre_propietario) return false;
-      if (needsSolicitante && !data.cedula_solicitante) return false;
-      return true;
+      req(data.parrafos_informe_tecnico.length > 0, "Párrafos del informe técnico");
+      if (tipoOrigen === "oficio") return falta;
+      req(!!data.cedula_propietario, "Número de documento del propietario");
+      req(!!data.nombre_propietario, "Nombre del propietario");
+      if (needsSolicitante) req(!!data.cedula_solicitante, "Número de documento del solicitante");
+      return falta;
     }
     if (tipoMutacion === "quinta_clase") {
-      if (!data.nombre_propietario) return false;
-      if (tipoOrigen !== "oficio" && !data.cedula_propietario) return false;
-      if (needsSolicitante && !data.cedula_solicitante) return false;
-      if (!data.fecha_visita_tecnica || !data.fecha_compraventa || !data.entidad_compraventa || !data.numero_predial_nuevo) return false;
-      return true;
+      req(!!data.nombre_propietario, "Nombre del propietario");
+      if (tipoOrigen !== "oficio") req(!!data.cedula_propietario, "Número de documento del propietario");
+      if (needsSolicitante) req(!!data.cedula_solicitante, "Número de documento del solicitante");
+      req(!!data.fecha_visita_tecnica, "Fecha de visita técnica");
+      req(!!data.fecha_compraventa, "Fecha de la compraventa");
+      req(!!data.entidad_compraventa, "Notaría o entidad de la compraventa");
+      req(!!data.numero_predial_nuevo, "Nueva referencia catastral");
+      return falta;
     }
-    if (tipoOrigen === "snr")    return !!data.numero_radicado;
-    if (tipoOrigen === "oficio") return tipoMutacion === "rectificacion" ? !!data.campo_rectificado : true;
-    if (!data.cedula_propietario || !data.nombre_propietario) return false;
-    if (needsSolicitante && !data.cedula_solicitante) return false;
-    if (tipoMutacion === "tercera_clase")   return !!data.area_construida_m2 && !!data.area_terreno_m2;
-    if (tipoMutacion === "rectificacion")   return !!data.campo_rectificado;
-    if (tipoMutacion === "complementacion") return !!data.numero_radicado && !!data.campo_complementado;
-    return true;
+    if (tipoOrigen === "snr") {
+      req(!!data.numero_radicado, "Número de radicado");
+      return falta;
+    }
+    if (tipoOrigen === "oficio") {
+      if (tipoMutacion === "rectificacion") req(!!data.campo_rectificado, "Campo que se rectifica");
+      return falta;
+    }
+    req(!!data.nombre_propietario, "Nombre del propietario");
+    req(!!data.cedula_propietario, "Número de documento del propietario");
+    if (needsSolicitante) req(!!data.cedula_solicitante, "Número de documento del solicitante");
+    if (tipoMutacion === "tercera_clase") {
+      req(!!data.area_construida_m2, "Área construida (m²)");
+      req(!!data.area_terreno_m2, "Área de terreno (m²)");
+    }
+    if (tipoMutacion === "rectificacion")   req(!!data.campo_rectificado, "Campo que se rectifica");
+    if (tipoMutacion === "complementacion") {
+      req(!!data.numero_radicado, "Número de radicado");
+      req(!!data.campo_complementado, "Dato que se complementa");
+    }
+    return falta;
   })();
+  const canSubmit = camposFaltantes.length === 0;
 
   return (
     <div className="space-y-5">
@@ -1088,6 +1117,15 @@ export default function FormBuilder({ tipoMutacion, tipoOrigen, onGenerate, isLo
           ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />Generando motivada...</>
           : <><Wand2 size={18} />Generar Motivada</>}
       </button>
+
+      {!canSubmit && !isLoading && camposFaltantes.length > 0 && (
+        <div className="text-xs text-amber-400/90 bg-amber-500/5 border border-amber-500/20 rounded-lg px-4 py-3">
+          <p className="font-medium mb-1">Para habilitar el botón, completa:</p>
+          <ul className="list-disc list-inside space-y-0.5 text-amber-300/80">
+            {camposFaltantes.map((c) => <li key={c}>{c}</li>)}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
