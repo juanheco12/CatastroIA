@@ -34,7 +34,7 @@ def _municipio(data: SolicitudUnificada) -> str:
     if data.municipio:
         return data.municipio
     clean = data.numero_predial.replace("-", "").replace(" ", "")
-    return _MUNICIPIOS.get(clean[:5], "__________")
+    return _MUNICIPIOS.get(clean[:5], "Montería")
 
 def _lista_y(items: list[str]) -> str:
     """Une una lista al estilo español: 'a, b y c'."""
