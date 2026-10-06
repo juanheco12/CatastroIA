@@ -33,18 +33,34 @@ interface GrupoCampo {
   offsetMin: number;
 }
 
+/** Normaliza un valor para decidir si dos ocurrencias son "el mismo dato":
+ * ignora mayúsculas/acentos, espacios sobrantes y espacios alrededor de los
+ * guiones. Así '140- 122014', '140-122014' y '140-122014 ' se consideran
+ * iguales y se piden una sola vez; valores realmente distintos (140-135470)
+ * siguen separados. */
+function normalizarValor(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/\s*-\s*/g, "-")
+    .replace(/\s+/g, " ");
+}
+
 /** Varios campos confirmados pueden compartir el mismo tipo y el mismo valor
- * original (la misma cédula/predial repetida varias veces en el documento) —
+ * (la misma cédula/predial/matrícula repetida varias veces en el documento) —
  * se agrupan en un solo input para que el usuario lo escriba una vez y se
  * aplique a todas las ocurrencias, en vez de pedirle lo mismo N veces. El
  * orden de los grupos sigue su primera aparición en el texto. */
 function agruparCampos(campos: CampoVariable[]): GrupoCampo[] {
   const mapa = new Map<string, GrupoCampo>();
   for (const c of campos) {
-    const key = `${c.tipo_campo}::${c.texto_original}`;
+    const key = `${c.tipo_campo}::${normalizarValor(c.texto_original)}`;
     const existente = mapa.get(key);
     if (existente) {
       existente.campoIds.push(c.id);
+      // conserva como texto mostrado el de la ocurrencia más temprana
+      if (c.offset_inicio < existente.offsetMin) existente.textoOriginal = c.texto_original;
       existente.offsetMin = Math.min(existente.offsetMin, c.offset_inicio);
     } else {
       mapa.set(key, {
